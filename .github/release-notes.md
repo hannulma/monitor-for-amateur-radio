@@ -7,8 +7,7 @@
 |---|---|
 | Windows 10/11 – asennusohjelma / installer | `MonitorForBrandMeister-*-windows-setup.exe` |
 | Windows – ilman asennusta / portable | `MonitorForBrandMeister-*-windows-portable.zip` |
-| macOS, Intel | `MonitorForBrandMeister-*-macos-intel.dmg` |
-| macOS, Apple Silicon (M1–M4) | `…-macos-apple-silicon.dmg` jos mukana, muuten Intel-versio (toimii Rosetta 2:n kautta) / *if present, otherwise the Intel build via Rosetta 2* |
+| macOS 11+ (Intel ja Apple Silicon M1–M4 / *Intel and Apple Silicon*) | `MonitorForBrandMeister-*-macos-universal.dmg` |
 | Linux x86_64 | `MonitorForBrandMeister-*-linux-x86_64.tar.gz` |
 | Python (pip) | `monitor_for_brandmeister-*.whl` |
 

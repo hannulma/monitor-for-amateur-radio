@@ -103,50 +103,11 @@ jobs:
           name: windows
           path: out/*
 
-  macos:
-    needs: version
-    if: needs.version.outputs.release == 'true'
-    strategy:
-      matrix:
-        include:
-          - runner: macos-15-intel
-            arch: intel
-    runs-on: ${{ matrix.runner }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install . pyinstaller
-      - name: Build app
-        run: >
-          pyinstaller --noconfirm --clean --windowed --name "Monitor for BrandMeister"
-          --osx-bundle-identifier io.github.hannulma.monitorforbrandmeister
-          --add-data "bmmonitor/static:bmmonitor/static"
-          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore
-          --hidden-import websocket --hidden-import certifi
-          run_bmmonitor.py
-      - name: Build dmg
-        run: |
-          mkdir -p out dmgroot
-          cp -R "dist/Monitor for BrandMeister.app" dmgroot/
-          ln -s /Applications dmgroot/Applications
-          hdiutil create -volname "Monitor for BrandMeister" -srcfolder dmgroot -ov -format UDZO \
-            "out/MonitorForBrandMeister-${{ needs.version.outputs.version }}-macos-${{ matrix.arch }}.dmg"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macos-${{ matrix.arch }}
-          path: out/*
-
-  # Universal2-Mac-versio (Intel + Apple Silicon M1–M4 natiivisti). Rakennetaan Intel-koneella, koska
-  # GitHubin arm64-Mac-koneita ei aina saada. Käytetään python.orgin universal2-Pythonia ja yhdistetään
+  # Universal2-Mac-versio: yksi .app/.dmg, joka toimii natiivisti sekä Intel- että Apple Silicon (M1–M4) -Maceissa.
+  # Rakennetaan Intel-koneella, koska GitHubin arm64-Mac-koneita ei aina saada. Käytetään python.orgin universal2-Pythonia ja yhdistetään
   # x86_64- ja arm64-pyörät (delocate-merge). Ajetaan koekäännöksenä myös, kun työnkulkua muutetaan.
   macos-universal:
     needs: version
-    continue-on-error: true
     timeout-minutes: 40
     runs-on: macos-15-intel
     env:
@@ -247,12 +208,12 @@ jobs:
           path: out/*
 
   release:
-    needs: [version, python-package, windows, macos, macos-universal, linux]
+    needs: [version, python-package, windows, macos-universal, linux]
     runs-on: ubuntu-latest
     if: >-
       always() && needs.version.outputs.release == 'true' &&
       needs.python-package.result == 'success' && needs.windows.result == 'success' &&
-      needs.macos.result == 'success' && needs.linux.result == 'success'
+      needs.macos-universal.result == 'success' && needs.linux.result == 'success'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4

@@ -72,6 +72,6 @@ is shortened, and finally the precise place is omitted.
 ## Build and release
 
 `.github/workflows/release.yml` runs when a new `__version__` (no existing `v<version>` tag) reaches `main`, on `v*` tags or manually: PyInstaller builds on `windows-latest` (one-file exe without
-console + Inno Setup installer from `installer/windows.iss`), `macos-15` and `macos-15-intel` (`.app` → `.dmg`),
+console + Inno Setup installer from `installer/windows.iss`), `macos-15-intel` (universal2 `.app` → `.dmg`, built with the python.org universal2 Python and x86_64+arm64 wheels fused by `delocate-merge`),
 `ubuntu-22.04` (one-file binary), plus wheel/sdist; all artifacts and `SHA256SUMS.txt` are attached to a GitHub
 release. `.github/workflows/ci.yml` runs the test suite on all three operating systems.

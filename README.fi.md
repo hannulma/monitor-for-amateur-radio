@@ -21,8 +21,7 @@ Lataa uusin versio **[Releases](https://github.com/hannulma/monitor-for-brandmei
 | Käyttöjärjestelmä | Tiedosto |
 |---|---|
 | Windows 10/11 | `MonitorForBrandMeister-<versio>-windows-setup.exe` (asennusohjelma) tai `…-windows-portable.zip` (ilman asennusta) |
-| macOS, Apple Silicon (M1–M4) | `…-macos-apple-silicon.dmg`, jos saatavilla; muuten Intel-versio toimii Rosetta 2:n kautta |
-| macOS, Intel | `MonitorForBrandMeister-<versio>-macos-intel.dmg` |
+| macOS 11+ (Intel ja Apple Silicon M1–M4) | `MonitorForBrandMeister-<versio>-macos-universal.dmg` |
 | Linux x86_64 | `MonitorForBrandMeister-<versio>-linux-x86_64.tar.gz` |
 | Python 3.9+ (mikä tahansa käyttöjärjestelmä) | `monitor_for_brandmeister-<versio>-py3-none-any.whl` |
 
@@ -165,7 +164,7 @@ python -m bmmonitor --demo
 
 **Uusi versio:** päivitä `__version__` tiedostoon `bmmonitor/__init__.py` ja pushaa `main`-haaraan. Jos versiota
 ei ole vielä julkaistu, GitHub Actions rakentaa Windows-asennusohjelman,
-macOS-levykuvat (Apple Silicon ja Intel), Linux-ohjelman ja Python-paketin, luo tagin `v<versio>` ja julkaisee ne Releases-sivulle.
+macOS-levykuvan (universal2: Intel ja Apple Silicon), Linux-ohjelman ja Python-paketin, luo tagin `v<versio>` ja julkaisee ne Releases-sivulle.
 Tekninen tausta ja rajapinnat: [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
 ## Vastuuvapaus

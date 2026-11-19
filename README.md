@@ -65,8 +65,7 @@ Get the latest version from **[Releases](https://github.com/hannulma/monitor-for
 | OS | File |
 |---|---|
 | Windows 10/11 | `MonitorForBrandMeister-<version>-windows-setup.exe` (installer) or `…-windows-portable.zip` |
-| macOS Apple Silicon (M1–M4) | `…-macos-apple-silicon.dmg` when available; otherwise the Intel build runs via Rosetta 2 |
-| macOS Intel | `MonitorForBrandMeister-<version>-macos-intel.dmg` |
+| macOS 11+ (Intel and Apple Silicon M1–M4) | `MonitorForBrandMeister-<version>-macos-universal.dmg` |
 | Linux x86_64 | `MonitorForBrandMeister-<version>-linux-x86_64.tar.gz` |
 | Any OS with Python ≥ 3.9 | `pip install monitor_for_brandmeister-<version>-py3-none-any.whl` |
 
@@ -151,7 +150,7 @@ python -m bmmonitor --demo        # UI with fake traffic
 
 **Releasing:** bump `__version__` in `bmmonitor/__init__.py` and push to `main`. When the version has not been
 released yet, GitHub Actions builds the Windows installer, macOS disk
-images (Apple Silicon and Intel), the Linux binary and the Python package, creates the tag `v<version>` and publishes a release
+image (universal2: Intel and Apple Silicon), the Linux binary and the Python package, creates the tag `v<version>` and publishes a release
 (versions like `0.8.0b1` are marked as pre-releases).
 
 ## Disclaimer
