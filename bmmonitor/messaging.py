@@ -69,6 +69,12 @@ def ssl_context() -> ssl.SSLContext:
     return _SSL_CTX
 
 
+def ws_options() -> dict:
+    """socket.io/websocket-client-asetukset: sama käyttöjärjestelmän varmennetarkistus kuin muissa hauissa.
+    Ilman tätä websocket-client lukee varmenteet OpenSSL:n oletuspolusta, joka on tyhjä mm. macOS-sovelluspaketissa."""
+    return {"sslopt": {"context": ssl_context()}}
+
+
 def http_session(timeout: int = 30) -> aiohttp.ClientSession:
     return aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout),
                                  connector=aiohttp.TCPConnector(ssl=ssl_context()))

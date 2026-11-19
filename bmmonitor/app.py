@@ -26,7 +26,7 @@ import socketio
 from aiohttp import web
 
 from . import APP_ID, APP_NAME, __version__
-from .messaging import DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message
+from .messaging import DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message, ws_options
 from .bmapi import BMApi, BMApiError
 from .services import DEFAULT_SERVICES, ServiceHub, normalize_services
 from .features import (CALL_OR_ID, DEFAULT_DEVICES, DEFAULT_WATCH, Commands, DeviceMonitor, Heard, Stats,
@@ -591,7 +591,8 @@ def bm_thread(mon: Monitor, loop: asyncio.AbstractEventLoop):
     """Sama synkroninen socket.io-asiakas kuin Brandmeisterin virallisessa
     Python-esimerkissä. Ajetaan omassa säikeessään."""
     sio = socketio.Client(reconnection=True, reconnection_delay=2,
-                          reconnection_delay_max=30, logger=False, engineio_logger=False)
+                          reconnection_delay_max=30, logger=False, engineio_logger=False,
+                          websocket_extra_options=ws_options())
     warned = {"parse": False}
 
     def call(fn, *a):
@@ -690,7 +691,7 @@ def diagnose(seconds: int = 30):
           f"python-engineio {getattr(engineio, '__version__', '?')}")
     counts: dict[str, int] = {}
     shown = [0]
-    sio = socketio.Client(logger=False, engineio_logger=False)
+    sio = socketio.Client(logger=False, engineio_logger=False, websocket_extra_options=ws_options())
 
     @sio.event
     def connect():

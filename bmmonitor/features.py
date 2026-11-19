@@ -374,7 +374,8 @@ def bm_user_history(talkgroups: list[int], timeout: float = 15) -> list[dict]:
     """Brandmeisterin oma kysely: ryhmässä kuullut käyttäjät, viimeisin aika ja puhekerrat.
     Synkroninen – ajetaan säikeessä."""
     import socketio
-    sio = socketio.Client(logger=False, engineio_logger=False)
+    from .messaging import ws_options
+    sio = socketio.Client(logger=False, engineio_logger=False, websocket_extra_options=ws_options())
     box: dict = {}
 
     @sio.event
