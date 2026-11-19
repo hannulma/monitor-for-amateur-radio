@@ -141,46 +141,79 @@ jobs:
           name: macos-${{ matrix.arch }}
           path: out/*
 
-  # Apple Silicon -käännös on valinnainen: jos GitHubin arm64-Mac-koneita ei saada, julkaisu tehdään ilman sitä
-  # (Intel-versio toimii myös Apple Siliconilla Rosetta 2:n kautta).
-  macos-arm:
+  # Universal2-Mac-versio (Intel + Apple Silicon M1–M4 natiivisti). Rakennetaan Intel-koneella, koska
+  # GitHubin arm64-Mac-koneita ei aina saada. Käytetään python.orgin universal2-Pythonia ja yhdistetään
+  # x86_64- ja arm64-pyörät (delocate-merge). Ajetaan koekäännöksenä myös, kun työnkulkua muutetaan.
+  macos-universal:
     needs: version
-    if: needs.version.outputs.release == 'true'
     continue-on-error: true
-    timeout-minutes: 30
-    strategy:
-      matrix:
-        include:
-          - runner: macos-15
-            arch: apple-silicon
-    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    runs-on: macos-15-intel
+    env:
+      PY_PKG_VERSION: "3.12.8"
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install
+      - name: Install universal2 Python (python.org)
         run: |
-          python -m pip install --upgrade pip
-          pip install . pyinstaller
+          curl -fsSL -o py.pkg "https://www.python.org/ftp/python/${PY_PKG_VERSION}/python-${PY_PKG_VERSION}-macos11.pkg"
+          sudo installer -pkg py.pkg -target /
+          PY=/Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12
+          lipo -archs "$PY"
+          "$PY" -m venv venv
+          venv/bin/python -m pip install --upgrade pip
+          venv/bin/pip install "delocate>=0.11" pyinstaller
+      - name: Build universal2 wheels for dependencies
+        run: |
+          set -e
+          DEPS=$(venv/bin/python -c "import tomllib;print('\n'.join(tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']))")
+          echo "$DEPS" > deps.txt
+          for A in x86_64 arm64; do
+            venv/bin/pip download -r deps.txt -d "wh_$A" --only-binary=:all: \
+              --platform "macosx_11_0_$A" --platform "macosx_10_9_universal2" --python-version 3.12 --implementation cp
+          done
+          mkdir -p wh_uni
+          venv/bin/python - <<'PY'
+          import glob, os, shutil, subprocess
+          def key(f): return "-".join(os.path.basename(f).split("-")[:2]).lower()
+          x86 = {key(f): f for f in glob.glob("wh_x86_64/*.whl")}
+          for f in glob.glob("wh_arm64/*.whl"):
+              k = key(f)
+              if f.endswith("arm64.whl"):
+                  subprocess.run(["venv/bin/delocate-merge", f, x86[k], "-w", "wh_uni"], check=True)
+              else:
+                  shutil.copy(f, "wh_uni")
+          print("\n".join(sorted(os.listdir("wh_uni"))))
+          PY
+          venv/bin/pip install --no-index --find-links wh_uni -r deps.txt
+          venv/bin/pip install --no-deps .
       - name: Build app
         run: >
-          pyinstaller --noconfirm --clean --windowed --name "Monitor for BrandMeister"
+          venv/bin/pyinstaller --noconfirm --clean --windowed --target-arch universal2
+          --name "Monitor for BrandMeister"
           --osx-bundle-identifier io.github.hannulma.monitorforbrandmeister
           --add-data "bmmonitor/static:bmmonitor/static"
           --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
+      - name: Verify architectures and smoke test
+        run: |
+          APP="dist/Monitor for BrandMeister.app"
+          lipo -archs "$APP/Contents/MacOS/Monitor for BrandMeister"
+          find "$APP" -name "*.so" -o -name "*.dylib" | while read f; do
+            a=$(lipo -archs "$f"); case "$a" in *x86_64*arm64*|*arm64*x86_64*) ;; *) echo "::error::$f: $a"; exit 1;; esac
+          done
+          echo "Kaikki binäärit ovat universal2"
       - name: Build dmg
         run: |
+          VERSION=$(python3 -c "import re;print(re.search(r'__version__ = \"([^\"]+)\"', open('bmmonitor/__init__.py').read()).group(1))")
           mkdir -p out dmgroot
           cp -R "dist/Monitor for BrandMeister.app" dmgroot/
           ln -s /Applications dmgroot/Applications
           hdiutil create -volname "Monitor for BrandMeister" -srcfolder dmgroot -ov -format UDZO \
-            "out/MonitorForBrandMeister-${{ needs.version.outputs.version }}-macos-${{ matrix.arch }}.dmg"
+            "out/MonitorForBrandMeister-${VERSION}-macos-universal.dmg"
       - uses: actions/upload-artifact@v4
         with:
-          name: macos-${{ matrix.arch }}
+          name: macos-universal
           path: out/*
 
   linux:
@@ -214,7 +247,7 @@ jobs:
           path: out/*
 
   release:
-    needs: [version, python-package, windows, macos, macos-arm, linux]
+    needs: [version, python-package, windows, macos, macos-universal, linux]
     runs-on: ubuntu-latest
     if: >-
       always() && needs.version.outputs.release == 'true' &&
