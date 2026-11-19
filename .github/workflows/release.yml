@@ -1,9 +1,12 @@
 name: Release
 
-# Julkaisu käynnistyy, kun pushataan versiotagi, esim:  git tag v0.8.0b1 && git push origin v0.8.0b1
-# Tagin pitää vastata bmmonitor/__init__.py:n __version__-arvoa (v-etuliitteellä).
+# Julkaisu käynnistyy automaattisesti, kun main-haaraan tulee uusi versionumero
+# (bmmonitor/__init__.py: __version__), jota ei ole vielä julkaistu. Työnkulku rakentaa paketit,
+# luo tagin v<versio> ja julkaisun. Myös käsin pushattu v*-tagi tai "Run workflow" käynnistää sen.
 on:
   push:
+    branches: [main]
+    paths: ["bmmonitor/__init__.py", ".github/workflows/release.yml"]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -19,19 +22,32 @@ jobs:
     outputs:
       version: ${{ steps.v.outputs.version }}
       prerelease: ${{ steps.v.outputs.prerelease }}
+      release: ${{ steps.v.outputs.release }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - id: v
         run: |
           VERSION=$(python -c "import re;print(re.search(r'__version__ = \"([^\"]+)\"', open('bmmonitor/__init__.py').read()).group(1))")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           if [[ "$VERSION" =~ (a|b|rc)[0-9]+$ ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
-          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "v$VERSION" ]]; then
-            echo "::error::Tagi ${GITHUB_REF_NAME} ei vastaa versiota v$VERSION"; exit 1
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            if [[ "${GITHUB_REF_NAME}" != "v$VERSION" ]]; then
+              echo "::error::Tagi ${GITHUB_REF_NAME} ei vastaa versiota v$VERSION"; exit 1
+            fi
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          elif git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "Versio v$VERSION on jo julkaistu – ei uutta julkaisua."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Uusi versio v$VERSION – rakennetaan ja julkaistaan."
+            echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
   python-package:
     needs: version
+    if: needs.version.outputs.release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +64,7 @@ jobs:
 
   windows:
     needs: version
+    if: needs.version.outputs.release == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,6 +105,7 @@ jobs:
 
   macos:
     needs: version
+    if: needs.version.outputs.release == 'true'
     strategy:
       matrix:
         include:
@@ -127,6 +145,7 @@ jobs:
 
   linux:
     needs: version
+    if: needs.version.outputs.release == 'true'
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -157,7 +176,7 @@ jobs:
   release:
     needs: [version, python-package, windows, macos, linux]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: needs.version.outputs.release == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -168,6 +187,8 @@ jobs:
         run: cd artifacts && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ needs.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
           name: Monitor for BrandMeister ${{ needs.version.outputs.version }}
           prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
           generate_release_notes: true

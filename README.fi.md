@@ -163,9 +163,9 @@ pytest
 python -m bmmonitor --demo
 ```
 
-**Uusi versio:** päivitä `__version__` tiedostoon `bmmonitor/__init__.py`, commit, sitten
-`git tag v<versio> && git push origin v<versio>`. GitHub Actions rakentaa Windows-asennusohjelman,
-macOS-levykuvat (Apple Silicon ja Intel), Linux-ohjelman ja Python-paketin ja julkaisee ne Releases-sivulle.
+**Uusi versio:** päivitä `__version__` tiedostoon `bmmonitor/__init__.py` ja pushaa `main`-haaraan. Jos versiota
+ei ole vielä julkaistu, GitHub Actions rakentaa Windows-asennusohjelman,
+macOS-levykuvat (Apple Silicon ja Intel), Linux-ohjelman ja Python-paketin, luo tagin `v<versio>` ja julkaisee ne Releases-sivulle.
 Tekninen tausta ja rajapinnat: [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
 ## Vastuuvapaus

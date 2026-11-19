@@ -149,9 +149,9 @@ pytest
 python -m bmmonitor --demo        # UI with fake traffic
 ```
 
-**Releasing:** bump `__version__` in `bmmonitor/__init__.py`, commit, then
-`git tag v<version> && git push origin v<version>`. GitHub Actions builds the Windows installer, macOS disk
-images (Apple Silicon and Intel), the Linux binary and the Python package and publishes them as a release
+**Releasing:** bump `__version__` in `bmmonitor/__init__.py` and push to `main`. When the version has not been
+released yet, GitHub Actions builds the Windows installer, macOS disk
+images (Apple Silicon and Intel), the Linux binary and the Python package, creates the tag `v<version>` and publishes a release
 (versions like `0.8.0b1` are marked as pre-releases).
 
 ## Disclaimer
