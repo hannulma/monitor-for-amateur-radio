@@ -21,6 +21,8 @@ from pathlib import Path
 
 import aiohttp
 
+from .i18n import tr
+
 log = logging.getLogger("bmmonitor.msg")
 
 APRS_MSG_MAX = 67
@@ -85,8 +87,10 @@ def friendly_error(e: Exception) -> str:
     msg = str(e) or e.__class__.__name__
     if "CERTIFICATE_VERIFY_FAILED" in msg or isinstance(e, aiohttp.ClientConnectorCertificateError):
         host = getattr(e, "host", "") or ""
-        return (f"Varmenteen tarkistus epäonnistui ({host}). "
-                "Päivitä: pip install --upgrade truststore certifi")
+        return tr("Varmenteen tarkistus epäonnistui ({host}). ", host=host) + tr(
+            "Päivitä: pip install --upgrade truststore certifi")
+    if isinstance(e, asyncio.TimeoutError):
+        return tr("Aikakatkaisu")
     return msg
 
 
@@ -141,7 +145,7 @@ def split_message(text: str, max_parts: int) -> list[str]:
 def validate_call(c: str) -> str:
     c = c.strip().upper()
     if not CALL_RE.match(c):
-        raise ValueError(f"Virheellinen kutsu: {c!r} (muoto esim. OH2ABC-7)")
+        raise ValueError(tr("Virheellinen kutsu: {x} (muoto esim. OH2ABC-7)", x=repr(c)))
     return c
 
 
@@ -225,7 +229,7 @@ class AprsClient:
                         keepalive_at = time.time() + 600
                     continue
                 if not line:
-                    raise ConnectionError("APRS-IS sulki yhteyden")
+                    raise ConnectionError(tr("APRS-IS sulki yhteyden"))
                 self._handle_line(line.decode("utf-8", "replace").strip(), login)
         finally:
             sender.cancel()
@@ -237,7 +241,7 @@ class AprsClient:
                 m = re.search(r"server (\S+)", line)
                 self.server_name = m.group(1) if m else ""
                 if not self.verified:
-                    self.error = "Passcode ei kelpaa (unverified) – viestejä ei välitetä"
+                    self.error = tr("Passcode ei kelpaa (unverified) – viestejä ei välitetä")
                 self.hub.touch()
             return
         # APRS-viesti:  SRC>DST,PATH::ADDRESSEE:ackNN / rejNN / teksti{NN
@@ -528,7 +532,7 @@ def normalize_messaging(new: dict, old: dict) -> dict:
     if "passcode" in new:
         p = str(new["passcode"]).strip()
         if p and not p.lstrip("-").isdigit():
-            raise ValueError("Passcoden pitää olla numero")
+            raise ValueError(tr("Passcoden pitää olla numero"))
         out["passcode"] = p
     if "server" in new:
         out["server"] = str(new["server"]).strip() or "rotate.aprs2.net"
@@ -561,11 +565,11 @@ def normalize_messaging(new: dict, old: dict) -> dict:
             if not url:
                 continue
             if not url.startswith(("http://", "https://")):
-                raise ValueError(f"Syötteen osoitteen pitää alkaa http:// tai https:// ({url})")
+                raise ValueError(tr("Syötteen osoitteen pitää alkaa http:// tai https:// ({url})", url=url))
             cmd = re.sub(r"[^A-Z0-9ÄÖÅ]", "", str(f.get("cmd", "")).upper())[:10]
             feeds.append({"name": str(f.get("name", "")).strip()[:20], "url": url,
                           "enabled": bool(f.get("enabled", True)), "cmd": cmd})
         out["feeds"] = feeds
     if out.get("enabled") and not out.get("login"):
-        raise ValueError("Anna oma kutsu (APRS-IS-tunnus) ennen kuin otat lähetyksen käyttöön")
+        raise ValueError(tr("Anna oma kutsu (APRS-IS-tunnus) ennen kuin otat lähetyksen käyttöön"))
     return out

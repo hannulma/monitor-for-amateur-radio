@@ -12,6 +12,7 @@ import time
 from datetime import datetime, timezone
 from urllib.parse import quote
 
+from .i18n import tr
 from .messaging import http_session
 
 API = "https://api.brandmeister.network/v2"
@@ -56,15 +57,15 @@ class BMApi:
         if auth:
             key = (self.get_key() or "").strip()
             if not key:
-                raise BMApiError("Toiminto vaatii Brandmeister API-avaimen (Asetukset)", 401)
+                raise BMApiError(tr("Toiminto vaatii Brandmeister API-avaimen (Asetukset)"), 401)
             headers["Authorization"] = f"Bearer {key}"
         async with http_session(20) as s:
             async with s.request(method, API + path, json=body, headers=headers) as r:
                 text = await r.text()
                 if r.status in (401, 403) and auth:
-                    raise BMApiError("API-avain hylättiin tai laite ei ole sinun (HTTP %d)" % r.status, r.status)
+                    raise BMApiError(tr("API-avain hylättiin tai laite ei ole sinun (HTTP {s})", s=r.status), r.status)
                 if r.status == 404:
-                    raise BMApiError("Ei löytynyt", 404)
+                    raise BMApiError(tr("Ei löytynyt"), 404)
                 if r.status >= 400:
                     raise BMApiError(f"BM API HTTP {r.status}: {text[:200]}", r.status)
                 try:

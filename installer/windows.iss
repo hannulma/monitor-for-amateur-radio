@@ -26,6 +26,8 @@ SolidCompression=yes
 WizardStyle=modern
 LicenseFile=..\LICENSE
 UninstallDisplayIcon={app}\{#AppExe}
+CloseApplications=force
+RestartApplications=no
 
 [Languages]
 Name: "finnish"; MessagesFile: "compiler:Languages\Finnish.isl"
@@ -47,6 +49,8 @@ Name: "{userstartup}\{#AppName}"; Filename: "{app}\{#AppExe}"; Parameters: "--no
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; Ohjelman sisäinen päivitys ajaa asennuksen hiljaisena -> käynnistä ohjelma uudelleen (selainvälilehti yhdistää itse)
+Filename: "{app}\{#AppExe}"; Parameters: "--no-browser --wait-for-exit"; Flags: nowait skipifnotsilent
 
 [UninstallRun]
 Filename: "{cmd}"; Parameters: "/C taskkill /IM {#AppExe} /F"; Flags: runhidden; RunOnceId: "StopApp"

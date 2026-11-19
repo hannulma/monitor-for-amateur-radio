@@ -25,6 +25,8 @@ import aiohttp
 import socketio
 from aiohttp import web
 
+from .i18n import set_lang, tr
+from .updater import Updater
 from . import APP_ID, APP_NAME, __version__
 from .messaging import DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message, ws_options
 from .bmapi import BMApi, BMApiError
@@ -53,6 +55,8 @@ DEFAULT_CONFIG = {
     "log_csv": True,
     "calls_limit": 15,          # Viimeisimmät puhelut -listan pituus (10/15/20/25)
     "bm_api_key": "",           # BM SelfCare API-avain (vain laitteen hallintaan)
+    "language": "",             # "fi" / "en"; tyhjä = valitaan selaimen kielen mukaan
+    "update_check": True,       # tarkista uudet versiot GitHubista kerran päivässä
 }
 CALLS_LIMITS = (10, 15, 20, 25)
 
@@ -82,7 +86,7 @@ def parse_patterns(items) -> list[str]:
         if not p:
             continue
         if not all(c.isdigit() or c in "*?" for c in p):
-            raise ValueError(f"Virheellinen puheryhmä: {p!r} (sallitut: numerot, * ja ?)")
+            raise ValueError(tr("Virheellinen puheryhmä: {p} (sallitut: numerot, * ja ?)", p=repr(p)))
         if p not in out:
             out.append(p)
     return out
@@ -157,6 +161,7 @@ class Monitor:
         svc = self.cfg.get("services") or {}
         self.cfg["services"] = {k: {**v, **(svc.get(k) or {})} for k, v in DEFAULT_SERVICES.items()}
         self.matcher = Matcher(self.cfg["talkgroups"])
+        set_lang(self.cfg.get("language") or "fi")
 
         self.tg_names: dict[int, str] = {}
         self.tg_stats: dict[int, dict] = {}
@@ -188,6 +193,7 @@ class Monitor:
         self.commands = Commands(self)
         self.services = ServiceHub(self)
         self.hub.command_handler = self.commands.handle
+        self.updater = Updater(self)
 
     def touch(self):
         self.dirty = True
@@ -214,7 +220,7 @@ class Monitor:
         if "calls_limit" in new:
             n = int(new["calls_limit"])
             if n not in CALLS_LIMITS:
-                raise ValueError(f"Sallitut arvot: {', '.join(map(str, CALLS_LIMITS))}")
+                raise ValueError(tr("Sallitut arvot: {v}", v=", ".join(map(str, CALLS_LIMITS))))
             self.cfg["calls_limit"] = n
         if "watch" in new:
             w = new["watch"]
@@ -227,7 +233,7 @@ class Monitor:
                     if not x:
                         continue
                     if not CALL_OR_ID.fullmatch(x):
-                        raise ValueError(f"Virheellinen kutsu tai DMR-ID: {x}")
+                        raise ValueError(tr("Virheellinen kutsu tai DMR-ID: {x}", x=x))
                     if x not in lst:
                         lst.append(x)
                 out["list"] = lst
@@ -249,7 +255,7 @@ class Monitor:
                     if not did:
                         continue
                     if not did.isdigit() or not 4 <= len(did) <= 10:
-                        raise ValueError(f"Virheellinen laitteen ID: {did}")
+                        raise ValueError(tr("Virheellinen laitteen ID: {x}", x=did))
                     if int(did) in seen:
                         continue
                     seen.add(int(did))
@@ -266,6 +272,15 @@ class Monitor:
             out, changed = normalize_services(new["services"], self.cfg["services"])
             self.cfg["services"] = out
             self.services.reconfigure(changed)
+        if "language" in new:
+            lang = str(new["language"] or "")
+            if lang not in ("fi", "en"):
+                raise ValueError(tr("Virheellinen kieli"))
+            self.cfg["language"] = lang
+            set_lang(lang)
+        if "update_check" in new:
+            self.cfg["update_check"] = bool(new["update_check"])
+            self.updater.wake.set()
         if "bm_api_key" in new:
             key = str(new["bm_api_key"] or "").strip()
             if key != "********":
@@ -544,6 +559,7 @@ class Monitor:
             "watch_status": self.watch_status(),
             "devices": self.devmon.snapshot(),
             "services": self.services.snapshot(),
+            "update": self.updater.snapshot(),
             "calls": sorted(self.calls, key=lambda c: float(c.get("start") or 0), reverse=True)[:200],
             "data": sorted(self.data, key=lambda c: float(c.get("start") or 0), reverse=True)[:200],
             "paths": {"config": str(self.cfg_path), "calls_csv": str(self.calls_csv),
@@ -811,12 +827,12 @@ def make_app(mon: Monitor) -> web.Application:
             body = await request.json()
         except Exception:  # noqa: BLE001
             body = {}
-        text = (body.get("text") or "").strip() or f"Monitor for BrandMeister: testiviesti {time.strftime('%H:%M')}"
+        text = (body.get("text") or "").strip() or tr("Monitor for BrandMeister: testiviesti {t}", t=time.strftime("%H:%M"))
         m = mon.cfg["messaging"]
         if not m.get("enabled"):
-            return web.json_response({"ok": False, "error": "Lähetys ei ole päällä"}, status=400)
+            return web.json_response({"ok": False, "error": tr("Lähetys ei ole päällä")}, status=400)
         if not m.get("recipients"):
-            return web.json_response({"ok": False, "error": "Vastaanottajia ei ole määritetty"}, status=400)
+            return web.json_response({"ok": False, "error": tr("Vastaanottajia ei ole määritetty")}, status=400)
         mon.hub.announce("", text, source="testi")
         return web.json_response({"ok": True})
 
@@ -835,7 +851,7 @@ def make_app(mon: Monitor) -> web.Application:
     async def station(request):
         q = (request.query.get("q") or "").strip().upper().split("-")[0]
         if not q:
-            return web.json_response({"ok": False, "error": "Anna kutsu tai DMR-ID"}, status=400)
+            return web.json_response({"ok": False, "error": tr("Anna kutsu tai DMR-ID")}, status=400)
         is_id = q.isdigit()
         out = {"ok": True, "q": q, "registry": [], "devices": [], "heard": [], "errors": []}
         call = q
@@ -848,12 +864,12 @@ def make_app(mon: Monitor) -> web.Application:
             if not is_id or call != q:
                 out["registry"] = out["registry"] or await mon.api.registry_by_call(call)
         except Exception as e:  # noqa: BLE001
-            out["errors"].append(f"Rekisteri: {friendly_error(e)}")
+            out["errors"].append(tr("Rekisteri: {e}", e=friendly_error(e)))
         try:
             if not call.isdigit():
                 out["devices"] = await mon.api.devices_by_call(call)
         except Exception as e:  # noqa: BLE001
-            out["errors"].append(f"Laitteet: {friendly_error(e)}")
+            out["errors"].append(tr("Laitteet: {e}", e=friendly_error(e)))
         ids = {int(r.get("ID")) for r in out["registry"] if str(r.get("ID", "")).isdigit()}
         if is_id:
             ids.add(int(q))
@@ -874,7 +890,7 @@ def make_app(mon: Monitor) -> web.Application:
             tg = request.query.get("tg")
             tg = int(tg) if tg else None
         except ValueError:
-            return web.json_response({"ok": False, "error": "Virheellinen parametri"}, status=400)
+            return web.json_response({"ok": False, "error": tr("Virheellinen parametri")}, status=400)
         hours = max(1, min(24 * 14, hours))
         return web.json_response({"ok": True, **mon.stats.compute(hours, tg)}, dumps=lambda o: json.dumps(o, default=str))
 
@@ -884,7 +900,7 @@ def make_app(mon: Monitor) -> web.Application:
         except ValueError:
             tg = 0
         if tg <= 0:
-            return web.json_response({"ok": False, "error": "Anna puheryhmä"}, status=400)
+            return web.json_response({"ok": False, "error": tr("Anna puheryhmä")}, status=400)
         hit = mon.stats.bm_cache.get(str(tg))
         if hit and time.time() - hit[0] < 300:
             users = hit[1]
@@ -904,7 +920,7 @@ def make_app(mon: Monitor) -> web.Application:
             b = await request.json()
             dev = int(b["id"])
             if dev not in mon.devmon.ids():
-                raise ValueError("Laite ei ole seurattavien listalla")
+                raise ValueError(tr("Laite ei ole seurattavien listalla"))
             act = b.get("action")
             slot = int(b.get("slot", 0))
             if act == "add":
@@ -918,7 +934,7 @@ def make_app(mon: Monitor) -> web.Application:
             elif act == "reset":
                 r = await mon.api.reset_connection(dev)
             else:
-                raise ValueError("Tuntematon toiminto")
+                raise ValueError(tr("Tuntematon toiminto"))
             await asyncio.sleep(1)
             mon.devmon.wake.set()
             return web.json_response({"ok": True, "result": r}, dumps=lambda o: json.dumps(o, default=str))
@@ -943,9 +959,19 @@ def make_app(mon: Monitor) -> web.Application:
     async def test_alert(_):
         mon.watcher.seq += 1
         mon.watcher.alerts.appendleft({"seq": mon.watcher.seq, "time": time.time(), "kind": "testi", "call": "TESTI",
-                                       "name": "Testihälytys", "id": 0, "tg": 91, "tg_name": mon.tg_name(91), "via": ""})
+                                       "name": tr("Testihälytys"), "id": 0, "tg": 91, "tg_name": mon.tg_name(91), "via": ""})
         mon.touch()
         return web.json_response({"ok": True})
+
+    async def update_check(_):
+        return web.json_response({"ok": True, "update": await mon.updater.check()})
+
+    async def update_install(_):
+        try:
+            await mon.updater.install()
+            return web.json_response({"ok": True})
+        except Exception as e:  # noqa: BLE001
+            return web.json_response({"ok": False, "error": friendly_error(e)}, status=400)
 
     async def ping(_):
         return web.json_response({"app": APP_ID, "version": __version__})
@@ -956,6 +982,8 @@ def make_app(mon: Monitor) -> web.Application:
         return web.json_response({"ok": True})
 
     app.router.add_get("/api/ping", ping)
+    app.router.add_post("/api/update/check", update_check)
+    app.router.add_post("/api/update/install", update_install)
     app.router.add_post("/api/shutdown", shutdown)
     app.router.add_get("/api/station", station)
     app.router.add_get("/api/stats", stats)
@@ -970,19 +998,19 @@ def make_app(mon: Monitor) -> web.Application:
             body = await request.json()
             m = mon.cfg["messaging"]
             if not m.get("login"):
-                raise ValueError("Aseta oma APRS-IS-tunnus (Syötteet ja viestit)")
+                raise ValueError(tr("Aseta oma APRS-IS-tunnus (Syötteet ja viestit)"))
             a = mon.hub.aprs
             if not a.connected:
-                raise ValueError("APRS-IS-yhteys ei ole auki")
+                raise ValueError(tr("APRS-IS-yhteys ei ole auki"))
             if a.verified is False:
-                raise ValueError("Passcode ei kelpaa – viestejä ei välitetä")
+                raise ValueError(tr("Passcode ei kelpaa – viestejä ei välitetä"))
             to = validate_call(str(body.get("to", "")))
             frm = validate_call(str(body.get("from") or m["login"]))
             if frm.split("-")[0] not in mon.hub.watch_bases():
-                raise ValueError("Lähettäjän pitää olla oma kutsusi tai seurattava kutsu")
+                raise ValueError(tr("Lähettäjän pitää olla oma kutsusi tai seurattava kutsu"))
             text = clean_text(str(body.get("text", "")), bool(m.get("ascii")))
             if not text:
-                raise ValueError("Kirjoita viesti")
+                raise ValueError(tr("Kirjoita viesti"))
             parts = split_message(text, 3)
             for part in parts:
                 a.send(to, part, source="vastaus", src=frm)
@@ -1003,15 +1031,27 @@ def make_app(mon: Monitor) -> web.Application:
     return app
 
 
-def free_port(preferred: int) -> int:
+def _can_bind(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if sys.platform != "win32":
+            # kuten aiohttp: suljetun yhteyden TIME_WAIT-tila ei estä samaa porttia
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            s.bind(("127.0.0.1", port))
+            return True
+        except OSError:
+            return False
+
+
+def free_port(preferred: int, wait: float = 0) -> int:
+    """Ensisijaisesti sama portti (selainvälilehti yhdistää siihen uudelleen); tarvittaessa odotetaan."""
+    deadline = time.time() + wait
+    while not _can_bind(preferred) and time.time() < deadline:
+        time.sleep(0.5)
     for port in range(preferred, preferred + 50):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(("127.0.0.1", port))
-                return port
-            except OSError:
-                continue
-    raise RuntimeError("Vapaata porttia ei löytynyt")
+        if _can_bind(port):
+            return port
+    raise RuntimeError(tr("Vapaata porttia ei löytynyt"))
 
 
 def running_instance(port: int) -> bool:
@@ -1030,13 +1070,18 @@ async def run(args):
     if not cfg_path.exists():
         mon.save_config()
     preferred = args.port or int(mon.cfg.get("port", 8765))
+    if args.wait_for_exit:   # päivityksen jälkeen: odota, että vanha versio on sulkeutunut
+        for _ in range(60):
+            if not running_instance(preferred):
+                break
+            await asyncio.sleep(0.5)
     if not args.demo and running_instance(preferred):
         url = f"http://127.0.0.1:{preferred}/"
         print(f"{APP_NAME} on jo käynnissä: {url}")
         if not args.no_browser:
             webbrowser.open(url)
         return
-    port = free_port(preferred)
+    port = free_port(preferred, wait=30 if args.wait_for_exit else 0)
 
     runner = web.AppRunner(make_app(mon))
     await runner.setup()
@@ -1053,12 +1098,20 @@ async def run(args):
     tasks = [asyncio.create_task(mon.broadcast_loop()), asyncio.create_task(mon.load_tg_names()),
              asyncio.create_task(mon.hub.run()), asyncio.create_task(mon.devmon.run()),
              asyncio.create_task(mon.services.run())]
+    if not args.demo:
+        tasks.append(asyncio.create_task(mon.updater.run()))
     tasks.append(asyncio.create_task(demo_loop(mon) if args.demo else bm_loop(mon)))
     try:
         await mon.shutdown_event.wait()
     finally:
         for t in tasks:
             t.cancel()
+        # avoimet selainyhteydet kiinni, muuten aiohttp odottaa niitä sulkiessaan jopa minuutin
+        for ws in list(mon.clients):
+            try:
+                await asyncio.wait_for(ws.close(code=1001, message=b"shutdown"), 2)
+            except Exception:  # noqa: BLE001
+                pass
         await runner.cleanup()
 
 
@@ -1068,6 +1121,7 @@ def main():
     ap.add_argument("--no-browser", action="store_true", help="älä avaa selainta automaattisesti")
     ap.add_argument("--config", help="asetustiedoston polku")
     ap.add_argument("--demo", action="store_true", help="keksitty testiliikenne, ei yhteyttä BM:ään")
+    ap.add_argument("--wait-for-exit", action="store_true", help=argparse.SUPPRESS)
     ap.add_argument("--diag", action="store_true", help="vianetsintä: näytä mitä BM lähettää (30 s)")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()

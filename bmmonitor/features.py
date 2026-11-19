@@ -9,6 +9,7 @@ import time
 from collections import deque
 from pathlib import Path
 
+from .i18n import tr
 from .bmapi import BMApi, BMApiError, default_slot, parse_bm_time
 
 log = logging.getLogger("bmmonitor.features")
@@ -37,12 +38,12 @@ def _hm(ts) -> str:
 def _ago(ts) -> str:
     s = max(0, int(time.time() - float(ts)))
     if s < 90:
-        return f"{s}s sitten"
+        return tr("{n}s sitten", n=s)
     if s < 5400:
-        return f"{s // 60}min sitten"
+        return tr("{n}min sitten", n=s // 60)
     if s < 172800:
-        return f"{s // 3600}h sitten"
-    return f"{s // 86400}pv sitten"
+        return tr("{n}h sitten", n=s // 3600)
+    return tr("{n}pv sitten", n=s // 86400)
 
 
 # --------------------------------------------------------------------------
@@ -457,7 +458,7 @@ class Commands:
         feeds = self.feed_cmds()
         if t in ("", "APUA", "HELP", "OHJE", "KOMENNOT"):
             extra = " ".join(sorted(feeds))
-            return f"Komennot: TG<nro>, KUKA <kutsu>, NYT{(', ' + extra) if extra else ''}"
+            return tr("Komennot: TG<nro>, KUKA <kutsu>, NYT{extra}", extra=(", " + extra) if extra else "")
         m = re.fullmatch(r"TG ?(\d{1,9})", t)
         if m:
             return self.tg_info(int(m.group(1)))
@@ -470,10 +471,10 @@ class Commands:
             f = feeds[t]
             st = self.mon.hub.feeds.status.get(f["url"], {})
             latest = st.get("latest")
-            return f"{f.get('name') or t}: {latest}" if latest else f"{t}: ei uutisia (syötettä ei vielä luettu)"
+            return f"{f.get('name') or t}: {latest}" if latest else tr("{t}: ei uutisia (syötettä ei vielä luettu)", t=t)
         if CALL_OR_ID.fullmatch(t) and not t.isdigit() and re.search(r"\d", t):
             return self.who_info(t)
-        return "Tuntematon komento. Laheta APUA"
+        return tr("Tuntematon komento. Laheta APUA")
 
     def tg_info(self, tg: int) -> str:
         h = self.mon.heard
@@ -481,13 +482,13 @@ class Commands:
         label = f"TG{tg}{(' ' + name) if name else ''}"
         a = h.active_by_tg.get(tg)
         if a and time.time() - float(a.get("start") or 0) < 300:
-            return f"{label}: NYT {a['call'] or a['id']} {a.get('name') or ''} ({a.get('via') or ''})".replace("  ", " ")
+            return f"{label}: {tr('NYT')} {a['call'] or a['id']} {a.get('name') or ''} ({a.get('via') or ''})".replace("  ", " ")
         last = h.last_by_tg.get(tg)
         s = self.mon.tg_stats.get(tg)
         if s and s.get("last") and (not last or float(s["last"]["start"]) >= float(last.get("start") or 0)):
             last = s["last"]
         if not last:
-            return f"{label}: ei liikennettä ohjelman käynnistyksen jälkeen"
+            return tr("{label}: ei liikennettä ohjelman käynnistyksen jälkeen", label=label)
         dur = last.get("dur") if last.get("dur") is not None else last.get("duration")
         return (f"{label}: {last.get('call') or last.get('id')} {last.get('name') or ''} {_hm(last.get('start'))} "
                 f"{int(dur or 0)}s ({last.get('via') or ''})").replace("  ", " ")
@@ -495,14 +496,14 @@ class Commands:
     def now_info(self) -> str:
         act = [(tg, s["active"]) for tg, s in self.mon.tg_stats.items() if s.get("active")]
         if not act:
-            return "Ei lahetyksia seuratuissa ryhmissa"
-        return "NYT: " + ", ".join(f"TG{tg} {a.get('call') or a.get('id')}" for tg, a in act[:5])
+            return tr("Ei lahetyksia seuratuissa ryhmissa")
+        return tr("NYT") + ": " + ", ".join(f"TG{tg} {a.get('call') or a.get('id')}" for tg, a in act[:5])
 
     def who_info(self, q: str) -> str:
         res = self.mon.heard.lookup(call="" if q.isdigit() else q, dmr_id=q if q.isdigit() else None)
         if not res:
-            return f"{q}: ei kuultu ohjelman kaynnistyksen jalkeen"
+            return tr("{q}: ei kuultu ohjelman kaynnistyksen jalkeen", q=q)
         e = res[0]
         where = f"TG{e['tg']}" if e.get("group") else f"-> {e.get('to_call')}"
-        state = "NYT" if e.get("active") else f"{_hm(e.get('start'))} ({_ago(e.get('start'))})"
+        state = tr("NYT") if e.get("active") else f"{_hm(e.get('start'))} ({_ago(e.get('start'))})"
         return f"{e.get('call') or e['id']} {e.get('name') or ''} {state} {where} via {e.get('via') or '?'}".replace("  ", " ")

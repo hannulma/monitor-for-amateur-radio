@@ -54,6 +54,14 @@ DMR radio via APRS.
   `Tie 101 Espoo, Kalevalantie: Liikennevalot, epäkunnossa` or
   `Keltainen liikennesää: lumi/räntä, to 14–pe 12 (30 %)`.
 
+- **English and Finnish** – choose the language in Settings. It covers the user interface, the program's own
+  alerts and the replies sent to your radio (radio commands work in both languages: `HELP`/`APUA`, `WHO`/`KUKA`,
+  `NOW`/`NYT`). FMI warnings and Digitraffic bulletins stay in Finnish, their source language.
+- **Automatic updates** – the app checks GitHub for a new version once a day (can be turned off). On Windows
+  (installer), macOS and Linux, **Update now** downloads the new version, verifies it against the release's
+  `SHA256SUMS.txt`, installs it and restarts the app; the browser tab reconnects by itself. Beta users are
+  offered new betas, stable users only stable releases.
+
 Several services use Finnish open data and are most useful in Finland; the BrandMeister features work worldwide.
 
 ![Services](docs/screenshot-services.png)
@@ -151,7 +159,8 @@ python -m bmmonitor --demo        # UI with fake traffic
 **Releasing:** bump `__version__` in `bmmonitor/__init__.py` and push to `main`. When the version has not been
 released yet, GitHub Actions builds the Windows installer, macOS disk
 image (universal2: Intel and Apple Silicon), the Linux binary and the Python package, creates the tag `v<version>` and publishes a release
-(versions like `0.8.0b1` are marked as pre-releases).
+(versions like `0.9.0b1` are marked as pre-releases). Installed apps pick the new version up through the
+built-in update check.
 
 ## Disclaimer
 

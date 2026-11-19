@@ -75,3 +75,30 @@ is shortened, and finally the precise place is omitted.
 console + Inno Setup installer from `installer/windows.iss`), `macos-15-intel` (universal2 `.app` → `.dmg`, built with the python.org universal2 Python and x86_64+arm64 wheels fused by `delocate-merge`),
 `ubuntu-22.04` (one-file binary), plus wheel/sdist; all artifacts and `SHA256SUMS.txt` are attached to a GitHub
 release. `.github/workflows/ci.yml` runs the test suite on all three operating systems.
+
+
+## Languages
+
+`bmmonitor/i18n.py` holds the program's own texts (errors, alerts, radio replies) with the Finnish text as the
+key: `tr("Virheellinen kutsu: {x}", x=c)`. The UI dictionary is `bmmonitor/static/i18n.js`; the page is written
+in Finnish and a `MutationObserver` translates every text node and `placeholder`/`title` attribute, so newly
+rendered parts are translated too. Sentences with variable parts use `T("… {n} …", {n})`. The tests check that
+placeholders match between the languages.
+
+## Updates
+
+`bmmonitor/updater.py` checks `api.github.com/repos/hannulma/monitor-for-brandmeister/releases` once a day
+(fallback: `releases.atom`, which has no API rate limit). Beta users get pre-releases, stable users only stable
+ones. Installation downloads the platform asset, verifies it against `SHA256SUMS.txt` and then:
+
+| Install kind | How it is updated |
+|---|---|
+| Windows installer (`unins000.exe` next to the exe) | runs the new setup with `/SILENT`; the `[Run]` entry with `skipifnotsilent` restarts the app |
+| macOS `.app` (writable parent folder) | mounts the dmg, a helper script waits for the app to exit, swaps the bundle with `ditto` (rolls back on failure) and reopens it |
+| Linux binary | a helper script swaps the binary and restarts it |
+| Windows portable / pip | download link or `pip install --upgrade <wheel URL>` |
+
+The restarted app gets `--wait-for-exit` and the original arguments, waits for the old instance to release the
+port and binds the same port, so the open browser tab reconnects and reloads itself when it sees a new version.
+Child processes are started without PyInstaller's `_PYI_*` variables (`PYINSTALLER_RESET_ENVIRONMENT=1`).
+`BMM_RELEASES_API` overrides the releases URL for testing.

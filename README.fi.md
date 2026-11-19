@@ -98,7 +98,17 @@ RSS-, Atom- ja JSON Feed -syötteet (esim. BrandMeisterin uutiset, SRAL): uuden 
 radioon. APRS-IS-yhteyden, vastaanottajien, komentojen ja kuittausten asetukset.
 
 ### Asetukset
-Seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, BrandMeister API-avain ja **Sulje ohjelma**.
+Seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, BrandMeister API-avain, **kieli**, **päivitykset** ja
+**Sulje ohjelma**.
+
+- **Kieli (suomi / English)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
+  Radiokomennot toimivat kummallakin kielellä (`APUA`/`HELP`, `KUKA`/`WHO`, `NYT`/`NOW`). Ilmatieteen laitoksen
+  varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).
+- **Päivitykset:** ohjelma tarkistaa GitHubista kerran päivässä, onko uusi versio saatavilla (voi kytkeä pois).
+  Windowsissa (asennusohjelmalla asennettu), macOS:ssä ja Linuxissa **Päivitä nyt** lataa uuden version,
+  tarkistaa sen julkaisun `SHA256SUMS.txt`-tarkistussummaa vasten, asentaa sen ja käynnistää ohjelman uudelleen –
+  selainvälilehti yhdistää itse. Beta-version käyttäjälle tarjotaan uudet betat, vakaan version käyttäjälle vain
+  vakaat versiot. Asennuksettomassa Windows-versiossa ja pip-asennuksessa näytetään latauslinkki tai komento.
 
 | Merkintä | Tarkoittaa |
 |---|---|

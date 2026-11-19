@@ -20,6 +20,7 @@ import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
+from .i18n import bearing, num, tr
 from .messaging import friendly_error, http_session
 
 log = logging.getLogger("bmmonitor.services")
@@ -52,7 +53,7 @@ DEFAULT_SERVICES = {
 def locator_to_latlon(loc: str) -> tuple[float, float]:
     loc = loc.strip().upper()
     if not re.fullmatch(r"[A-R]{2}\d{2}([A-X]{2}(\d{2})?)?", loc):
-        raise ValueError("Virheellinen lokaattori (esim. KP20LE)")
+        raise ValueError(tr("Virheellinen lokaattori (esim. KP20LE)"))
     lon = (ord(loc[0]) - 65) * 20 - 180
     lat = (ord(loc[1]) - 65) * 10 - 90
     lon += int(loc[2]) * 2
@@ -84,7 +85,7 @@ def parse_location(text: str) -> tuple[float, float]:
     if m:
         lat, lon = float(m.group(1).replace(",", ".")), float(m.group(2).replace(",", "."))
         if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-            raise ValueError("Koordinaatit eivät ole sallitulla alueella")
+            raise ValueError(tr("Koordinaatit eivät ole sallitulla alueella"))
         return lat, lon
     return locator_to_latlon(t)
 
@@ -102,8 +103,7 @@ def bearing_name(lat1, lon1, lat2, lon2) -> str:
     x = (math.cos(math.radians(lat1)) * math.sin(math.radians(lat2)) -
          math.sin(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.cos(math.radians(lon2 - lon1)))
     b = (math.degrees(math.atan2(y, x)) + 360) % 360
-    names = ["pohjoisessa", "koillisessa", "idässä", "kaakossa", "etelässä", "lounaassa", "lännessä", "luoteessa"]
-    return names[int((b + 22.5) // 45) % 8]
+    return bearing(int((b + 22.5) // 45))
 
 
 def point_in_polygon(lat, lon, poly: list[tuple[float, float]]) -> bool:
@@ -213,7 +213,7 @@ class Lightning(Service):
 
     async def check(self):
         if not self.loc:
-            raise ValueError("Aseta oma sijainti")
+            raise ValueError(tr("Aseta oma sijainti"))
         lat, lon = self.loc
         r = float(self.cfg.get("radius_km") or 30)
         dlat = r / 111.0 + 0.05
@@ -264,10 +264,11 @@ class Lightning(Service):
         self.last_alert = now
         self.last_alert_dist = nearest["km"]
         n15 = sum(1 for s in recent if now - s["time"] < 900)
-        kind = "maasalama" if nearest["ground"] else "salama"
-        txt = f"Salama {nearest['km']:.0f} km {nearest['dir']}, {n15} iskua/15 min"
-        self.alert(f"⚡ {kind.capitalize()} {nearest['km']:.0f} km {nearest['dir']}",
-                   f"{n15} iskua 15 min aikana {self.cfg.get('radius_km')} km säteellä", txt, "bad")
+        kind = tr("maasalama") if nearest["ground"] else tr("salama")
+        km = f"{nearest['km']:.0f}"
+        txt = tr("Salama {km} km {dir}, {n} iskua/15 min", km=km, dir=nearest["dir"], n=n15)
+        self.alert(tr("⚡ {kind} {km} km {dir}", kind=kind.capitalize(), km=km, dir=nearest["dir"]),
+                   tr("{n} iskua 15 min aikana {r} km säteellä", n=n15, r=self.cfg.get("radius_km")), txt, "bad")
 
 
 # --------------------------------------------------------------------------
@@ -404,7 +405,7 @@ class Warnings(Service):
 
     async def check(self):
         if not self.loc:
-            raise ValueError("Aseta oma sijainti")
+            raise ValueError(tr("Aseta oma sijainti"))
         lat, lon = self.loc
         items = parse_cap_feed(await fetch_text(self.FEED, 60))
         min_level = COLORS.get(self.cfg.get("min_color", "yellow"), 1)
@@ -490,25 +491,26 @@ class SpaceWeather(Service):
             return
         if kp >= thr and not self.storm:
             self.storm = True
-            self.alert(f"Geomagneettinen myrsky: Kp {kp:.1f}", "Revontulikelit VHF:llä mahdollisia, HF-kelit voivat heiketä.",
-                       f"Avaruussaa: Kp {kp:.1f} - myrsky, revontulikelit mahdollisia", "warn")
+            self.alert(tr("Geomagneettinen myrsky: Kp {kp}", kp=num(kp)),
+                       tr("Revontulikelit VHF:llä mahdollisia, HF-kelit voivat heiketä."),
+                       tr("Avaruussaa: Kp {kp} - myrsky, revontulikelit mahdollisia", kp=f"{kp:.1f}"), "warn")
         elif kp < thr - 1:
             self.storm = False
         for x in reversed(new):
             if x["kind"] == "flare" and self.cfg.get("flares", True):
-                self.alert(x["title"], "HF-yhteydet voivat katketa auringon puoleisella maapallolla.", x["title"], "warn")
+                self.alert(x["title"], tr("HF-yhteydet voivat katketa auringon puoleisella maapallolla."), x["title"], "warn")
             elif x["kind"] == "forecast" and self.cfg.get("forecasts", True):
-                self.alert(x["title"], "NOAA:n ennuste", x["title"], "info")
+                self.alert(x["title"], tr("NOAA:n ennuste"), x["title"], "info")
 
     @staticmethod
     def describe(m: str, thr: float):
         f = re.search(r"X-ray (?:Flux exceeded|Event exceeded) (M5|X\d+)", m, re.I)
         if f:
-            return (f"Auringonpurkaus: röntgenvuo ylitti {f.group(1).upper()}", "flare")
+            return (tr("Auringonpurkaus: röntgenvuo ylitti {c}", c=f.group(1).upper()), "flare")
         k = re.search(r"WARNING: Geomagnetic K-index of (\d) expected", m)
         if k and int(k.group(1)) >= thr:
             valid = re.search(r"Valid To: \d{4} (\w{3} \d+ \d{4}) UTC", m)
-            return (f"Ennuste: K-indeksi {k.group(1)} odotettavissa" + (f" (voimassa {valid.group(1)} UTC asti)" if valid else ""),
+            return (tr("Ennuste: K-indeksi {k} odotettavissa", k=k.group(1)) + (tr(" (voimassa {t} UTC asti)", t=valid.group(1)) if valid else ""),
                     "forecast")
         return None
 
@@ -592,7 +594,7 @@ class Aurora(Service):
 
     async def check(self):
         if not self.loc:
-            raise ValueError("Aseta oma sijainti")
+            raise ValueError(tr("Aseta oma sijainti"))
         lat, lon = self.loc
         start = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 3900))
         xml = await fetch_text(f"{self.WFS}?service=WFS&version=2.0.0&request=getFeature"
@@ -617,7 +619,7 @@ class Aurora(Service):
             sts.append({"name": mag_name(la, lo), "lat": la, "lon": lo, "range": round(max(recent) - min(recent)),
                         "km": round(distance_km(lat, lon, la, lo))})
         if not sts:
-            raise ValueError("Magnetometridataa ei saatu")
+            raise ValueError(tr("Magnetometridataa ei saatu"))
         self.stations = sorted(sts, key=lambda s: -s["lat"])
         near = min(sts, key=lambda s: s["km"])
         thr = float(self.cfg.get("threshold_nt") or 100)
@@ -644,11 +646,12 @@ class Aurora(Service):
             return
         if lvl > self.level and visible_ok:
             self.level = lvl
-            word = {1: "mahdollisia", 2: "todennäköisiä", 3: "voimakkaita"}[lvl]
-            cl = f", pilvisyys {int(clouds)}/8" if clouds is not None else ""
-            txt = f"Revontulet {word}: {near['name']} {rng} nT/h{cl}"
-            self.alert(f"🌌 {txt}", f"Magneettinen aktiivisuus lähimmällä magnetometrillä ({near['name']}, {near['km']} km). "
-                       f"VHF-revontulikelit mahdollisia.", txt, "warn" if lvl < 3 else "bad")
+            word = tr({1: "mahdollisia", 2: "todennäköisiä", 3: "voimakkaita"}[lvl])
+            cl = tr(", pilvisyys {c}/8", c=int(clouds)) if clouds is not None else ""
+            txt = tr("Revontulet {word}: {name} {rng} nT/h{cl}", word=word, name=near["name"], rng=rng, cl=cl)
+            self.alert(f"🌌 {txt}", tr("Magneettinen aktiivisuus lähimmällä magnetometrillä ({name}, {km} km). "
+                                      "VHF-revontulikelit mahdollisia.", name=near["name"], km=near["km"]),
+                       txt, "warn" if lvl < 3 else "bad")
 
 
 # --------------------------------------------------------------------------
@@ -669,13 +672,13 @@ class Radiation(Service):
     async def check(self):
         radius = float(self.cfg.get("radius_km") or 0)
         if radius > 0 and not self.loc:
-            raise ValueError("Aseta oma sijainti tai valitse koko Suomi (säde 0)")
+            raise ValueError(tr("Aseta oma sijainti tai valitse koko Suomi (säde 0)"))
         xml = await fetch_text(self.URL, 60)
         names = re.findall(r'locationcode/name">([^<]+)<', xml)
         pos = re.search(r"<gmlcov:positions>(.*?)</gmlcov:positions>", xml, re.S)
         vals = re.search(r"<gml:doubleOrNilReasonTupleList>(.*?)</gml:doubleOrNilReasonTupleList>", xml, re.S)
         if not (pos and vals):
-            raise ValueError("Säteilydataa ei saatu")
+            raise ValueError(tr("Säteilydataa ei saatu"))
         rows = [r.split() for r in pos.group(1).strip().splitlines()]
         vrows = [r.split() for r in vals.group(1).strip().splitlines()]
         sts = []
@@ -693,7 +696,7 @@ class Radiation(Service):
                 st["km"] = round(distance_km(self.loc[0], self.loc[1], la, lo))
             sts.append(st)
         if not sts:
-            raise ValueError("Säteilydataa ei saatu")
+            raise ValueError(tr("Säteilydataa ei saatu"))
         area = [s for s in sts if radius <= 0 or s.get("km", 1e9) <= radius]
         self.stations = sorted(area, key=lambda s: s.get("km", 0))[:8]
         fin_max = max(sts, key=lambda s: s["dr"])
@@ -715,11 +718,12 @@ class Radiation(Service):
         for s in new:
             self.alerted[s["name"]] = time.time()
         top = max(new, key=lambda s: s["dr"])
-        more = f" (+{len(new) - 1} asemaa)" if len(new) > 1 else ""
+        more = tr(" (+{n} asemaa)", n=len(new) - 1) if len(new) > 1 else ""
         dist = f", {top['km']} km" if "km" in top else ""
-        txt = f"Säteily koholla: {top['name']} {top['dr']:.2f} µSv/h{more}".replace(".", ",", 1)
-        self.alert(f"☢ {txt}", f"Raja {thr:.2f} µSv/h{dist}. Normaali taso Suomessa n. 0,05–0,3 µSv/h. "
-                   f"Tarkista tilanne STUK:n sivuilta.", txt.replace("µSv/h", "uSv/h"), "bad")
+        txt = tr("Säteily koholla: {name} {dr} µSv/h{more}", name=top["name"], dr=num(top["dr"], 2), more=more)
+        self.alert(f"☢ {txt}", tr("Raja {thr} µSv/h{dist}. Normaali taso Suomessa n. 0,05–0,3 µSv/h. "
+                                 "Tarkista tilanne STUK:n sivuilta.", thr=num(thr, 2), dist=dist),
+                   txt.replace("µSv/h", "uSv/h"), "bad")
 
 
 # --------------------------------------------------------------------------
@@ -750,7 +754,7 @@ class Traffic(Service):
         provinces = set(self.cfg.get("provinces") or [])
         roads = {int(r) for r in self.cfg.get("roads") or []}
         if not (center or provinces or roads):
-            raise ValueError("Valitse sijainti, maakunta tai tienumero")
+            raise ValueError(tr("Valitse sijainti, maakunta tai tienumero"))
         feats = []
         for t in types:
             d = await fetch_json(f"{self.API}?inactiveHours=0&includeAreaGeometry=false&situationType={t}",
@@ -774,7 +778,7 @@ class Traffic(Service):
             if prov & provinces:
                 why.append(", ".join(sorted(prov & provinces)))
             if rds & roads:
-                why.append("tie " + ", ".join(str(r) for r in sorted(rds & roads)))
+                why.append(tr("tie {roads}", roads=", ".join(str(r) for r in sorted(rds & roads))))
             if not why:
                 continue
             feats_txt = ", ".join(x.get("name", "") for x in ann.get("features", []) if x.get("name"))
@@ -986,7 +990,7 @@ class ServiceHub:
         w = self.mon.watcher
         w.seq += 1
         w.alerts.appendleft({"seq": w.seq, "time": time.time(), "kind": "palvelu", "service": service,
-                             "service_title": self.services[service].title, "title": title, "body": body,
+                             "service_title": tr(self.services[service].title), "title": title, "body": body,
                              "level": level, "call": "", "tg": None, "via": ""})
         if sms:
             self.mon.hub.announce("", sms, source=service)
@@ -1013,7 +1017,7 @@ class ServiceHub:
         out["aurora"] = {**A.status, "stations": A.stations}
         out["radiation"] = {**R.status, "stations": R.stations}
         out["provinces"] = PROVINCES
-        out["traffic_types"] = TRAFFIC_TYPES
+        out["traffic_types"] = {k: tr(v) for k, v in TRAFFIC_TYPES.items()}
         return out
 
     async def run(self):
@@ -1078,7 +1082,7 @@ def normalize_services(new: dict, old: dict) -> tuple[dict, set[str]]:
             if not x:
                 continue
             if not x.isdigit():
-                raise ValueError(f"Tienumeron pitää olla numero: {x}")
+                raise ValueError(tr("Tienumeron pitää olla numero: {x}", x=x))
             roads.append(int(x))
         out["traffic"]["roads"] = roads
     if "types" in tr:
@@ -1099,5 +1103,5 @@ def normalize_services(new: dict, old: dict) -> tuple[dict, set[str]]:
         if out[sec].get("enabled") and out["location"].get("lat") is None and not (
                 sec == "traffic" and (not out["traffic"].get("use_location") and out["traffic"].get("center")
                                       or out["traffic"]["provinces"] or out["traffic"]["roads"])):
-            raise ValueError("Aseta ensin oma sijainti (koordinaatit tai lokaattori)")
+            raise ValueError(tr("Aseta ensin oma sijainti (koordinaatit tai lokaattori)"))
     return out, changed

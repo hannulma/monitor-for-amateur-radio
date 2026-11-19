@@ -132,6 +132,9 @@
   .feedrow input.fname { width: 110px; }
   .feedrow input.furl { flex: 1; min-width: 200px; }
   .ok { color: var(--live); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .updpill { background: rgba(61,220,132,.15); color: var(--live); border: 1px solid rgba(61,220,132,.4); }
+  .prog { height: 6px; background: #22303d; border-radius: 3px; overflow: hidden; max-width: 320px; margin-top: 6px; }
+  .prog div { height: 100%; background: var(--live); transition: width .3s; }
   .note { background: rgba(79,179,255,.08); border: 1px solid rgba(79,179,255,.25); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 13px; line-height: 1.5; margin-bottom: 6px; }
   @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
 </style>
@@ -142,6 +145,7 @@
   <div class="status"><span id="dot" class="dot"></span><span id="statusText">Yhdistetään…</span></div>
   <div class="spacer"></div>
   <span class="muted" id="watching"></span>
+  <span id="updPill" class="pill updpill" style="display:none; cursor:pointer"></span>
   <span id="aprsBadge" class="muted"></span>
 </header>
 <nav class="tabs" id="tabs">
@@ -197,6 +201,19 @@
       <div><button id="btnKeySave">Tallenna avain</button> <button id="btnKeyDel">Poista avain</button> <span id="keyState" class="muted"></span></div>
     </div>
     <div class="paths" id="paths"></div>
+    <h3>Kieli</h3>
+    <div class="row">
+      <div><label for="langSel">Käyttöliittymän kieli</label>
+        <select id="langSel" data-noi18n><option value="fi">Suomi</option><option value="en">English</option></select></div>
+      <div class="hint" style="max-width:560px">Kieli koskee myös ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
+        Ilmatieteen laitoksen varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).</div>
+    </div>
+    <h3>Versio ja päivitykset</h3>
+    <div id="updBox"></div>
+    <div class="row">
+      <div><label><input id="updAuto" type="checkbox"> Tarkista päivitykset automaattisesti (kerran päivässä)</label></div>
+      <div><button id="btnUpdCheck">Tarkista nyt</button></div>
+    </div>
     <h3>Ohjelma</h3>
     <div class="row"><div><button id="btnQuit">Sulje ohjelma</button></div>
       <div class="hint" style="max-width:520px">Sulkee taustalla toimivan ohjelman. Ohjelman voi avata uudelleen käynnistämällä sen; jos se on jo käynnissä,
@@ -526,6 +543,7 @@
   <a id="pExt" href="#" target="_blank" rel="noopener">Hoseline ↗</a>
   <button id="dockClose">Lopeta</button>
 </div>
+<script src="/static/i18n.js"></script>
 <script src="/static/player.js"></script>
 
 <script>
@@ -543,7 +561,7 @@ function renderPlayer() {
   const on = player.groups.size > 0;
   $("dock").classList.toggle("open", on); document.body.classList.toggle("docked", on);
   if (!on) return;
-  $("pChips").innerHTML = [...player.groups].map(tg => `<span class="chip"><b>TG ${tg}</b> <span class="muted">${esc(tgLabel(tg))}</span><button data-leave="${tg}" title="Lopeta TG ${tg}">×</button></span>`).join(" ");
+  $("pChips").innerHTML = [...player.groups].map(tg => `<span class="chip"><b>TG ${tg}</b> <span class="muted">${esc(tgLabel(tg))}</span><button data-leave="${tg}" title="${esc(T("Lopeta TG {tg}", {tg}))}">×</button></span>`).join(" ");
   $("pExt").href = "https://hose.brandmeister.network/?subscribe=" + [...player.groups].join(",");
   const st = player.state;
   $("pState").textContent = st === "on" ? "KUUNTELU" : st === "connecting" ? "YHDISTETÄÄN" : "VIRHE";
@@ -573,16 +591,16 @@ const now = () => Date.now() / 1000 + offset;
 function fmtTime(ts) {
   if (!ts) return "";
   const d = new Date(ts * 1000), t = new Date();
-  const hm = d.toLocaleTimeString("fi-FI", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
-  return d.toDateString() === t.toDateString() ? hm : d.toLocaleDateString("fi-FI") + " " + hm;
+  const hm = d.toLocaleTimeString(LOC(), {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+  return d.toDateString() === t.toDateString() ? hm : d.toLocaleDateString(LOC()) + " " + hm;
 }
 function ago(ts) {
   if (!ts) return "";
   let s = Math.max(0, Math.round(now() - ts));
-  if (s < 60) return s + " s sitten";
-  if (s < 3600) return Math.floor(s / 60) + " min sitten";
-  if (s < 86400) return Math.floor(s / 3600) + " h " + Math.floor((s % 3600) / 60) + " min sitten";
-  return Math.floor(s / 86400) + " pv sitten";
+  if (s < 60) return T("{n} s sitten", {n: s});
+  if (s < 3600) return T("{n} min sitten", {n: Math.floor(s / 60)});
+  if (s < 86400) return T("{h} h {m} min sitten", {h: Math.floor(s / 3600), m: Math.floor((s % 3600) / 60)});
+  return T("{n} pv sitten", {n: Math.floor(s / 86400)});
 }
 function dur(sec) {
   if (sec == null) return "";
@@ -603,9 +621,10 @@ function render() {
   const st = S.status;
   $("dot").className = "dot" + (st.connected ? " ok" : "");
   $("statusText").textContent = (st.demo ? "DEMO – " : "") + (st.connected
-      ? `Yhdistetty · ${st.events.toLocaleString("fi-FI")} tapahtumaa` + (st.last_event ? ` · viimeisin ${ago(st.last_event)}` : "")
-      : "Ei yhteyttä" + (st.error ? ` (${st.error})` : ""));
-  $("watching").textContent = "Seurataan: " + (S.config.talkgroups.join(", ") || "–");
+      ? T("Yhdistetty · {n} tapahtumaa", {n: st.events.toLocaleString(LOC())}) + (st.last_event ? T(" · viimeisin {ago}", {ago: ago(st.last_event)}) : "")
+      : T("Ei yhteyttä") + (st.error ? ` (${st.error})` : ""));
+  $("watching").textContent = T("Seurataan: {list}", {list: S.config.talkgroups.join(", ") || "–"});
+  renderUpdate();
 
   // Puheryhmät
   const rows = [...S.talkgroups].sort((a, b) => {
@@ -621,7 +640,7 @@ function render() {
     const p = a || l;
     return `<tr class="${a ? "live" : ""}">
       <td class="tg">${r.tg}${r.pattern && r.pattern !== String(r.tg) ? ` <span class="pill">${esc(r.pattern)}</span>` : ""}</td>
-      <td>${r.tg > 90 ? `<button class="listen${player.isOn(r.tg) ? " on" : ""}" data-tg="${r.tg}" title="${player.isOn(r.tg) ? "Lopeta kuuntelu" : "Kuuntele TG " + r.tg}">${player.isOn(r.tg) ? ICON_STOP : ICON_PLAY}</button>` : ""}</td>
+      <td>${r.tg > 90 ? `<button class="listen${player.isOn(r.tg) ? " on" : ""}" data-tg="${r.tg}" title="${player.isOn(r.tg) ? "Lopeta kuuntelu" : T("Kuuntele TG {tg}", {tg: r.tg})}">${player.isOn(r.tg) ? ICON_STOP : ICON_PLAY}</button>` : ""}</td>
       <td>${esc(r.name)}</td>
       <td>${state}</td>
       <td>${p ? fmtTime(a ? a.start : l.stop) : ""}</td>
@@ -645,8 +664,8 @@ function render() {
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; sel.value = cur; }
   const minDur = Number(S.config.min_duration || 0);
   $("callSkipNote").style.display = minDur > 0 ? "" : "none";
-  if (minDur > 0) $("callSkipNote").innerHTML = `Alle ${minDur} s puhelut ohitetaan asetusten mukaan` +
-    ` (${(S.status.skipped_short || 0).toLocaleString("fi-FI")} ohitettu). <button id="btnNoSkip">Näytä kaikki puhelut</button>`;
+  if (minDur > 0) $("callSkipNote").innerHTML = esc(T("Alle {n} s puhelut ohitetaan asetusten mukaan ({k} ohitettu).",
+    {n: minDur, k: (S.status.skipped_short || 0).toLocaleString(LOC())})) + ` <button id="btnNoSkip">Näytä kaikki puhelut</button>`;
   const limit = Number(S.config.calls_limit || 15);
   if (document.activeElement !== $("callLimit")) $("callLimit").value = String(limit);
   const calls = S.calls.filter(c => !sel.value || String(c.tg) === sel.value).slice(0, limit);
@@ -668,13 +687,13 @@ function renderMsg() {
   if (a.enabled) badge = a.connected && a.verified !== false ? `<span class="ok">● APRS-IS</span>` : `<span class="bad">● APRS-IS</span>`;
   $("aprsBadge").innerHTML = badge;
   $("aprsStatus").innerHTML = !a.enabled ? `<span class="muted">Lähetys ei ole päällä.</span>` :
-    a.connected ? `<span class="${a.verified === false ? "bad" : "ok"}">APRS-IS yhdistetty${a.server ? " (" + esc(a.server) + ")" : ""}${a.verified === true ? ", tunnus vahvistettu" : ""}</span>${a.error ? ` <span class="bad">${esc(a.error)}</span>` : ""}` :
-    `<span class="bad">APRS-IS ei yhteyttä${a.error ? ": " + esc(a.error) : ""}</span>`;
-  if (a.passcode_auto != null) $("mPassHint").textContent = "tyhjä = " + a.passcode_auto + " (laskettu)";
+    a.connected ? `<span class="${a.verified === false ? "bad" : "ok"}">${T("APRS-IS yhdistetty")}${a.server ? " (" + esc(a.server) + ")" : ""}${a.verified === true ? T(", tunnus vahvistettu") : ""}</span>${a.error ? ` <span class="bad">${esc(a.error)}</span>` : ""}` :
+    `<span class="bad">${T("APRS-IS ei yhteyttä")}${a.error ? ": " + esc(a.error) : ""}</span>`;
+  if (a.passcode_auto != null) $("mPassHint").textContent = T("tyhjä = {n} (laskettu)", {n: a.passcode_auto});
   $("feedStatus").innerHTML = (cfg.feeds || []).map(f => {
     const st = M.feeds[f.url] || {};
     const state = !f.enabled ? `<span class="muted">pois päältä</span>` : st.error ? `<span class="bad">${esc(st.error)}</span>` :
-      st.checked ? `<span class="ok">OK · ${st.count} uutista</span>` : `<span class="muted">odottaa</span>`;
+      st.checked ? `<span class="ok">${T("OK · {n} uutista", {n: st.count})}</span>` : `<span class="muted">odottaa</span>`;
     return `<tr><td><b>${esc(f.name || st.title || "")}</b> <span class="muted">${esc(f.url)}</span></td><td>${st.checked ? ago(st.checked) : ""}</td><td class="wrap">${esc(st.latest || "")}</td><td>${state}</td></tr>`;
   }).join("");
   $("msgLogEmpty").style.display = M.log.length ? "none" : "";
@@ -682,7 +701,7 @@ function renderMsg() {
     <td>${fmtTime(m.time)}</td><td>${m.dir === "in" ? "↓ saapunut" : "↑ lähtevä"}</td>
     <td class="call">${esc(m.dir === "in" ? m.from + " → " + m.to : m.to)}</td>
     <td class="wrap">${esc(m.text)}</td>
-    <td class="${STATUS_CLASS[m.status] || "bad"}">${esc(m.status)}${m.tries > 1 ? ` (${m.tries}×)` : ""}</td></tr>`).join("");
+    <td class="${STATUS_CLASS[m.status] || "bad"}">${esc(T(m.status))}${m.tries > 1 ? ` (${m.tries}×)` : ""}</td></tr>`).join("");
 }
 
 function feedRow(f) {
@@ -697,7 +716,7 @@ function feedRow(f) {
   d.querySelector(".fprev").onclick = async () => {
     const url = d.querySelector(".furl").value.trim();
     const r = await fetch("/api/feeds/preview?url=" + encodeURIComponent(url)); const j = await r.json();
-    alertBox(j.ok ? `${j.title}\n\n` + j.items.map(i => "• " + i.title).join("\n") : "Virhe: " + j.error);
+    alertBox(j.ok ? `${j.title}\n\n` + j.items.map(i => "• " + i.title).join("\n") : T("Virhe: {e}", {e: j.error}));
   };
   return d;
 }
@@ -726,27 +745,73 @@ function fillSettings() {
   $("dataFilter").value = S.config.data_filter;
   $("minDur").value = S.config.min_duration;
   $("logCsv").checked = !!S.config.log_csv;
-  $("verInfo").textContent = "Versio " + S.version + ".";
+  $("verInfo").textContent = "";
+  $("langSel").value = LANG; $("updAuto").checked = S.config.update_check !== false;
   $("keyState").textContent = S.config.bm_api_key ? "Avain tallennettu" : "Ei avainta";
   $("apiKey").value = "";
   const p = S.paths;
-  $("paths").innerHTML = `Asetukset: ${esc(p.config)}<br>Puheluloki: ${esc(p.calls_csv)}<br>SMS/data-loki: ${esc(p.data_csv)}<br>Datan raakatapahtumat: ${esc(p.raw)}`;
+  $("paths").innerHTML = [["Asetukset", p.config], ["Puheluloki", p.calls_csv], ["SMS/data-loki", p.data_csv], ["Datan raakatapahtumat", p.raw]]
+    .map(([k, v]) => `${esc(T(k))}: ${esc(v)}`).join("<br>");
 }
 
-let firstSnapshot = true, quitting = false;
+// ---------------- kieli ja päivitykset ----------------
+function initLang() {
+  let l = S.config.language;
+  if (!l) { l = (navigator.language || "").toLowerCase().startsWith("fi") ? "fi" : "en"; saveCfg({language: l}); }
+  setLang(l);
+}
+const UPD_KIND = {"windows-setup": "Windows (asennettu)", "windows-portable": "Windows (ilman asennusta)", macos: "macOS", linux: "Linux", pip: "Python (pip)"};
+function renderUpdate() {
+  const u = S.update; if (!u) return;
+  $("updPill").style.display = u.available ? "" : "none";
+  if (u.available) $("updPill").textContent = T("Päivitys {v} saatavilla", {v: u.latest});
+  if (TAB !== "asetukset") return;
+  let h = `<div>${esc(T("Asennettu versio: {v}", {v: u.current}))} <span class="muted">· ${esc(T(UPD_KIND[u.kind] || u.kind))}</span></div>`;
+  if (u.busy) {
+    const msg = {download: T("Ladataan päivitystä…"), install: T("Asennetaan…"), restart: T("Käynnistetään uudelleen…")}[u.message] || "…";
+    const pct = Math.round((u.progress || 0) * 100);
+    h += `<div class="note" style="margin-top:8px">${esc(msg)}${u.message === "download" ? " " + pct + " %" : ""}<div class="prog"><div style="width:${pct}%"></div></div></div>`;
+  } else if (u.available) {
+    h += `<div class="note" style="margin-top:8px"><b>${esc(T("Uusi versio {v} on saatavilla.", {v: u.latest}))}</b>
+      <a href="${esc(u.url)}" target="_blank" rel="noopener">${esc(T("Mitä uutta"))} ↗</a><div style="margin-top:8px">`;
+    if (u.auto) {
+      h += `<button class="primary" id="btnUpdInstall">${esc(T("Päivitä nyt"))}</button>
+        <div class="hint">${esc(T("Uusi versio ladataan, sen tarkistussumma tarkistetaan ja ohjelma käynnistyy uudelleen. Tämä sivu yhdistää automaattisesti."))}</div>`;
+    } else if (u.kind === "pip" && u.asset) {
+      h += `<div class="hint">${esc(T("Päivitä komennolla:"))}</div><code style="user-select:all">pip install --upgrade ${esc(u.asset.url)}</code>`;
+    } else if (u.asset) {
+      const hint = u.kind === "windows-portable" ? "Pura zip-tiedosto ja korvaa vanha ohjelmatiedosto, kun ohjelma on suljettu."
+        : u.kind === "macos" ? "Sulje ohjelma, avaa levykuva ja vedä ohjelma Ohjelmat-kansioon (Korvaa)." : "Korvaa vanha ohjelmatiedosto uudella, kun ohjelma on suljettu.";
+      h += `<a href="${esc(u.asset.url)}"><button class="primary">${esc(T("Lataa {name}", {name: u.asset.name}))}</button></a><div class="hint">${esc(T(hint))}</div>`;
+    } else {
+      h += `<a href="${esc(u.url)}" target="_blank" rel="noopener">${esc(T("Avaa julkaisusivu"))} ↗</a>`;
+    }
+    h += `</div></div>`;
+  } else if (u.checked && !u.error) {
+    h += `<div class="ok" style="margin-top:6px">${esc(T("Ohjelma on ajan tasalla (tarkistettu {ago}).", {ago: ago(u.checked)}))}</div>`;
+  } else if (!u.checked) {
+    h += `<div class="muted" style="margin-top:6px">${esc(T("Päivityksiä ei ole vielä tarkistettu."))}</div>`;
+  }
+  if (u.error && !u.busy) h += `<div class="bad" style="margin-top:6px">${esc(u.error)}</div>`;
+  if ($("updBox").dataset.html !== h) { $("updBox").innerHTML = h; $("updBox").dataset.html = h; }
+}
+let firstSnapshot = true, quitting = false, bootVersion = null;
 function connect() {
   const ws = new WebSocket(`ws://${location.host}/ws`);
   ws.onmessage = ev => {
     S = JSON.parse(ev.data);
     offset = S.now - Date.now() / 1000;
-    if (firstSnapshot) { firstSnapshot = false; seenAlerts = lastNotified = maxAlertSeq(); showTab(TAB); }
+    if (bootVersion && S.version !== bootVersion) { location.reload(); return; }   // päivitetty versio -> uusi sivu
+    bootVersion = bootVersion || S.version;
+    if (firstSnapshot) { firstSnapshot = false; initLang(); seenAlerts = lastNotified = maxAlertSeq(); showTab(TAB); }
     handleAlerts();
     render();
   };
   ws.onclose = () => {
     if (quitting) { $("dot").className = "dot"; $("statusText").textContent = "Ohjelma on suljettu. Voit sulkea tämän välilehden."; return; }
     $("dot").className = "dot";
-    $("statusText").textContent = "Sovellus ei vastaa – onko se suljettu? Yritetään uudelleen…";
+    $("statusText").textContent = S && S.update && S.update.busy ? T("Päivitetään – ohjelma käynnistyy uudelleen…")
+      : T("Sovellus ei vastaa – onko se suljettu? Yritetään uudelleen…");
     setTimeout(connect, 2000);
   };
 }
@@ -789,10 +854,25 @@ $("btnTest").onclick = async () => {
 $("tgBody").addEventListener("pointerdown", e => { const b = e.target.closest(".listen"); if (b) listen(Number(b.dataset.tg)); });
 $("dockClose").onclick = () => listen(null);
 $("btnQuit").onclick = async () => {
-  if (!confirm("Suljetaanko Monitor for BrandMeister? Seuranta ja hälytykset loppuvat, kunnes käynnistät ohjelman uudelleen.")) return;
+  if (!confirm(T("Suljetaanko Monitor for BrandMeister? Seuranta ja hälytykset loppuvat, kunnes käynnistät ohjelman uudelleen."))) return;
   quitting = true; await fetch("/api/shutdown", {method: "POST"});
 };
 $("btnClear").onclick = () => fetch("/api/clear", {method: "POST"});
+$("langSel").onchange = async e => {
+  const l = e.target.value; setLang(l);
+  const j = await saveCfg({language: l}); if (j.ok) S.config = j.config;
+  render(); showTab(TAB);
+};
+$("updAuto").onchange = e => saveCfg({update_check: e.target.checked});
+$("btnUpdCheck").onclick = async () => { $("btnUpdCheck").disabled = true; await api("/api/update/check", {}); $("btnUpdCheck").disabled = false; };
+$("updPill").onclick = () => showTab("asetukset");
+$("updBox").addEventListener("click", async e => {
+  if (e.target.id !== "btnUpdInstall") return;
+  if (!confirm(T("Päivitetäänkö ohjelma versioon {v}? Ohjelma käynnistyy uudelleen.", {v: S.update.latest}))) return;
+  e.target.disabled = true;
+  await api("/api/update/install", {});
+});
+
 $("callFilter").onchange = render;
 $("callSkipNote").addEventListener("click", async e => {
   if (e.target.id !== "btnNoSkip") return;
@@ -813,7 +893,7 @@ async function api(path, body) {
 }
 const saveCfg = obj => api("/api/config", obj);
 function fmtShort(ts) { if (!ts) return ""; const d = new Date(ts * 1000), t = new Date();
-  return d.toDateString() === t.toDateString() ? d.toLocaleTimeString("fi-FI", {hour: "2-digit", minute: "2-digit"}) : d.toLocaleDateString("fi-FI", {day: "numeric", month: "numeric"}) + " " + d.toLocaleTimeString("fi-FI", {hour: "2-digit", minute: "2-digit"}); }
+  return d.toDateString() === t.toDateString() ? d.toLocaleTimeString(LOC(), {hour: "2-digit", minute: "2-digit"}) : d.toLocaleDateString(LOC(), {day: "numeric", month: "numeric"}) + " " + d.toLocaleTimeString(LOC(), {hour: "2-digit", minute: "2-digit"}); }
 function where(x) { return x.tg ? `TG ${x.tg}${x.tg_name ? " " + esc(x.tg_name) : ""}` : (x.to ? "→ " + esc(x.to) : ""); }
 $("btnKeySave").onclick = async () => { const k = $("apiKey").value.trim(); if (!k) return; const j = await saveCfg({bm_api_key: k}); $("keyState").textContent = j.ok ? "Avain tallennettu" : j.error; $("apiKey").value = ""; };
 $("btnKeyDel").onclick = async () => { const j = await saveCfg({bm_api_key: ""}); $("keyState").textContent = j.ok ? "Ei avainta" : j.error; };
@@ -876,9 +956,9 @@ function updateAlertBadge() {
 }
 function alertText(a) {
   if (a.kind === "palvelu") return [a.title, a.body || ""];
-  if (a.kind === "laite_pois") return [`Laite ${a.call} pois verkosta`, `ID ${a.id}${a.via ? " · " + a.via : ""}`];
-  if (a.kind === "laite_ok") return [`Laite ${a.call} palasi verkkoon`, `ID ${a.id}`];
-  return [`${a.call}${a.name ? " (" + a.name + ")" : ""} aktiivinen`, `${a.tg ? "TG " + a.tg + (a.tg_name ? " " + a.tg_name : "") : "→ " + (a.to || "")}${a.via ? " · " + a.via : ""}`];
+  if (a.kind === "laite_pois") return [T("Laite {call} pois verkosta", {call: a.call}), `ID ${a.id}${a.via ? " · " + a.via : ""}`];
+  if (a.kind === "laite_ok") return [T("Laite {call} palasi verkkoon", {call: a.call}), `ID ${a.id}`];
+  return [T("{who} aktiivinen", {who: a.call + (a.name ? " (" + a.name + ")" : "")}), `${a.tg ? "TG " + a.tg + (a.tg_name ? " " + a.tg_name : "") : "→ " + (a.to || "")}${a.via ? " · " + a.via : ""}`];
 }
 function beep(bad) {
   try {
@@ -994,7 +1074,7 @@ function renderDevices() {
     const act = d.activity;
     return `<div class="devcard">
       <div class="top"><span class="call clk" data-q="${esc(d.callsign || d.id)}">${esc(d.callsign || "?")}</span><span class="muted">ID ${d.id}</span>${status}
-        <span class="muted">${d.last_seen ? "nähty " + ago(d.last_seen) : ""}</span><span class="spacer"></span>
+        <span class="muted">${d.last_seen ? esc(T("nähty {ago}", {ago: ago(d.last_seen)})) : ""}</span><span class="spacer"></span>
         <button data-rm="${d.id}" title="Poista seurannasta">Poista seurannasta</button></div>
       <div class="muted" style="margin:4px 0 8px">${esc([d.hardware, d.firmware, d.city, d.tx ? d.tx + (d.rx && d.rx !== d.tx ? "/" + d.rx : "") + " MHz" : "", d.colorcode != null ? "CC" + d.colorcode : "", d.statusText].filter(Boolean).join(" · "))}</div>
       ${act ? `<div style="margin-bottom:6px">Viimeisin liikenne: ${who({call: act.call, name: act.name})} → <span class="tg">TG ${esc(act.tg)}</span> <span class="muted">${act.stop ? ago(act.stop) : "nyt"}</span></div>` : ""}
@@ -1004,8 +1084,8 @@ function renderDevices() {
         <div><label>Lisää pysyvä TG</label><input type="text" class="addtg" style="width:90px" placeholder="244">
           <select class="addslot">${[0, 1, 2].map(s => `<option value="${s}" ${s === (d.default_slot ?? 0) ? "selected" : ""}>${SLOTNAME(s)}</option>`).join("")}</select>
           <button data-act="add" data-id="${d.id}">Lisää</button></div>
-        <div>${slots.map(s => `<button data-act="drop_dynamic" data-id="${d.id}" data-slot="${s}">Tyhjennä dynaamiset (${SLOTNAME(s)})</button>
-          <button data-act="drop_call" data-id="${d.id}" data-slot="${s}">Katkaise puhelu (${SLOTNAME(s)})</button>`).join(" ")}
+        <div>${slots.map(s => `<button data-act="drop_dynamic" data-id="${d.id}" data-slot="${s}">${esc(T("Tyhjennä dynaamiset ({s})", {s: SLOTNAME(s)}))}</button>
+          <button data-act="drop_call" data-id="${d.id}" data-slot="${s}">${esc(T("Katkaise puhelu ({s})", {s: SLOTNAME(s)}))}</button>`).join(" ")}
           <button data-act="reset" data-id="${d.id}">Nollaa yhteys</button></div>
         <span class="err devmsg"></span></div>` : ""}
     </div>`;
@@ -1021,7 +1101,7 @@ $("devCards").addEventListener("click", async e => {
   if (b.dataset.act === "add") { body.tg = Number(card.querySelector(".addtg").value); body.slot = Number(card.querySelector(".addslot").value);
     if (!body.tg) { msg.textContent = "Anna puheryhmä"; return; } }
   if (b.dataset.act === "delete") body.tg = Number(b.dataset.tg);
-  if (b.dataset.act === "reset" && !confirm("Nollataanko laitteen yhteys Brandmeisteriin? Laite yhdistää uudelleen hetken kuluttua.")) return;
+  if (b.dataset.act === "reset" && !confirm(T("Nollataanko laitteen yhteys Brandmeisteriin? Laite yhdistää uudelleen hetken kuluttua."))) return;
   b.disabled = true; if (msg) msg.textContent = "…";
   const j = await api("/api/device/action", body);
   b.disabled = false;
@@ -1030,7 +1110,7 @@ $("devCards").addEventListener("click", async e => {
 
 // ---------------- tilastot ----------------
 let STATS = null, statsTimer = null;
-function fmtCompact(n) { return n >= 10000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1).replace(".", ",") + " t." : n.toLocaleString("fi-FI"); }
+function fmtCompact(n) { return n >= 10000 ? dec((n / 1000).toFixed(n >= 100000 ? 0 : 1)) + T(" t.") : n.toLocaleString(LOC()); }
 async function loadStats() {
   const sel = $("sTg"), cur = sel.value;
   const tgs = [...new Set([...S.talkgroups.map(r => r.tg)])].sort((a, b) => a - b);
@@ -1050,7 +1130,7 @@ function renderStats() {
   drawColumns(j);
   $("sTable").innerHTML = `<table><thead><tr><th>${j.bucket === 3600 ? "Tunti" : "Päivä"}</th><th class="num">Puheluita</th><th class="num">Puheaika</th></tr></thead><tbody>` +
     j.bins.map(b => `<tr><td>${fmtBin(b.t, j.bucket)}</td><td class="num">${b.calls}</td><td class="num">${dur(b.airtime)}</td></tr>`).join("") + `</tbody></table>`;
-  $("sNote").textContent = j.oldest ? `Tilastot perustuvat tämän ohjelman tallentamiin puheluihin ${fmtShort(j.oldest)} alkaen (seuratut puheryhmät).` : "Ei vielä tallennettuja puheluita.";
+  $("sNote").textContent = j.oldest ? T("Tilastot perustuvat tämän ohjelman tallentamiin puheluihin {t} alkaen (seuratut puheryhmät).", {t: fmtShort(j.oldest)}) : "Ei vielä tallennettuja puheluita.";
   const maxT = Math.max(1, ...j.talkers.map(x => x.airtime));
   $("sTalk").innerHTML = j.talkers.map(x => `<tr><td>${who({call: x.call, id: x.id})}</td><td>${esc(x.name)}</td><td class="num">${x.calls}</td>
     <td class="num">${dur(x.airtime)}</td><td style="width:30%"><div class="hbar"><div style="width:${(x.airtime / maxT * 100).toFixed(1)}%"></div></div></td></tr>`).join("") || `<tr><td colspan="5" class="muted">Ei dataa</td></tr>`;
@@ -1059,8 +1139,8 @@ function renderStats() {
     <td class="num">${dur(x.airtime)}</td><td style="width:25%"><div class="hbar"><div style="width:${(x.airtime / maxG * 100).toFixed(1)}%"></div></div></td></tr>`).join("") || `<tr><td colspan="6" class="muted">Ei dataa</td></tr>`;
 }
 function fmtBin(t, bucket) { const d = new Date(t * 1000);
-  return bucket === 3600 ? d.toLocaleDateString("fi-FI", {weekday: "short"}) + " " + String(d.getHours()).padStart(2, "0") + ":00"
-    : d.toLocaleDateString("fi-FI", {weekday: "short", day: "numeric", month: "numeric"}); }
+  return bucket === 3600 ? d.toLocaleDateString(LOC(), {weekday: "short"}) + " " + String(d.getHours()).padStart(2, "0") + ":00"
+    : d.toLocaleDateString(LOC(), {weekday: "short", day: "numeric", month: "numeric"}); }
 function niceMax(v) { if (v <= 5) return 5; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p; return 10 * p; }
 function drawColumns(j) {
   const svg = $("sSvg"), W = svg.clientWidth || 900, H = 190, L = 36, R = 6, T = 10, B = 24;
@@ -1085,7 +1165,7 @@ $("sSvg").addEventListener("mousemove", e => {
   const r = e.target.closest("rect[data-i]"), tip = $("sTip");
   if (!r || !STATS) { tip.style.display = "none"; return; }
   const b = STATS.bins[Number(r.dataset.i)];
-  tip.innerHTML = `<b>${fmtBin(b.t, STATS.bucket)}</b><br>${b.calls} puhelua · ${dur(b.airtime)}`;
+  tip.innerHTML = `<b>${fmtBin(b.t, STATS.bucket)}</b><br>${esc(T("{n} puhelua · {d}", {n: b.calls, d: dur(b.airtime)}))}`;
   const box = $("sChart").getBoundingClientRect();
   tip.style.display = "block"; tip.style.left = Math.min(box.width - 160, e.clientX - box.left + 12) + "px"; tip.style.top = (e.clientY - box.top - 40) + "px";
 });
@@ -1098,10 +1178,11 @@ $("btnBm").onclick = async () => {
   $("bmState").textContent = "Haetaan Brandmeisteriltä…"; $("bmBody").innerHTML = "";
   const j = await api("/api/stats/bm?tg=" + tg);
   if (!j.ok) { $("bmState").textContent = j.error; return; }
-  $("bmState").textContent = `TG ${j.tg} ${j.name || ""}: ${j.total_users.toLocaleString("fi-FI")} asemaa, ${j.total_calls.toLocaleString("fi-FI")} avausta` + (j.oldest ? ` (vanhin ${fmtShort(j.oldest)})` : "");
+  $("bmState").textContent = T("TG {tg} {name}: {u} asemaa, {c} avausta", {tg: j.tg, name: j.name || "", u: j.total_users.toLocaleString(LOC()), c: j.total_calls.toLocaleString(LOC())})
+    + (j.oldest ? T(" (vanhin {t})", {t: fmtShort(j.oldest)}) : "");
   const mx = Math.max(1, ...j.users.map(u => u.count));
   $("bmBody").innerHTML = j.users.map((u, i) => `<tr><td class="muted">${i + 1}</td><td>${who({call: u.call, id: u.id})}</td><td>${esc(u.name)}</td>
-    <td class="num">${u.count.toLocaleString("fi-FI")}</td><td>${fmtShort(u.last)} <span class="muted">${ago(u.last)}</span></td>
+    <td class="num">${u.count.toLocaleString(LOC())}</td><td>${fmtShort(u.last)} <span class="muted">${ago(u.last)}</span></td>
     <td style="width:28%"><div class="hbar"><div style="width:${(u.count / mx * 100).toFixed(1)}%"></div></div></td></tr>`).join("");
 };
 
@@ -1114,8 +1195,8 @@ function renderAprs() {
   const msgs = M.aprs_msgs || [];
   let empty = "";
   if (!S.config.messaging.login) empty = "Aseta oma APRS-IS-tunnus ja passcode välilehdellä Syötteet ja viestit, niin viestit näkyvät tässä.";
-  else if (!a.connected) empty = "APRS-IS-yhteys ei ole auki" + (a.error ? ": " + esc(a.error) : "") + ".";
-  else if (!msgs.length) empty = `Ei viestejä vielä. Näytetään kutsujen ${esc(bases.map(b => b + "*").join(", "))} kaikki saapuvat ja lähtevät APRS-viestit.`;
+  else if (!a.connected) empty = esc(T("APRS-IS-yhteys ei ole auki")) + (a.error ? ": " + esc(a.error) : "") + ".";
+  else if (!msgs.length) empty = esc(T("Ei viestejä vielä. Näytetään kutsujen {c} kaikki saapuvat ja lähtevät APRS-viestit.", {c: bases.map(b => b + "*").join(", ")}));
   $("aprsEmpty").innerHTML = empty; $("aprsEmpty").style.display = msgs.length ? "none" : "";
   const html = msgs.map((m, i) => {
     const mine = bases.includes((m.from || "").split("-")[0]);
@@ -1125,14 +1206,14 @@ function renderAprs() {
       <td>${fmtTime(m.time)}</td>
       <td style="white-space:nowrap"><span class="call clk" data-q="${esc((m.from || "").split("-")[0])}">${esc(m.from)}</span> <span class="muted">→</span> <span class="call">${esc(m.to)}</span></td>
       <td class="wrap">${mine ? '<span class="muted">↑</span> ' : ""}${esc(m.text)}</td>
-      <td class="${cls}" style="white-space:nowrap">${esc(st)}${m.tries > 1 ? ` (${m.tries}×)` : ""}${m.copies > 1 ? ` <span class="muted">(${m.copies}×)</span>` : ""}</td></tr>`;
+      <td class="${cls}" style="white-space:nowrap">${esc(T(st))}${m.tries > 1 ? ` (${m.tries}×)` : ""}${m.copies > 1 ? ` <span class="muted">(${m.copies}×)</span>` : ""}</td></tr>`;
   }).join("");
   if ($("aprsBody").dataset.html !== html) { $("aprsBody").innerHTML = html; $("aprsBody").dataset.html = html; }
   // lähettäjävaihtoehdot: oma tunnus + seurattujen kutsujen SSID:t, jotka esiintyvät viesteissä
   const login = (S.config.messaging.login || "").toUpperCase();
   const own = new Set(login ? [login] : []);
   msgs.forEach(m => [m.from, m.to].forEach(c => { if (c && bases.includes(c.split("-")[0])) own.add(c); }));
-  const opts = [...own].sort((x, y) => x === login ? -1 : y === login ? 1 : x.localeCompare(y)).map(c => `<option value="${esc(c)}">${esc(c)}${c === login ? " (ohjelma)" : ""}</option>`).join("");
+  const opts = [...own].sort((x, y) => x === login ? -1 : y === login ? 1 : x.localeCompare(y)).map(c => `<option value="${esc(c)}">${esc(c)}${c === login ? " " + esc(T("(ohjelma)")) : ""}</option>`).join("");
   if ($("rFrom").dataset.opts !== opts) { const cur = $("rFrom").value; $("rFrom").innerHTML = opts; $("rFrom").dataset.opts = opts; if (cur && own.has(cur)) $("rFrom").value = cur; }
   $("aprsReply").style.display = login ? "" : "none";
 }
@@ -1151,14 +1232,14 @@ $("aprsBody").addEventListener("click", e => {
 });
 function updateCount() {
   const n = $("rText").value.length, parts = Math.max(1, Math.ceil(n / 64));
-  $("rCount").textContent = n ? `${n} merkkiä${n > 67 ? ` · ${parts} viestiä` : ""}` : "";
+  $("rCount").textContent = n ? T("{n} merkkiä", {n}) + (n > 67 ? T(" · {p} viestiä", {p: parts}) : "") : "";
 }
 $("rText").addEventListener("input", updateCount);
 $("rText").addEventListener("keydown", e => { if (e.key === "Enter") $("rSend").click(); });
 $("rSend").onclick = async () => {
   $("rMsg").textContent = "Lähetetään…";
   const j = await api("/api/aprs/send", {from: $("rFrom").value, to: $("rTo").value, text: $("rText").value});
-  if (j.ok) { $("rMsg").innerHTML = `<span class="ok">Lähetetty${j.parts > 1 ? ` (${j.parts} osaa)` : ""} – tila päivittyy listaan</span>`; $("rText").value = ""; updateCount(); }
+  if (j.ok) { $("rMsg").innerHTML = `<span class="ok">${esc(T("Lähetetty") + (j.parts > 1 ? T(" ({n} osaa)", {n: j.parts}) : "") + T(" – tila päivittyy listaan"))}</span>`; $("rText").value = ""; updateCount(); }
   else $("rMsg").innerHTML = `<span class="bad">${esc(j.error)}</span>`;
 };
 
@@ -1224,7 +1305,7 @@ $("btnLocGeo").onclick = () => {
     const j = await saveCfg({services: {location: {text: lat + ", " + lon}}});
     $("locErr").innerHTML = j.ok ? '<span class="ok">Sijainti tallennettu</span>' : esc(j.error);
     if (j.ok) S.config = j.config;
-  }, e => { $("locErr").textContent = "Sijaintia ei saatu: " + e.message; }, {timeout: 15000});
+  }, e => { $("locErr").textContent = T("Sijaintia ei saatu: {e}", {e: e.message}); }, {timeout: 15000});
 };
 const openDetails = new Set();
 document.addEventListener("toggle", e => { const d = e.target; if (d.dataset && d.dataset.did) { d.open ? openDetails.add(d.dataset.did) : openDetails.delete(d.dataset.did); } }, true);
@@ -1240,12 +1321,12 @@ function renderServices() {
     if (document.activeElement !== sec.querySelector("[data-en]")) sec.querySelector("[data-en]").checked = on;
     sec.querySelector(".tcenter") && (sec.querySelector(".tcenter").style.opacity = c.traffic.use_location ? .45 : 1);
     sec.querySelector("[data-st]").innerHTML = !on ? "Pois päältä." :
-      (s.error ? `<span class="bad">${esc(s.error)}</span>` : s.checked ? `Tarkistettu ${ago(s.checked)}` : "Ensimmäinen tarkistus käynnissä…") +
-      (s.last_event ? ` · viimeisin hälytys ${ago(s.last_event)}` : "");
+      (s.error ? `<span class="bad">${esc(s.error)}</span>` : s.checked ? esc(T("Tarkistettu {ago}", {ago: ago(s.checked)})) : "Ensimmäinen tarkistus käynnissä…") +
+      (s.last_event ? esc(T(" · viimeisin hälytys {ago}", {ago: ago(s.last_event)})) : "");
     let v = "";
     if (n === "lightning" && on) {
       const near = s.nearest;
-      v = `<div class="tiles" style="padding:10px 0 0"><div class="tile"><div class="lbl">Iskuja 60 min / ${c.lightning.radius_km} km</div><div class="val">${s.count_60min ?? "–"}</div></div>
+      v = `<div class="tiles" style="padding:10px 0 0"><div class="tile"><div class="lbl">${esc(T("Iskuja 60 min / {r} km", {r: c.lightning.radius_km}))}</div><div class="val">${s.count_60min ?? "–"}</div></div>
         <div class="tile"><div class="lbl">Lähin isku</div><div class="val">${near ? Math.round(near.km) + " km" : "–"}</div><div class="muted">${near ? esc(near.dir) + " · " + ago(near.time) : ""}</div></div></div>` +
         ((s.strikes || []).length ? `<table style="margin-top:8px"><tbody>${s.strikes.slice(0, 6).map(x => `<tr><td>${fmtTime(x.time)}</td><td class="num">${x.km} km</td><td>${esc(x.dir)}</td><td class="muted">${x.ground ? "maasalama" : "pilvisalama"}</td></tr>`).join("")}</tbody></table>` : "");
     }
@@ -1258,32 +1339,32 @@ function renderServices() {
     }
     if (n === "space" && on) {
       const kp = s.kp, thr = c.space.kp_threshold;
-      v = `<div class="tiles" style="padding:10px 0 0"><div class="tile"><div class="lbl">Kp nyt</div><div class="bigkp ${kp >= thr ? "warn" : ""}">${kp != null ? kp.toFixed(1).replace(".", ",") : "–"}</div><div class="muted">${kp >= 5 ? "myrsky" : kp >= 4 ? "levoton" : kp != null ? "rauhallinen" : ""}</div></div>
-        <div class="tile"><div class="lbl">Suurin 6 h</div><div class="val">${s.kp_max6h != null ? s.kp_max6h.toFixed(1).replace(".", ",") : "–"}</div></div></div>` +
-        ((s.recent || []).length ? `<div class="muted" style="margin-top:10px">NOAA:n viimeisimmät ilmoitukset (Kp-raja ${thr} tai purkaukset)</div><table><tbody>${s.recent.slice(0, 5).map(x => `<tr><td>${fmtShort(x.time)}</td><td class="wrap">${esc(x.title)}</td></tr>`).join("")}</tbody></table>` : "");
+      v = `<div class="tiles" style="padding:10px 0 0"><div class="tile"><div class="lbl">Kp nyt</div><div class="bigkp ${kp >= thr ? "warn" : ""}">${kp != null ? dec(kp.toFixed(1)) : "–"}</div><div class="muted">${kp >= 5 ? "myrsky" : kp >= 4 ? "levoton" : kp != null ? "rauhallinen" : ""}</div></div>
+        <div class="tile"><div class="lbl">Suurin 6 h</div><div class="val">${s.kp_max6h != null ? dec(s.kp_max6h.toFixed(1)) : "–"}</div></div></div>` +
+        ((s.recent || []).length ? `<div class="muted" style="margin-top:10px">${esc(T("NOAA:n viimeisimmät ilmoitukset (Kp-raja {thr} tai purkaukset)", {thr}))}</div><table><tbody>${s.recent.slice(0, 5).map(x => `<tr><td>${fmtShort(x.time)}</td><td class="wrap">${esc(x.title)}</td></tr>`).join("")}</tbody></table>` : "");
     }
     if (n === "aurora" && on && s.nearest) {
       const thr = c.aurora.threshold_nt, lvlTxt = ["rauhallista", "mahdollisia", "todennäköisiä", "voimakkaita"][s.level || 0];
       const mx = Math.max(thr * 2, ...(s.stations || []).map(x => x.range));
       v = `<div class="tiles" style="padding:10px 0 0">
         <div class="tile"><div class="lbl">${esc(s.nearest.name)} (${s.nearest.km} km)</div><div class="val ${s.level ? "warn" : ""}">${s.nearest.range} nT/h</div><div class="muted">${lvlTxt}</div></div>
-        <div class="tile"><div class="lbl">Pimeys</div><div class="val">${s.dark ? "pimeää" : "valoisaa"}</div><div class="muted">aurinko ${String(s.sun).replace(".", ",")}°</div></div>
+        <div class="tile"><div class="lbl">Pimeys</div><div class="val">${s.dark ? "pimeää" : "valoisaa"}</div><div class="muted">${esc(T("aurinko {s}°", {s: dec(String(s.sun))}))}</div></div>
         <div class="tile"><div class="lbl">Pilvisyys</div><div class="val">${s.clouds != null ? Math.round(s.clouds) + "/8" : "–"}</div><div class="muted">${esc(s.cloud_station || "")}</div></div></div>
         <table style="margin-top:8px"><tbody>${(s.stations || []).map(x => `<tr><td>${esc(x.name)}</td><td class="num">${x.range} nT/h</td>
         <td style="width:45%"><div class="hbar"><div style="width:${Math.min(100, x.range / mx * 100).toFixed(1)}%"></div></div></td></tr>`).join("")}</tbody></table>
-        <div class="muted" style="margin-top:4px">Asemat pohjoisesta etelään. Raja ${thr} nT/h.</div>`;
+        <div class="muted" style="margin-top:4px">${esc(T("Asemat pohjoisesta etelään. Raja {thr} nT/h.", {thr}))}</div>`;
     }
     if (n === "radiation" && on && s.fin_max) {
-      const f = x => x.toFixed(3).replace(".", ","), thr = c.radiation.threshold;
+      const f = x => dec(x.toFixed(3)), thr = c.radiation.threshold;
       v = `<div class="tiles" style="padding:10px 0 0">
-        ${s.nearest ? `<div class="tile"><div class="lbl">Lähin: ${esc(s.nearest.name)} (${s.nearest.km} km)</div><div class="val ${s.nearest.dr >= thr ? "bad" : ""}">${f(s.nearest.dr)}</div><div class="muted">µSv/h</div></div>` : ""}
-        ${s.area_max ? `<div class="tile"><div class="lbl">Korkein ${c.radiation.radius_km ? c.radiation.radius_km + " km säteellä" : "Suomessa"} (${s.count} asemaa)</div><div class="val ${s.area_max.dr >= thr ? "bad" : ""}">${f(s.area_max.dr)}</div><div class="muted">${esc(s.area_max.name)}</div></div>` : ""}
+        ${s.nearest ? `<div class="tile"><div class="lbl">${esc(T("Lähin: {name} ({km} km)", {name: s.nearest.name, km: s.nearest.km}))}</div><div class="val ${s.nearest.dr >= thr ? "bad" : ""}">${f(s.nearest.dr)}</div><div class="muted">µSv/h</div></div>` : ""}
+        ${s.area_max ? `<div class="tile"><div class="lbl">${esc(c.radiation.radius_km ? T("Korkein {r} km säteellä ({n} asemaa)", {r: c.radiation.radius_km, n: s.count}) : T("Korkein Suomessa ({n} asemaa)", {n: s.count}))}</div><div class="val ${s.area_max.dr >= thr ? "bad" : ""}">${f(s.area_max.dr)}</div><div class="muted">${esc(s.area_max.name)}</div></div>` : ""}
         <div class="tile"><div class="lbl">Korkein koko Suomessa</div><div class="val">${f(s.fin_max.dr)}</div><div class="muted">${esc(s.fin_max.name)}</div></div></div>
         <table style="margin-top:8px"><tbody>${(s.stations || []).map(x => `<tr><td>${esc(x.name)}</td><td class="num">${x.km != null ? x.km + " km" : ""}</td><td class="num ${x.dr >= thr ? "bad" : ""}">${f(x.dr)} µSv/h</td></tr>`).join("")}</tbody></table>`;
     }
     if (n === "traffic" && on) {
       const it = s.items || [];
-      v = it.length ? `<div class="muted" style="margin-top:8px">${s.active} voimassa olevaa tiedotetta valituilla ehdoilla · klikkaa nähdäksesi tarkemmin</div><div class="scroll" style="max-height:360px"><table><tbody>${it.map(x => `<tr><td class="wrap">
+      v = it.length ? `<div class="muted" style="margin-top:8px">${esc(T("{n} voimassa olevaa tiedotetta valituilla ehdoilla · klikkaa nähdäksesi tarkemmin", {n: s.active}))}</div><div class="scroll" style="max-height:360px"><table><tbody>${it.map(x => `<tr><td class="wrap">
         <details${openDetails.has(x.id) ? " open" : ""} data-did="${esc(x.id)}"><summary style="cursor:pointer"><b>${esc(x.short || x.title)}</b></summary>
         <div style="margin-top:4px">${esc(x.what)}</div><div class="muted">${esc(x.where)}</div>${x.comment ? `<div class="muted">${esc(x.comment)}</div>` : ""}</details></td>
         <td class="muted" style="white-space:nowrap;vertical-align:top">${esc(x.why)}<br>${x.time ? fmtShort(x.time) : ""}</td></tr>`).join("")}</tbody></table></div>`
