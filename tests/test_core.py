@@ -1,5 +1,6 @@
 """Perustestit: ajetaan GitHub Actionsissa Windowsilla, macOS:llä ja Linuxilla (ei verkkoyhteyksiä)."""
 import asyncio
+import calendar
 import json
 import socket
 import time
@@ -54,9 +55,12 @@ def test_locator_and_geo():
     assert 160 < distance_km(60.17, 24.94, 61.5, 23.76) < 170
     sq = [(0, 0), (0, 1), (1, 1), (1, 0)]
     assert point_in_polygon(0.5, 0.5, sq) and not point_in_polygon(1.5, 0.5, sq)
-    # keskikesän keskipäivä Helsingissä: aurinko korkealla
-    noon = time.mktime((2026, 6, 21, 13, 20, 0, 0, 0, -1))
-    assert sun_elevation(60.17, 24.94, noon) > 45
+    # keskikesän aurinkokeskipäivä Helsingissä (~10.20 UTC): aurinko n. 53° korkeudella.
+    # UTC-aika, jotta testi ei riipu koneen aikavyöhykkeestä.
+    noon = calendar.timegm((2026, 6, 21, 10, 20, 0))
+    assert 50 < sun_elevation(60.17, 24.94, noon) < 56
+    midnight = calendar.timegm((2026, 12, 21, 22, 20, 0))
+    assert sun_elevation(60.17, 24.94, midnight) < -40
 
 
 def test_rss_parse():
