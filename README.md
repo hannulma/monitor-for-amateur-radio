@@ -65,7 +65,7 @@ Get the latest version from **[Releases](https://github.com/hannulma/monitor-for
 | OS | File |
 |---|---|
 | Windows 10/11 | `MonitorForBrandMeister-<version>-windows-setup.exe` (installer) or `…-windows-portable.zip` |
-| macOS Apple Silicon (M1–M4) | `MonitorForBrandMeister-<version>-macos-apple-silicon.dmg` |
+| macOS Apple Silicon (M1–M4) | `…-macos-apple-silicon.dmg` when available; otherwise the Intel build runs via Rosetta 2 |
 | macOS Intel | `MonitorForBrandMeister-<version>-macos-intel.dmg` |
 | Linux x86_64 | `MonitorForBrandMeister-<version>-linux-x86_64.tar.gz` |
 | Any OS with Python ≥ 3.9 | `pip install monitor_for_brandmeister-<version>-py3-none-any.whl` |

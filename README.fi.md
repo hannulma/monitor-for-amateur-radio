@@ -21,7 +21,7 @@ Lataa uusin versio **[Releases](https://github.com/hannulma/monitor-for-brandmei
 | Käyttöjärjestelmä | Tiedosto |
 |---|---|
 | Windows 10/11 | `MonitorForBrandMeister-<versio>-windows-setup.exe` (asennusohjelma) tai `…-windows-portable.zip` (ilman asennusta) |
-| macOS, Apple Silicon (M1–M4) | `MonitorForBrandMeister-<versio>-macos-apple-silicon.dmg` |
+| macOS, Apple Silicon (M1–M4) | `…-macos-apple-silicon.dmg`, jos saatavilla; muuten Intel-versio toimii Rosetta 2:n kautta |
 | macOS, Intel | `MonitorForBrandMeister-<versio>-macos-intel.dmg` |
 | Linux x86_64 | `MonitorForBrandMeister-<versio>-linux-x86_64.tar.gz` |
 | Python 3.9+ (mikä tahansa käyttöjärjestelmä) | `monitor_for_brandmeister-<versio>-py3-none-any.whl` |
