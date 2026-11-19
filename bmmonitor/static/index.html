@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitor for BrandMeister</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #171e26; --line: #26313d; --text: #d9e1e8; --muted: #7d8b99;
+    --accent: #4fb3ff; --live: #3ddc84; --warn: #ffb547; --bad: #ff6b6b;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-size: 14px; }
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+  .status { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); display: inline-block; }
+  .dot.ok { background: var(--live); }
+  .spacer { flex: 1; }
+  button { background: #22303d; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #04121e; border-color: var(--accent); font-weight: 600; }
+  main { padding: 16px 18px; display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
+  section.wide { grid-column: 1 / -1; }
+  section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: center; }
+  section h2 .count { color: var(--text); font-weight: 400; text-transform: none; letter-spacing: 0; }
+  .scroll { max-height: 420px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 500; font-size: 12px; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.wrap { white-space: normal; }
+  tr.live td { background: rgba(61, 220, 132, .09); }
+  .livebadge { display: inline-flex; align-items: center; gap: 5px; color: var(--live); font-weight: 600; }
+  .livebadge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--live); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  .tg { font-weight: 600; color: var(--accent); }
+  .muted { color: var(--muted); }
+  .call { font-weight: 600; }
+  .pill { font-size: 11px; padding: 1px 6px; border-radius: 10px; background: #22303d; color: var(--muted); }
+  .empty { padding: 18px; color: var(--muted); text-align: center; }
+  #settings { grid-column: 1 / -1; padding: 14px; }
+  #settings label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
+  #settings input, #settings textarea, #settings select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
+  #settings textarea { width: 100%; min-height: 60px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .err { color: var(--bad); margin-left: 10px; }
+  .paths { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: var(--muted); margin-top: 12px; line-height: 1.6; }
+  .filter { margin-left: auto; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; text-transform: none; letter-spacing: 0; }
+  .listen { background: none; border: 1px solid var(--line); border-radius: 50%; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
+  .listen:hover { color: var(--accent); border-color: var(--accent); }
+  .listen.on { background: var(--live); border-color: var(--live); color: #04121e; }
+  .listen svg { width: 14px; height: 14px; fill: currentColor; }
+  #dock { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 2px solid var(--live); display: none; align-items: center; gap: 14px; padding: 10px 16px; z-index: 20; box-shadow: 0 -8px 24px rgba(0,0,0,.4); flex-wrap: wrap; }
+  #dock.open { display: flex; }
+  body.docked main { padding-bottom: 90px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: #22303d; border: 1px solid var(--line); border-radius: 14px; padding: 3px 4px 3px 10px; font-size: 13px; }
+  .chip b { color: var(--accent); }
+  .chip button { border: 0; background: none; color: var(--muted); padding: 0 6px; font-size: 15px; line-height: 1; }
+  .chip button:hover { color: var(--bad); }
+  #pNow { min-width: 260px; flex: 1; }
+  #pNow .who { font-weight: 600; font-size: 15px; }
+  #pNow.talking .who { color: var(--live); }
+  .vu { width: 140px; height: 8px; background: #22303d; border-radius: 4px; overflow: hidden; }
+  .vu div { height: 100%; width: 0; background: linear-gradient(90deg, var(--live), var(--warn) 75%, var(--bad)); transition: width 90ms linear; }
+  #pVol { width: 110px; }
+  a { color: var(--accent); }
+  #msgPanel { grid-column: 1 / -1; }
+  #msgPanel .inner { padding: 14px; }
+  .form label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
+  .form input[type=text], .form input[type=number], .form input[type=password], .form select, .form textarea { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
+  .form textarea { width: 100%; min-height: 54px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .inner { padding: 14px; }
+  h3 { font-size: 13px; color: var(--text); margin: 18px 0 6px; font-weight: 600; }
+  nav.tabs { display: flex; gap: 2px; padding: 0 18px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 49px; z-index: 4; overflow-x: auto; }
+  nav.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 9px 14px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  nav.tabs button:hover { color: var(--text); }
+  nav.tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
+  nav.tabs .badge { background: var(--bad); color: #fff; border-radius: 9px; padding: 0 6px; font-size: 11px; margin-left: 5px; }
+  .clk { cursor: pointer; text-decoration: underline dotted rgba(217,225,232,.35); text-underline-offset: 3px; }
+  .clk:hover { color: var(--accent); }
+  .tiles { display: flex; gap: 12px; flex-wrap: wrap; padding: 14px 14px 0; }
+  .tile { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; min-width: 150px; }
+  .tile .lbl { color: var(--muted); font-size: 12px; }
+  .tile .val { font-size: 22px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .chart { position: relative; padding: 8px 14px 4px; }
+  .chart svg { display: block; width: 100%; height: 190px; }
+  .chart .tip { position: absolute; pointer-events: none; background: #0b0f13; border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-size: 12px; white-space: nowrap; display: none; z-index: 3; }
+  .hbar { position: relative; height: 8px; background: #22303d; border-radius: 4px; min-width: 80px; }
+  .hbar div { position: absolute; left: 0; top: 0; bottom: 0; background: #3987e5; border-radius: 0 4px 4px 0; }
+  .devcard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 10px 14px; background: var(--bg); }
+  .devcard .top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .devcard .top .call { font-size: 16px; }
+  .tgchip { display: inline-flex; align-items: center; gap: 4px; background: #22303d; border: 1px solid var(--line); border-radius: 12px; padding: 2px 4px 2px 9px; margin: 2px 4px 2px 0; font-size: 12px; }
+  .tgchip.dyn { border-style: dashed; }
+  .tgchip button { border: 0; background: none; color: var(--muted); padding: 0 5px; font-size: 14px; line-height: 1; }
+  .tgchip button:hover { color: var(--bad); }
+  .online { color: var(--live); font-weight: 600; } .offline { color: var(--bad); font-weight: 600; }
+  .svcgrid { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 1000px) { .svcgrid { grid-template-columns: 1fr; } }
+  .form label.switch, .switch { margin: 0 0 0 auto; }
+  .switch { position: relative; display: inline-flex !important; align-items: center; gap: 8px; margin-left: auto; cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--text); }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch .sl { width: 38px; height: 22px; border-radius: 11px; background: #33404d; position: relative; transition: background .15s; }
+  .switch .sl::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #d9e1e8; transition: left .15s; }
+  .switch input:checked + .sl { background: var(--live); }
+  .switch input:checked + .sl::after { left: 19px; }
+  .switch input:focus-visible + .sl { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .svc.off .svcbody { opacity: .55; }
+  .provgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 10px; margin-top: 4px; }
+  .provgrid label { display: flex !important; align-items: center; gap: 6px; margin: 0 !important; color: var(--text) !important; font-size: 13px !important; }
+  .wcol { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 9px; color: #111; }
+  .wcol.yellow { background: #f5d547; } .wcol.orange { background: #ff9a3c; } .wcol.red { background: #ff5a5a; }
+  .bigkp { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .svcstatus { font-size: 12px; color: var(--muted); padding: 8px 14px; border-top: 1px solid var(--line); }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: flex-start; justify-content: center; z-index: 50; padding: 60px 16px; overflow: auto; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(720px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .modal .mh { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .modal .mh h2 { margin: 0; font-size: 20px; }
+  .modal .mb { padding: 6px 16px 16px; }
+  .toasts { position: fixed; right: 16px; top: 100px; display: flex; flex-direction: column; gap: 8px; z-index: 60; }
+  .toast { background: #0b0f13; border: 1px solid var(--live); border-left: 4px solid var(--live); border-radius: 8px; padding: 10px 14px; min-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,.5); cursor: pointer; }
+  .toast.bad { border-color: var(--bad); }
+  #msgPanel label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
+  #msgPanel input[type=text], #msgPanel input[type=number], #msgPanel input[type=password] { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
+  #msgPanel h3 { font-size: 13px; color: var(--text); margin: 18px 0 6px; font-weight: 600; }
+  .feedrow { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .feedrow input.fname { width: 110px; }
+  .feedrow input.furl { flex: 1; min-width: 200px; }
+  .ok { color: var(--live); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .note { background: rgba(79,179,255,.08); border: 1px solid rgba(79,179,255,.25); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 13px; line-height: 1.5; margin-bottom: 6px; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Monitor for BrandMeister <span class="pill" style="vertical-align:middle">beta</span></h1>
+  <div class="status"><span id="dot" class="dot"></span><span id="statusText">Yhdistetään…</span></div>
+  <div class="spacer"></div>
+  <span class="muted" id="watching"></span>
+  <span id="aprsBadge" class="muted"></span>
+</header>
+<nav class="tabs" id="tabs">
+  <button data-tab="seuranta" class="active">Seuranta</button>
+  <button data-tab="kaverit">Kaverit<span class="badge" id="alertBadge" style="display:none"></span></button>
+  <button data-tab="laitteet">Laitteet</button>
+  <button data-tab="tilastot">Tilastot</button>
+  <button data-tab="palvelut">Palvelut</button>
+  <button data-tab="viestit">Syötteet ja viestit</button>
+  <button data-tab="asetukset">Asetukset</button>
+</nav>
+
+<main>
+  <section id="settings" data-tab="asetukset">
+    <div class="row">
+      <div style="flex:1; min-width:280px">
+        <label for="tgInput">Seurattavat puheryhmät</label>
+        <textarea id="tgInput" placeholder="244* 91 2441"></textarea>
+        <div class="hint">Erota välilyönnillä tai pilkulla. <b>*</b> = mikä tahansa merkkijono (244* = kaikki 244-alkuiset), <b>?</b> = yksi numero.</div>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="dataFilter">Tekstiviestit ja data</label>
+        <select id="dataFilter">
+          <option value="all">Koko verkko</option>
+          <option value="matched">Vain seurattujen ryhmien / ID:iden</option>
+        </select>
+      </div>
+      <div>
+        <label for="minDur">Ohita lyhyet avaukset: alle (sekuntia)</label>
+        <input id="minDur" type="number" min="0" step="0.5" style="width:90px">
+        <div class="hint">0 = kaikki puhelut tallentuvat. Listan pituus valitaan Viimeisimmät puhelut -paneelista.</div>
+      </div>
+      <div>
+        <label><input id="logCsv" type="checkbox"> Tallenna CSV-lokiin</label>
+      </div>
+      <div>
+        <button class="primary" id="btnSave">Tallenna</button>
+        <button id="btnClear">Tyhjennä historia</button>
+        <span class="err" id="saveErr"></span>
+      </div>
+    </div>
+    <h3>Brandmeister API-avain (vapaaehtoinen)</h3>
+    <div class="row">
+      <div style="flex:1;min-width:280px">
+        <label for="apiKey">API-avain laitteen hallintaan</label>
+        <input id="apiKey" type="password" autocomplete="off" placeholder="eyJ0eXAiOiJKV1Qi…" style="width:100%">
+        <div class="hint">Luo avain: brandmeister.network → SelfCare → Security / API Keys. Avainta tarvitaan vain
+          Laitteet-välilehden hallintapainikkeisiin, ja Brandmeister sallii ne vain omille laitteillesi.
+          Avain tallentuu vain tämän koneen asetustiedostoon.</div>
+      </div>
+      <div><button id="btnKeySave">Tallenna avain</button> <button id="btnKeyDel">Poista avain</button> <span id="keyState" class="muted"></span></div>
+    </div>
+    <div class="paths" id="paths"></div>
+    <h3>Ohjelma</h3>
+    <div class="row"><div><button id="btnQuit">Sulje ohjelma</button></div>
+      <div class="hint" style="max-width:520px">Sulkee taustalla toimivan ohjelman. Ohjelman voi avata uudelleen käynnistämällä sen; jos se on jo käynnissä,
+        käynnistys avaa vain tämän sivun. <span id="verInfo"></span></div></div>
+  </section>
+
+  <section id="msgPanel" data-tab="viestit">
+    <h2>Syötteet → DMR-tekstiviestit</h2>
+    <div class="inner form">
+      <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. Brandmeister välittää ne DMR-tekstiviesteinä
+        sille radiolle, jonka DMR-ID:hen kutsu ja SSID on liitetty <b>BM SelfCaren APRS-asetuksissa</b>. Vastaanottajaksi
+        kirjoitetaan sama kutsu ja SSID (esim. <code>OH2ABC-7</code>). Viesti tulee perille, jos radio on kuultu verkossa äskettäin
+        tai SelfCaressa on <i>Text Capture</i> päällä.</div>
+      <div class="row">
+        <div><label><input type="checkbox" id="mEnabled"> Lähetys päällä</label></div>
+        <div><label for="mLogin">Oma APRS-IS-tunnus</label><input type="text" id="mLogin" placeholder="OH2ABC-13" style="width:130px">
+          <div class="hint">Ei samaa SSID:tä kuin Graywolfilla/iGatella</div></div>
+        <div><label for="mPass">Passcode</label><input type="password" id="mPass" style="width:110px">
+          <div class="hint" id="mPassHint">tyhjä = lasketaan kutsusta</div></div>
+        <div><label for="mServer">APRS-IS-palvelin</label><input type="text" id="mServer" style="width:180px"></div>
+      </div>
+      <div class="row">
+        <div style="flex:1;min-width:240px"><label for="mRecip">Vastaanottajat (radion kutsu-SSID)</label><input type="text" id="mRecip" placeholder="OH2ABC-7" style="width:100%"></div>
+        <div style="min-width:200px"><label for="mAprsWatch">Näytä APRS-viestit kutsuille</label><input type="text" id="mAprsWatch" placeholder="oma kutsu (oletus)" style="width:180px">
+          <div class="hint">Kaikki SSID:t, esim. OH2ABC = OH2ABC-1 … -15</div></div>
+        <div><label for="mParts">Viestejä / otsikko</label><input type="number" id="mParts" min="1" max="5" style="width:70px">
+          <div class="hint">67 merkkiä / viesti</div></div>
+        <div><label for="mInterval">Tarkistusväli (min)</label><input type="number" id="mInterval" min="1" style="width:80px"></div>
+        <div><label><input type="checkbox" id="mAscii"> Muunna ääkköset (ä→a)</label></div>
+        <div><label><input type="checkbox" id="mNoAck"> Älä odota kuittausta</label>
+          <div class="hint">Viesti lähetetään kerran eikä tule koskaan kahdesti, mutta perillemenoa ei voi seurata.</div></div>
+      </div>
+      <h3>Syötteet (RSS, Atom tai JSON Feed)</h3>
+      <div id="feedRows"></div>
+      <button id="btnAddFeed">+ Lisää syöte</button>
+      <div class="hint">Komento-kenttä (esim. SAA) tekee syötteen uusimmasta otsikosta radiosta kysyttävän. Uutta syötettä seurattaessa nykyiset uutiset ohitetaan, ja viesti lähtee vasta seuraavasta uudesta uutisesta. Etuliite näkyy viestin alussa, esim. <code>BM: otsikko</code>.</div>
+      <div class="row" style="margin-top:14px">
+        <div><button class="primary" id="btnMsgSave">Tallenna</button>
+          <button id="btnFeedCheck">Tarkista syötteet nyt</button>
+          <span class="err" id="msgErr"></span></div>
+      </div>
+      <div class="row">
+        <div style="flex:1;min-width:240px"><label for="mTest">Testiviesti</label><input type="text" id="mTest" maxlength="134" placeholder="Monitor for BrandMeister: testiviesti" style="width:100%"></div>
+        <div><button id="btnTest">Lähetä testiviesti</button></div>
+      </div>
+      <div id="aprsStatus" style="margin-top:12px"></div>
+      <h3>Komennot radiosta</h3>
+      <div class="note">Lähetä radiosta tekstiviesti Brandmeisterin APRS-palvelunumeroon <b>244999</b> (yksityisviesti) muodossa
+        <code>&lt;oma APRS-IS-tunnus&gt; &lt;komento&gt;</code>, esim. <code id="cmdExample">OH2ABC-13 TG244</code>. Ohjelma vastaa radioosi.<br>
+        Komennot: <b>APUA</b> · <b>TG244</b> (kuka puhui viimeksi) · <b>KUKA OH2ABC</b> (milloin ja missä kuultu) ·
+        <b>NYT</b> (lähetykset seuratuissa ryhmissä) · syötteiden komennot (esim. <b>SAA</b> = uusin otsikko).</div>
+      <div class="row">
+        <div><label><input type="checkbox" id="mCmd"> Vastaa komentoihin</label></div>
+        <div><label><input type="checkbox" id="mCmdAll"> Salli kaikille (ei suositella)</label></div>
+        <div style="flex:1;min-width:240px"><label for="mCmdAllow">Lisäksi sallitut kutsut</label>
+          <input type="text" id="mCmdAllow" placeholder="OH1ABC OH3XYZ" style="width:100%">
+          <div class="hint">Oletuksena komentoja saa lähettää oma kutsusi ja vastaanottajien kutsut (kaikki SSID:t).</div></div>
+      </div>
+      <h3>Syötteiden tila</h3>
+      <table><thead><tr><th>Syöte</th><th>Tarkistettu</th><th>Uusin otsikko</th><th>Tila</th></tr></thead><tbody id="feedStatus"></tbody></table>
+      <h3>Viestiloki</h3>
+      <div class="scroll" style="max-height:260px">
+        <table><thead><tr><th>Aika</th><th>Suunta</th><th>Kenelle / keneltä</th><th>Teksti</th><th>Tila</th></tr></thead><tbody id="msgLog"></tbody></table>
+        <div class="empty" id="msgLogEmpty">Ei viestejä vielä.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wide" data-tab="seuranta">
+    <h2>Puheryhmät <span class="count" id="tgCount"></span></h2>
+    <div class="scroll">
+      <table>
+        <thead><tr>
+          <th>TG</th><th title="Kuuntele Hoselinella"></th><th>Nimi</th><th>Tila</th><th>Viimeksi</th><th>Puhuja</th><th class="num">Kesto</th>
+          <th>Kautta</th><th class="num">Avauksia</th><th class="num">Yht. aika</th>
+        </tr></thead>
+        <tbody id="tgBody"></tbody>
+      </table>
+      <div class="empty" id="tgEmpty">Ei liikennettä vielä seuratuissa puheryhmissä.</div>
+    </div>
+  </section>
+
+  <section data-tab="seuranta">
+    <h2>Viimeisimmät puhelut <span class="count" id="callCount"></span>
+      <select class="filter" id="callFilter"><option value="">Kaikki seuratut</option></select>
+      <select class="filter" id="callLimit" style="margin-left:6px" title="Näytettävien puheluiden määrä">
+        <option value="10">10 viimeisintä</option><option value="15">15 viimeisintä</option>
+        <option value="20">20 viimeisintä</option><option value="25">25 viimeisintä</option>
+      </select>
+    </h2>
+    <div class="scroll" style="max-height:none">
+      <table>
+        <thead><tr><th>Aika</th><th>TG</th><th>Kutsu</th><th>Nimi</th><th class="num">Kesto</th><th>Kautta</th></tr></thead>
+        <tbody id="callBody"></tbody>
+      </table>
+      <div class="note" id="callSkipNote" style="display:none; margin:8px"></div>
+      <div class="empty" id="callEmpty">Ei puheluita.</div>
+    </div>
+  </section>
+
+  <section data-tab="seuranta">
+    <h2>APRS-viestit <span class="count" id="aprsWho"></span></h2>
+    <div class="scroll" style="max-height:340px">
+      <table><thead><tr><th>Aika</th><th>Keneltä → kenelle</th><th>Viesti</th><th>Tila</th></tr></thead><tbody id="aprsBody"></tbody></table>
+      <div class="empty" id="aprsEmpty"></div>
+    </div>
+    <div class="form" id="aprsReply" style="border-top:1px solid var(--line); padding:10px 14px">
+      <div class="row" style="align-items:flex-end">
+        <div><label for="rFrom">Lähettäjä</label><select id="rFrom" style="width:130px"></select></div>
+        <div><label for="rTo">Vastaanottaja</label><input type="text" id="rTo" placeholder="OH2ABC-7" style="width:120px"></div>
+        <div style="flex:1;min-width:200px"><label for="rText">Viesti <span class="muted" id="rCount"></span></label>
+          <input type="text" id="rText" maxlength="200" placeholder="Klikkaa viestiä vastataksesi tai kirjoita uusi" style="width:100%"></div>
+        <div><button class="primary" id="rSend">Lähetä</button></div>
+      </div>
+      <div class="hint" id="rMsg"></div>
+    </div>
+  </section>
+  <!-- ============ KAVERIT ============ -->
+  <section data-tab="kaverit" class="form">
+    <h2>Kaverilista</h2>
+    <div class="inner">
+      <label for="wList">Seurattavat kutsut tai DMR-ID:t</label>
+      <textarea id="wList" placeholder="OH2ABC OH3XYZ 2440123"></textarea>
+      <div class="row">
+        <div><label for="wQuiet">Hälytä, kun asema ollut hiljaa (min)</label><input id="wQuiet" type="number" min="0" style="width:90px">
+          <div class="hint">0 = hälytä jokaisesta avauksesta</div></div>
+        <div><label for="wScope">Missä</label><select id="wScope"><option value="all">Koko verkko</option><option value="matched">Vain seuratut puheryhmät</option></select></div>
+        <div><label><input type="checkbox" id="wDesktop"> Työpöytäilmoitus</label></div>
+        <div><label><input type="checkbox" id="wSound"> Äänimerkki</label></div>
+        <div><label><input type="checkbox" id="wSms"> Tekstiviesti radioon</label></div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div><button class="primary" id="btnWSave">Tallenna</button> <button id="btnWTest">Testaa hälytys</button>
+          <button id="btnNotif">Salli työpöytäilmoitukset</button> <span class="err" id="wErr"></span></div>
+      </div>
+      <div class="hint" id="notifState"></div>
+    </div>
+  </section>
+  <section data-tab="kaverit">
+    <h2>Kaverien tila</h2>
+    <div class="scroll" style="max-height:none">
+      <table><thead><tr><th>Kutsu</th><th>Tila</th><th>Viimeksi</th><th>Missä</th><th>Kautta</th></tr></thead><tbody id="wBody"></tbody></table>
+      <div class="empty" id="wEmpty">Lisää kutsuja kaverilistaan.</div>
+    </div>
+  </section>
+  <section data-tab="kaverit" class="wide">
+    <h2>Hälytykset <span class="count" id="alertCount"></span></h2>
+    <div class="scroll">
+      <table><thead><tr><th>Aika</th><th>Tyyppi</th><th>Kuka / mitä</th><th>Missä</th><th>Kautta</th></tr></thead><tbody id="alertBody"></tbody></table>
+      <div class="empty" id="alertEmpty">Ei hälytyksiä.</div>
+    </div>
+  </section>
+
+  <!-- ============ LAITTEET ============ -->
+  <section data-tab="laitteet" class="wide form">
+    <h2>Seurattavat toistimet ja hotspotit</h2>
+    <div class="inner">
+      <div class="row">
+        <div><label for="dId">Lisää laitteen ID</label><input id="dId" type="text" placeholder="244207 tai 244203901" style="width:180px"></div>
+        <div><button id="btnDAdd">Lisää</button></div>
+        <div><label for="dCall">tai hae kutsulla</label><input id="dCall" type="text" placeholder="OH2RUP" style="width:140px"></div>
+        <div><button id="btnDFind">Hae laitteet</button></div>
+        <div><label for="dOff">Hälytä, kun ei nähty (min)</label><input id="dOff" type="number" min="2" style="width:80px"></div>
+        <div><label><input type="checkbox" id="dSms"> Tekstiviesti radioon</label></div>
+        <div><button class="primary" id="btnDSave">Tallenna</button> <button id="btnDRefresh">Päivitä nyt</button> <span class="err" id="dErr"></span></div>
+      </div>
+      <div id="dFound"></div>
+      <div class="hint" id="dKeyHint"></div>
+    </div>
+    <div id="devCards"></div>
+    <div class="empty" id="devEmpty">Ei seurattavia laitteita. Lisää oma hotspotisi tai paikallinen toistin.</div>
+  </section>
+
+  <!-- ============ TILASTOT ============ -->
+  <section data-tab="tilastot" class="wide form">
+    <h2>Aktiivisuus seuratuissa puheryhmissä
+      <select class="filter" id="sTg"><option value="">Kaikki seuratut</option></select>
+      <select class="filter" id="sHours" style="margin-left:6px"><option value="24">24 h</option><option value="168">7 pv</option><option value="336">14 pv</option></select>
+    </h2>
+    <div class="tiles" id="sTiles"></div>
+    <div class="chart" id="sChart"><svg id="sSvg" role="img" aria-label="Puheluita aikajaksoittain"></svg><div class="tip" id="sTip"></div></div>
+    <div class="inner" style="padding-top:0"><button id="btnSTable" style="font-size:12px">Näytä taulukkona</button>
+      <div id="sTable" style="display:none" class="scroll"></div>
+      <div class="hint" id="sNote"></div></div>
+  </section>
+  <section data-tab="tilastot">
+    <h2>Eniten puhuneet</h2>
+    <div class="scroll" style="max-height:none"><table><thead><tr><th>Kutsu</th><th>Nimi</th><th class="num">Avauksia</th><th class="num">Puheaika</th><th></th></tr></thead><tbody id="sTalk"></tbody></table></div>
+  </section>
+  <section data-tab="tilastot">
+    <h2>Vilkkaimmat puheryhmät</h2>
+    <div class="scroll" style="max-height:none"><table><thead><tr><th>TG</th><th>Nimi</th><th class="num">Avauksia</th><th class="num">Asemia</th><th class="num">Puheaika</th><th></th></tr></thead><tbody id="sGroups"></tbody></table></div>
+  </section>
+  <section data-tab="tilastot" class="wide form">
+    <h2>Brandmeisterin historia: ryhmässä kuullut asemat</h2>
+    <div class="inner">
+      <div class="row"><div><label for="bmTg">Puheryhmä</label><input id="bmTg" type="text" style="width:110px" placeholder="244"></div>
+        <div><button id="btnBm">Hae</button> <span class="muted" id="bmState"></span></div></div>
+    </div>
+    <div class="scroll" style="max-height:none"><table><thead><tr><th>#</th><th>Kutsu</th><th>Nimi</th><th class="num">Avauksia</th><th>Viimeksi kuultu</th><th></th></tr></thead><tbody id="bmBody"></tbody></table></div>
+  </section>
+  <!-- ============ PALVELUT ============ -->
+  <section data-tab="palvelut" class="wide form">
+    <h2>Oma sijainti</h2>
+    <div class="inner">
+      <div class="row">
+        <div style="min-width:260px"><label for="locText">Koordinaatit tai lokaattori</label>
+          <input type="text" id="locText" placeholder="60.17, 24.94 tai KP20LE" style="width:240px"></div>
+        <div><button class="primary" id="btnLocSave">Tallenna sijainti</button> <button id="btnLocGeo">Käytä selaimen sijaintia</button></div>
+        <div id="locShow" class="muted"></div><span class="err" id="locErr"></span>
+      </div>
+      <div class="hint">Sijaintia käyttävät salamahälytys, säävaroitukset ja tieliikennetiedotteet. Sijainti tallentuu vain tälle koneelle.</div>
+    </div>
+  </section>
+  <div class="svcgrid" data-tab="palvelut" id="svcGrid">
+    <section class="svc form" data-svc="lightning">
+      <h2>⚡ Salamahälytys <label class="switch"><input type="checkbox" data-en="lightning"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
+      <div class="svcbody inner">
+        <div class="row">
+          <div><label>Säde (km)</label><input type="number" data-k="radius_km" min="1" max="300" style="width:80px"></div>
+          <div><label>Uusi hälytys aikaisintaan (min)</label><input type="number" data-k="cooldown_min" min="0" style="width:80px">
+            <div class="hint">Hälyttää heti uudestaan, jos salamat lähestyvät yli 5 km.</div></div>
+          <div><label><input type="checkbox" data-k="ground_only"> Vain maasalamat</label></div>
+          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        </div>
+        <div class="row" style="margin-top:8px"><button data-save="lightning">Tallenna</button><span class="err" data-err="lightning"></span></div>
+        <div class="svcview" data-view="lightning"></div>
+      </div>
+      <div class="svcstatus" data-st="lightning"></div>
+    </section>
+    <section class="svc form" data-svc="warnings">
+      <h2>⚠ Säävaroitukset <label class="switch"><input type="checkbox" data-en="warnings"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
+      <div class="svcbody inner">
+        <div class="row">
+          <div><label>Vähintään</label><select data-k="min_color"><option value="yellow">Keltainen</option><option value="orange">Oranssi</option><option value="red">Punainen</option></select></div>
+          <div><label><input type="checkbox" data-k="traffic_weather"> Myös liikennesää</label></div>
+          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        </div>
+        <div class="hint">Ilmatieteen laitoksen viralliset varoitukset, jotka koskevat omaa sijaintiasi (kuntarajojen mukaan).</div>
+        <div class="row" style="margin-top:8px"><button data-save="warnings">Tallenna</button><span class="err" data-err="warnings"></span></div>
+        <div class="svcview" data-view="warnings"></div>
+      </div>
+      <div class="svcstatus" data-st="warnings"></div>
+    </section>
+    <section class="svc form" data-svc="space">
+      <h2>☀ Avaruussää <label class="switch"><input type="checkbox" data-en="space"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
+      <div class="svcbody inner">
+        <div class="row">
+          <div><label>Hälytä, kun Kp ≥</label><input type="number" data-k="kp_threshold" min="1" max="9" step="1" style="width:70px"></div>
+          <div><label><input type="checkbox" data-k="flares"> Auringonpurkaukset (≥ M5)</label></div>
+          <div><label><input type="checkbox" data-k="forecasts"> NOAA:n K-ennusteet</label></div>
+          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        </div>
+        <div class="hint">Kp 5+ = geomagneettinen myrsky: revontulikelit VHF:llä mahdollisia, HF-kelit heikkenevät. Ei vaadi sijaintia.</div>
+        <div class="row" style="margin-top:8px"><button data-save="space">Tallenna</button><span class="err" data-err="space"></span></div>
+        <div class="svcview" data-view="space"></div>
+      </div>
+      <div class="svcstatus" data-st="space"></div>
+    </section>
+    <section class="svc form" data-svc="aurora">
+      <h2>🌌 Revontulihälytys <label class="switch"><input type="checkbox" data-en="aurora"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
+      <div class="svcbody inner">
+        <div class="row">
+          <div><label>Hälytysraja (nT/h)</label><input type="number" data-k="threshold_nt" min="20" step="10" style="width:90px"></div>
+          <div><label><input type="checkbox" data-k="dark_only"> Vain kun on pimeää</label></div>
+          <div><label><input type="checkbox" data-k="skip_overcast"> Ei kun täysin pilvistä</label></div>
+          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        </div>
+        <div class="hint">Lähimmän Ilmatieteen laitoksen magnetometrin kentän vaihtelu viimeisen tunnin aikana. Raja = mahdollisia,
+          2× = todennäköisiä, 4× = voimakkaita (uusi hälytys tason noustessa). Etelä-Suomessa 100 nT/h on hyvä lähtökohta, Lapissa noin 50.</div>
+        <div class="row" style="margin-top:8px"><button data-save="aurora">Tallenna</button><span class="err" data-err="aurora"></span></div>
+        <div class="svcview" data-view="aurora"></div>
+      </div>
+      <div class="svcstatus" data-st="aurora"></div>
+    </section>
+    <section class="svc form" data-svc="radiation">
+      <h2>☢ Säteilyvalvonta <label class="switch"><input type="checkbox" data-en="radiation"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
+      <div class="svcbody inner">
+        <div class="row">
+          <div><label>Hälytysraja (µSv/h)</label><input type="number" data-k="threshold" min="0.1" step="0.05" style="width:90px"></div>
+          <div><label>Säde (km)</label><input type="number" data-k="radius_km" min="0" style="width:80px"><div class="hint">0 = koko Suomi</div></div>
+          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        </div>
+        <div class="hint">STUK:n noin 250 mittausasemaa, päivitys 10 min välein. Normaali taso Suomessa n. 0,05–0,3 µSv/h; sade voi nostaa
+          lukemaa hetkellisesti. Oletusraja 0,4 µSv/h on STUK:n oma hälytysraja.</div>
+        <div class="row" style="margin-top:8px"><button data-save="radiation">Tallenna</button><span class="err" data-err="radiation"></span></div>
+        <div class="svcview" data-view="radiation"></div>
+      </div>
+      <div class="svcstatus" data-st="radiation"></div>
+    </section>
+    <section class="svc form" data-svc="traffic">
+      <h2>🚧 Tieliikennetiedotteet <label class="switch"><input type="checkbox" data-en="traffic"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
+      <div class="svcbody inner">
+        <div class="hint" style="margin-top:0">Ilmoittaa tiedotteet, jotka osuvat <b>säteelle</b>, valittuihin <b>maakuntiin</b> tai valituille <b>teille</b> (riittää, että yksi ehto täyttyy).</div>
+        <div class="row">
+          <div><label><input type="checkbox" data-k="use_location"> Säde oman sijainnin ympärillä</label></div>
+          <div class="tcenter"><label>tai muu keskipiste</label><input type="text" data-k="center" placeholder="61.50, 23.76 tai KP11RL" style="width:170px"></div>
+          <div><label>Säde (km)</label><input type="number" data-k="radius_km" min="0" style="width:80px"><div class="hint">0 = ei sädettä</div></div>
+          <div><label>Tienumerot</label><input type="text" data-k="roads" placeholder="4 9 25" style="width:120px"></div>
+        </div>
+        <label>Maakunnat</label><div class="provgrid" data-provs></div>
+        <label>Tiedotetyypit</label><div class="provgrid" data-types></div>
+        <div class="row">
+          <div><label><input type="checkbox" data-k="updates"> Ilmoita myös päivitykset</label></div>
+          <div><label><input type="checkbox" data-k="details"> Tarkka paikka hälytykseen</label></div>
+          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        </div>
+        <div class="row" style="margin-top:8px"><button data-save="traffic">Tallenna</button><span class="err" data-err="traffic"></span></div>
+        <div class="svcview" data-view="traffic"></div>
+      </div>
+      <div class="svcstatus" data-st="traffic"></div>
+    </section>
+  </div>
+</main>
+<div class="toasts" id="toasts"></div>
+<div class="modal-bg" id="modalBg"><div class="modal">
+  <div class="mh"><h2 id="mTitle"></h2><span class="muted" id="mSub"></span><span class="spacer"></span><button id="mClose">Sulje</button></div>
+  <div class="mb" id="mBody"></div>
+</div></div>
+
+<div id="dock">
+  <span class="livebadge" id="pState">KUUNTELU</span>
+  <span id="pChips"></span>
+  <div id="pNow"><div class="who" id="pWho">Odotetaan liikennettä…</div><div class="muted" id="pInfo"></div></div>
+  <div class="vu" title="Signaalin taso"><div id="pVu"></div></div>
+  <label class="muted" title="Äänenvoimakkuus">🔊 <input type="range" id="pVol" min="0" max="4" step="0.1"></label>
+  <a id="pExt" href="#" target="_blank" rel="noopener">Hoseline ↗</a>
+  <button id="dockClose">Lopeta</button>
+</div>
+<script src="/static/player.js"></script>
+
+<script>
+const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg>';
+const ICON_STOP = '<svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>';
+const player = new HosePlayer();
+function tgLabel(tg) { const r = S && S.talkgroups.find(x => x.tg === tg); return r && r.name ? r.name : ""; }
+function lookupCaller(id) {
+  if (!S || !id) return null;
+  for (const r of S.talkgroups) { if (r.active && r.active.id === id) return r.active; }
+  for (const r of S.talkgroups) { if (r.last && r.last.id === id) return r.last; }
+  return S.calls.find(c => c.id === id) || null;
+}
+function renderPlayer() {
+  const on = player.groups.size > 0;
+  $("dock").classList.toggle("open", on); document.body.classList.toggle("docked", on);
+  if (!on) return;
+  $("pChips").innerHTML = [...player.groups].map(tg => `<span class="chip"><b>TG ${tg}</b> <span class="muted">${esc(tgLabel(tg))}</span><button data-leave="${tg}" title="Lopeta TG ${tg}">×</button></span>`).join(" ");
+  $("pExt").href = "https://hose.brandmeister.network/?subscribe=" + [...player.groups].join(",");
+  const st = player.state;
+  $("pState").textContent = st === "on" ? "KUUNTELU" : st === "connecting" ? "YHDISTETÄÄN" : "VIRHE";
+  $("pState").style.color = st === "on" ? "" : "var(--warn)";
+  const c = player.call;
+  $("pNow").classList.toggle("talking", !!c);
+  if (c) {
+    const info = lookupCaller(c.src);
+    const call = (info && info.call) || (c.alias ? c.alias.split(/\s+/)[0] : "") || String(c.src);
+    const name = info && info.name ? info.name : "";
+    $("pWho").textContent = call + (name ? " · " + name : "");
+    $("pWho").dataset.q = (info && info.call) || String(c.src); $("pWho").classList.add("clk");
+    $("pInfo").textContent = `→ TG ${c.tg} ${tgLabel(c.tg)} · ${dur(now() - c.start)}` + (c.alias ? ` · ${c.alias}` : "") + ` · ID ${c.src}`;
+  } else {
+    $("pWho").textContent = "Odotetaan liikennettä…";
+    $("pInfo").textContent = player.error || "Ääni alkaa, kun joku puhuu valitussa ryhmässä.";
+    $("pVu").style.width = "0";
+  }
+}
+function listen(tg) { if (tg == null) player.stop(); else player.toggle(tg); }
+let S = null;          // viimeisin tila palvelimelta
+let offset = 0;        // palvelimen ja selaimen kellon ero
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const now = () => Date.now() / 1000 + offset;
+
+function fmtTime(ts) {
+  if (!ts) return "";
+  const d = new Date(ts * 1000), t = new Date();
+  const hm = d.toLocaleTimeString("fi-FI", {hour: "2-digit", minute: "2-digit", second: "2-digit"});
+  return d.toDateString() === t.toDateString() ? hm : d.toLocaleDateString("fi-FI") + " " + hm;
+}
+function ago(ts) {
+  if (!ts) return "";
+  let s = Math.max(0, Math.round(now() - ts));
+  if (s < 60) return s + " s sitten";
+  if (s < 3600) return Math.floor(s / 60) + " min sitten";
+  if (s < 86400) return Math.floor(s / 3600) + " h " + Math.floor((s % 3600) / 60) + " min sitten";
+  return Math.floor(s / 86400) + " pv sitten";
+}
+function dur(sec) {
+  if (sec == null) return "";
+  sec = Math.round(sec);
+  if (sec < 60) return sec + " s";
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return (h ? h + " h " : "") + m + " min " + (h ? "" : s + " s");
+}
+function q(call, id) { const v = call || (id ? String(id) : ""); return v ? ` data-q="${esc(v)}"` : ""; }
+function who(c) {
+  if (!c) return "";
+  const call = c.call || (c.id ? String(c.id) : "?");
+  return `<span class="call clk"${q(c.call, c.id)}>${esc(call)}</span>` + (c.name ? ` <span class="muted">${esc(c.name)}</span>` : "");
+}
+
+function render() {
+  if (!S) return;
+  const st = S.status;
+  $("dot").className = "dot" + (st.connected ? " ok" : "");
+  $("statusText").textContent = (st.demo ? "DEMO – " : "") + (st.connected
+      ? `Yhdistetty · ${st.events.toLocaleString("fi-FI")} tapahtumaa` + (st.last_event ? ` · viimeisin ${ago(st.last_event)}` : "")
+      : "Ei yhteyttä" + (st.error ? ` (${st.error})` : ""));
+  $("watching").textContent = "Seurataan: " + (S.config.talkgroups.join(", ") || "–");
+
+  // Puheryhmät
+  const rows = [...S.talkgroups].sort((a, b) => {
+    const ta = a.active ? 1e12 : (a.last ? a.last.stop : 0);
+    const tb = b.active ? 1e12 : (b.last ? b.last.stop : 0);
+    return tb - ta || a.tg - b.tg;
+  });
+  $("tgCount").textContent = rows.length ? `(${rows.length})` : "";
+  $("tgEmpty").style.display = rows.length ? "none" : "";
+  $("tgBody").innerHTML = rows.map(r => {
+    const a = r.active, l = r.last;
+    const state = a ? `<span class="livebadge">LÄHETYS</span>` : (l ? `<span class="muted">${ago(l.stop)}</span>` : `<span class="muted">ei liikennettä</span>`);
+    const p = a || l;
+    return `<tr class="${a ? "live" : ""}">
+      <td class="tg">${r.tg}${r.pattern && r.pattern !== String(r.tg) ? ` <span class="pill">${esc(r.pattern)}</span>` : ""}</td>
+      <td>${r.tg > 90 ? `<button class="listen${player.isOn(r.tg) ? " on" : ""}" data-tg="${r.tg}" title="${player.isOn(r.tg) ? "Lopeta kuuntelu" : "Kuuntele TG " + r.tg}">${player.isOn(r.tg) ? ICON_STOP : ICON_PLAY}</button>` : ""}</td>
+      <td>${esc(r.name)}</td>
+      <td>${state}</td>
+      <td>${p ? fmtTime(a ? a.start : l.stop) : ""}</td>
+      <td>${who(p)}</td>
+      <td class="num">${a ? dur(now() - a.start) : (l ? dur(l.duration) : "")}</td>
+      <td class="muted">${esc(p ? p.via : "")}</td>
+      <td class="num">${r.count || ""}</td>
+      <td class="num">${r.airtime ? dur(r.airtime) : ""}</td></tr>`;
+  }).join("");
+
+  renderMsg();
+  renderPlayer();
+  renderWatch();
+  renderDevices();
+  if (TAB === "palvelut") renderServices();
+
+  // Puhelusuodatin
+  const sel = $("callFilter"), cur = sel.value;
+  const tgs = [...new Set(S.calls.map(c => c.tg))].sort((a, b) => a - b);
+  const opts = `<option value="">Kaikki seuratut</option>` + tgs.map(t => `<option value="${t}">${t}</option>`).join("");
+  if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; sel.value = cur; }
+  const minDur = Number(S.config.min_duration || 0);
+  $("callSkipNote").style.display = minDur > 0 ? "" : "none";
+  if (minDur > 0) $("callSkipNote").innerHTML = `Alle ${minDur} s puhelut ohitetaan asetusten mukaan` +
+    ` (${(S.status.skipped_short || 0).toLocaleString("fi-FI")} ohitettu). <button id="btnNoSkip">Näytä kaikki puhelut</button>`;
+  const limit = Number(S.config.calls_limit || 15);
+  if (document.activeElement !== $("callLimit")) $("callLimit").value = String(limit);
+  const calls = S.calls.filter(c => !sel.value || String(c.tg) === sel.value).slice(0, limit);
+  $("callCount").textContent = calls.length ? `(${calls.length}${sel.value ? " · TG " + sel.value : ""})` : "";
+  $("callEmpty").style.display = calls.length ? "none" : "";
+  $("callBody").innerHTML = calls.map(c => `<tr>
+      <td>${fmtTime(c.start)}</td><td class="tg">${c.tg}</td>
+      <td class="call clk"${q(c.call, c.id)}>${esc(c.call || c.id)}</td><td>${esc(c.name)}</td>
+      <td class="num">${dur(c.duration)}</td><td class="muted">${esc(c.via)}</td></tr>`).join("");
+
+  renderAprs();
+}
+
+const STATUS_CLASS = {"kuitattu": "ok", "vastaanotettu": "ok", "lähetetty (ei kuittausta)": "ok", "lähetetty": "warn", "jonossa": "warn", "uudelleen": "warn"};
+function renderMsg() {
+  const M = S.messaging, cfg = S.config.messaging;
+  const a = M.aprs;
+  let badge = "";
+  if (a.enabled) badge = a.connected && a.verified !== false ? `<span class="ok">● APRS-IS</span>` : `<span class="bad">● APRS-IS</span>`;
+  $("aprsBadge").innerHTML = badge;
+  $("aprsStatus").innerHTML = !a.enabled ? `<span class="muted">Lähetys ei ole päällä.</span>` :
+    a.connected ? `<span class="${a.verified === false ? "bad" : "ok"}">APRS-IS yhdistetty${a.server ? " (" + esc(a.server) + ")" : ""}${a.verified === true ? ", tunnus vahvistettu" : ""}</span>${a.error ? ` <span class="bad">${esc(a.error)}</span>` : ""}` :
+    `<span class="bad">APRS-IS ei yhteyttä${a.error ? ": " + esc(a.error) : ""}</span>`;
+  if (a.passcode_auto != null) $("mPassHint").textContent = "tyhjä = " + a.passcode_auto + " (laskettu)";
+  $("feedStatus").innerHTML = (cfg.feeds || []).map(f => {
+    const st = M.feeds[f.url] || {};
+    const state = !f.enabled ? `<span class="muted">pois päältä</span>` : st.error ? `<span class="bad">${esc(st.error)}</span>` :
+      st.checked ? `<span class="ok">OK · ${st.count} uutista</span>` : `<span class="muted">odottaa</span>`;
+    return `<tr><td><b>${esc(f.name || st.title || "")}</b> <span class="muted">${esc(f.url)}</span></td><td>${st.checked ? ago(st.checked) : ""}</td><td class="wrap">${esc(st.latest || "")}</td><td>${state}</td></tr>`;
+  }).join("");
+  $("msgLogEmpty").style.display = M.log.length ? "none" : "";
+  $("msgLog").innerHTML = M.log.map(m => `<tr>
+    <td>${fmtTime(m.time)}</td><td>${m.dir === "in" ? "↓ saapunut" : "↑ lähtevä"}</td>
+    <td class="call">${esc(m.dir === "in" ? m.from + " → " + m.to : m.to)}</td>
+    <td class="wrap">${esc(m.text)}</td>
+    <td class="${STATUS_CLASS[m.status] || "bad"}">${esc(m.status)}${m.tries > 1 ? ` (${m.tries}×)` : ""}</td></tr>`).join("");
+}
+
+function feedRow(f) {
+  const d = document.createElement("div");
+  d.className = "feedrow";
+  d.innerHTML = `<label style="margin:0"><input type="checkbox" class="fen" ${f.enabled !== false ? "checked" : ""}></label>
+    <input type="text" class="fname" placeholder="Etuliite" value="${esc(f.name || "")}">
+    <input type="text" class="furl" placeholder="https://…/feed/" value="${esc(f.url || "")}">
+    <input type="text" class="fcmd" placeholder="Komento" title="Radiokomento, esim. SAA" style="width:90px" value="${esc(f.cmd || "")}">
+    <button class="fprev">Esikatsele</button><button class="fdel">Poista</button>`;
+  d.querySelector(".fdel").onclick = () => d.remove();
+  d.querySelector(".fprev").onclick = async () => {
+    const url = d.querySelector(".furl").value.trim();
+    const r = await fetch("/api/feeds/preview?url=" + encodeURIComponent(url)); const j = await r.json();
+    alertBox(j.ok ? `${j.title}\n\n` + j.items.map(i => "• " + i.title).join("\n") : "Virhe: " + j.error);
+  };
+  return d;
+}
+function alertBox(text) { $("msgErr").textContent = ""; const p = document.createElement("pre"); p.className = "note"; p.style.whiteSpace = "pre-wrap"; p.textContent = text; const old = $("previewBox"); if (old) old.remove(); p.id = "previewBox"; $("feedRows").after(p); }
+function fillMsg() {
+  const m = S.config.messaging;
+  $("mEnabled").checked = !!m.enabled; $("mLogin").value = m.login || ""; $("mPass").value = m.passcode || "";
+  $("mServer").value = m.server || ""; $("mRecip").value = (m.recipients || []).join(" ");
+  $("mParts").value = m.max_parts; $("mInterval").value = Math.round(m.feed_interval / 60); $("mAscii").checked = !!m.ascii; $("mNoAck").checked = !!m.no_ack; $("mAprsWatch").value = (m.aprs_watch || []).join(" ");
+  $("feedRows").innerHTML = ""; (m.feeds || []).forEach(f => $("feedRows").append(feedRow(f)));
+  $("mCmd").checked = m.commands_enabled !== false; $("mCmdAll").checked = !!m.commands_all;
+  $("mCmdAllow").value = (m.commands_allow || []).join(" ");
+  $("cmdExample").textContent = (m.login || "OH2ABC-13") + " TG244";
+}
+function collectMsg() {
+  return {enabled: $("mEnabled").checked, login: $("mLogin").value, passcode: $("mPass").value, server: $("mServer").value,
+    recipients: $("mRecip").value, max_parts: $("mParts").value, feed_interval: Number($("mInterval").value || 10) * 60,
+    ascii: $("mAscii").checked, no_ack: $("mNoAck").checked, aprs_watch: $("mAprsWatch").value,
+    feeds: [...document.querySelectorAll(".feedrow")].map(d => ({enabled: d.querySelector(".fen").checked,
+      name: d.querySelector(".fname").value, url: d.querySelector(".furl").value, cmd: d.querySelector(".fcmd").value})),
+    commands_enabled: $("mCmd").checked, commands_all: $("mCmdAll").checked, commands_allow: $("mCmdAllow").value};
+}
+
+function fillSettings() {
+  $("tgInput").value = S.config.talkgroups.join(" ");
+  $("dataFilter").value = S.config.data_filter;
+  $("minDur").value = S.config.min_duration;
+  $("logCsv").checked = !!S.config.log_csv;
+  $("verInfo").textContent = "Versio " + S.version + ".";
+  $("keyState").textContent = S.config.bm_api_key ? "Avain tallennettu" : "Ei avainta";
+  $("apiKey").value = "";
+  const p = S.paths;
+  $("paths").innerHTML = `Asetukset: ${esc(p.config)}<br>Puheluloki: ${esc(p.calls_csv)}<br>SMS/data-loki: ${esc(p.data_csv)}<br>Datan raakatapahtumat: ${esc(p.raw)}`;
+}
+
+let firstSnapshot = true, quitting = false;
+function connect() {
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onmessage = ev => {
+    S = JSON.parse(ev.data);
+    offset = S.now - Date.now() / 1000;
+    if (firstSnapshot) { firstSnapshot = false; seenAlerts = lastNotified = maxAlertSeq(); showTab(TAB); }
+    handleAlerts();
+    render();
+  };
+  ws.onclose = () => {
+    if (quitting) { $("dot").className = "dot"; $("statusText").textContent = "Ohjelma on suljettu. Voit sulkea tämän välilehden."; return; }
+    $("dot").className = "dot";
+    $("statusText").textContent = "Sovellus ei vastaa – onko se suljettu? Yritetään uudelleen…";
+    setTimeout(connect, 2000);
+  };
+}
+
+let TAB = "seuranta";
+function showTab(tab) {
+  TAB = tab;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll("main > section, main > .svcgrid").forEach(s => { s.style.display = s.dataset.tab === tab ? "" : "none"; });
+  if (!S) return;
+  if (tab === "asetukset") fillSettings();
+  if (tab === "viestit") fillMsg();
+  if (tab === "kaverit") { fillWatch(); seenAlerts = maxAlertSeq(); updateAlertBadge(); }
+  if (tab === "laitteet") fillDevices();
+  if (tab === "tilastot") loadStats();
+  if (tab === "palvelut") fillServices();
+}
+$("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); });
+$("btnSave").onclick = async () => {
+  $("saveErr").textContent = "";
+  const r = await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({talkgroups: $("tgInput").value, data_filter: $("dataFilter").value,
+                          min_duration: $("minDur").value, log_csv: $("logCsv").checked})});
+  const j = await r.json();
+  if (!j.ok) $("saveErr").textContent = j.error; else $("saveErr").innerHTML = '<span class="ok">Tallennettu</span>';
+};
+$("btnAddFeed").onclick = () => $("feedRows").append(feedRow({enabled: true}));
+$("btnMsgSave").onclick = async () => {
+  $("msgErr").textContent = "";
+  const r = await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messaging: collectMsg()})});
+  const j = await r.json();
+  if (!j.ok) $("msgErr").textContent = j.error; else { $("msgErr").innerHTML = '<span class="ok">Tallennettu</span>'; setTimeout(fillMsg, 300); }
+};
+$("btnFeedCheck").onclick = () => fetch("/api/feeds/check", {method: "POST"});
+$("btnTest").onclick = async () => {
+  $("msgErr").textContent = "";
+  const r = await fetch("/api/test_message", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({text: $("mTest").value})});
+  const j = await r.json(); if (!j.ok) $("msgErr").textContent = j.error;
+};
+$("tgBody").addEventListener("pointerdown", e => { const b = e.target.closest(".listen"); if (b) listen(Number(b.dataset.tg)); });
+$("dockClose").onclick = () => listen(null);
+$("btnQuit").onclick = async () => {
+  if (!confirm("Suljetaanko Monitor for BrandMeister? Seuranta ja hälytykset loppuvat, kunnes käynnistät ohjelman uudelleen.")) return;
+  quitting = true; await fetch("/api/shutdown", {method: "POST"});
+};
+$("btnClear").onclick = () => fetch("/api/clear", {method: "POST"});
+$("callFilter").onchange = render;
+$("callSkipNote").addEventListener("click", async e => {
+  if (e.target.id !== "btnNoSkip") return;
+  await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({min_duration: 0})});
+  if (S) S.config.min_duration = 0; render();
+});
+$("callLimit").onchange = async e => {
+  const n = Number(e.target.value);
+  if (S) S.config.calls_limit = n;
+  render();
+  await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({calls_limit: n})});
+};
+// ---------------- yhteiset ----------------
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  let j = {}; try { j = await r.json(); } catch (e) { j = {ok: false, error: "HTTP " + r.status}; }
+  return j;
+}
+const saveCfg = obj => api("/api/config", obj);
+function fmtShort(ts) { if (!ts) return ""; const d = new Date(ts * 1000), t = new Date();
+  return d.toDateString() === t.toDateString() ? d.toLocaleTimeString("fi-FI", {hour: "2-digit", minute: "2-digit"}) : d.toLocaleDateString("fi-FI", {day: "numeric", month: "numeric"}) + " " + d.toLocaleTimeString("fi-FI", {hour: "2-digit", minute: "2-digit"}); }
+function where(x) { return x.tg ? `TG ${x.tg}${x.tg_name ? " " + esc(x.tg_name) : ""}` : (x.to ? "→ " + esc(x.to) : ""); }
+$("btnKeySave").onclick = async () => { const k = $("apiKey").value.trim(); if (!k) return; const j = await saveCfg({bm_api_key: k}); $("keyState").textContent = j.ok ? "Avain tallennettu" : j.error; $("apiKey").value = ""; };
+$("btnKeyDel").onclick = async () => { const j = await saveCfg({bm_api_key: ""}); $("keyState").textContent = j.ok ? "Ei avainta" : j.error; };
+
+// ---------------- kutsukortti ----------------
+document.addEventListener("click", e => { const el = e.target.closest("[data-q]"); if (el && el.dataset.q && el.classList.contains("clk")) openStation(el.dataset.q); });
+$("mClose").onclick = () => $("modalBg").classList.remove("open");
+$("modalBg").addEventListener("click", e => { if (e.target === $("modalBg")) $("modalBg").classList.remove("open"); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("modalBg").classList.remove("open"); });
+async function openStation(qv) {
+  $("mTitle").textContent = qv; $("mSub").textContent = "haetaan…"; $("mBody").innerHTML = "";
+  $("modalBg").classList.add("open");
+  const j = await api("/api/station?q=" + encodeURIComponent(qv));
+  if (!j.ok) { $("mSub").textContent = j.error || "virhe"; return; }
+  const call = j.call || qv, reg = j.registry || [];
+  $("mTitle").textContent = call;
+  const names = [...new Set(reg.map(r => r.Name).filter(Boolean))];
+  $("mSub").textContent = names.join(", ");
+  const watched = j.watched;
+  let h = `<div class="row" style="margin:10px 0">
+    <button id="mWatch">${watched ? "Poista kaverilistalta" : "Lisää kaverilistaan"}</button>
+    ${!/^\d+$/.test(call) ? `<a href="https://brandmeister.network/#/profile/${encodeURIComponent(call)}" target="_blank" rel="noopener">Brandmeister-profiili ↗</a>
+    <a href="https://www.qrz.com/db/${encodeURIComponent(call)}" target="_blank" rel="noopener">QRZ ↗</a>` : ""}</div>`;
+  h += `<h3>Rekisteri</h3>` + (reg.length ? `<table><thead><tr><th>DMR-ID</th><th>Nimi</th><th>APRS-tunnus</th></tr></thead><tbody>` +
+    reg.map(r => `<tr><td>${esc(r.ID)}</td><td>${esc(r.Name)}</td><td>${r.SSID != null ? esc(r.Call + "-" + r.SSID) : '<span class="muted">ei asetettu</span>'}</td></tr>`).join("") + `</tbody></table>`
+    : `<div class="muted">Ei rekisteritietoja.</div>`);
+  const devs = j.devices || [];
+  h += `<h3>Laitteet (toistimet ja hotspotit)</h3>` + (devs.length ? `<table><thead><tr><th>ID</th><th>Tyyppi</th><th>Sijainti</th><th>Taajuus</th><th>Nähty</th><th></th></tr></thead><tbody>` +
+    devs.map(d => { const ls = d.last_seen ? Date.parse(d.last_seen.replace(" ", "T") + "Z") / 1000 : null;
+      return `<tr><td>${esc(d.id)}</td><td>${esc(d.hardware || d.linkname || "")}</td><td class="wrap">${esc(d.city || "")}</td>
+      <td>${esc(d.tx || "")}${d.rx && d.rx !== d.tx ? " / " + esc(d.rx) : ""}</td><td>${ls ? ago(ls) : ""}</td>
+      <td><button data-adddev="${esc(d.id)}">Seuraa</button></td></tr>`; }).join("") + `</tbody></table>` : `<div class="muted">Ei laitteita tällä kutsulla.</div>`);
+  const hd = j.heard || [];
+  h += `<h3>Kuultu verkossa (ohjelman käynnistyksen jälkeen)</h3>` + (hd.length ? `<table><thead><tr><th>Aika</th><th>Missä</th><th>Kautta</th><th class="num">Kesto</th></tr></thead><tbody>` +
+    hd.map(e => `<tr><td>${e.active ? '<span class="livebadge">NYT</span>' : fmtTime(e.start) + ` <span class="muted">${ago(e.start)}</span>`}</td>
+      <td>${e.group ? `<span class="tg">TG ${esc(e.tg)}</span> ${esc(e.tg_name || "")}` : "→ " + esc(e.to_call || "")}</td><td class="muted">${esc(e.via)}</td>
+      <td class="num">${e.dur != null ? dur(e.dur) : ""}</td></tr>`).join("") + `</tbody></table>` : `<div class="muted">Ei kuultu vielä.</div>`);
+  const lc = j.local_calls || [];
+  if (lc.length) h += `<h3>Puhelut seuratuissa ryhmissä</h3><table><tbody>` + lc.map(c => `<tr><td>${fmtTime(c.start)}</td><td class="tg">TG ${c.tg}</td><td class="num">${dur(c.duration)}</td></tr>`).join("") + `</tbody></table>`;
+  if ((j.errors || []).length) h += `<div class="bad" style="margin-top:10px">${j.errors.map(esc).join("<br>")}</div>`;
+  $("mBody").innerHTML = h;
+  $("mWatch").onclick = async () => {
+    const lst = [...S.config.watch.list]; const key = (/^\d+$/.test(call) ? call : call.split("-")[0]).toUpperCase();
+    const i = lst.indexOf(key); if (i >= 0) lst.splice(i, 1); else lst.push(key);
+    const r = await saveCfg({watch: {list: lst}}); if (r.ok) { S.config = r.config; $("mWatch").textContent = i >= 0 ? "Lisää kaverilistaan" : "Poista kaverilistalta"; }
+  };
+  $("mBody").querySelectorAll("[data-adddev]").forEach(b => b.onclick = async () => {
+    const lst = [...S.config.devices.list]; const id = Number(b.dataset.adddev);
+    if (!lst.some(d => d.id === id)) lst.push({id, note: ""});
+    const r = await saveCfg({devices: {list: lst}}); b.textContent = r.ok ? "Seurannassa ✓" : r.error; b.disabled = true;
+  });
+}
+
+// ---------------- kaverit & hälytykset ----------------
+let seenAlerts = 0, lastNotified = 0, beepCtx = null;
+const maxAlertSeq = () => S && S.alerts.length ? Math.max(...S.alerts.map(a => a.seq)) : 0;
+function updateAlertBadge() {
+  const n = S ? S.alerts.filter(a => a.seq > seenAlerts).length : 0;
+  $("alertBadge").style.display = n && TAB !== "kaverit" ? "" : "none"; $("alertBadge").textContent = n;
+}
+function alertText(a) {
+  if (a.kind === "palvelu") return [a.title, a.body || ""];
+  if (a.kind === "laite_pois") return [`Laite ${a.call} pois verkosta`, `ID ${a.id}${a.via ? " · " + a.via : ""}`];
+  if (a.kind === "laite_ok") return [`Laite ${a.call} palasi verkkoon`, `ID ${a.id}`];
+  return [`${a.call}${a.name ? " (" + a.name + ")" : ""} aktiivinen`, `${a.tg ? "TG " + a.tg + (a.tg_name ? " " + a.tg_name : "") : "→ " + (a.to || "")}${a.via ? " · " + a.via : ""}`];
+}
+function beep(bad) {
+  try {
+    beepCtx = beepCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (beepCtx.state === "suspended") beepCtx.resume();
+    [0, 0.18].forEach((t0, i) => { const o = beepCtx.createOscillator(), g = beepCtx.createGain();
+      o.frequency.value = bad ? 440 : (i ? 1320 : 880); o.connect(g); g.connect(beepCtx.destination);
+      const t = beepCtx.currentTime + t0; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15); o.start(t); o.stop(t + 0.16); });
+  } catch (e) { /* ei ääntä */ }
+}
+function toast(a) {
+  const [title, body] = alertText(a);
+  const d = document.createElement("div"); d.className = "toast" + (a.kind === "laite_pois" || a.level === "bad" ? " bad" : "");
+  d.innerHTML = `<b>${esc(title)}</b><div class="muted">${esc(body)}</div>`;
+  d.onclick = () => { d.remove(); if (a.kind === "kaveri" || a.kind === "testi") openStation(a.call); };
+  $("toasts").prepend(d); setTimeout(() => d.remove(), 12000);
+}
+function handleAlerts() {
+  if (!S) return;
+  const fresh = S.alerts.filter(a => a.seq > lastNotified).sort((x, y) => x.seq - y.seq);
+  if (fresh.length) {
+    lastNotified = maxAlertSeq();
+    const w = S.config.watch;
+    fresh.slice(-3).forEach(a => {
+      toast(a);
+      const [title, body] = alertText(a);
+      if ((w.desktop || a.kind === "palvelu") && "Notification" in window && Notification.permission === "granted") {
+        try { const n = new Notification(title, {body, tag: "bm-" + a.seq}); n.onclick = () => { window.focus(); openStation(a.call); }; } catch (e) { /* */ }
+      }
+    });
+    if (w.sound || fresh.some(a => a.kind === "palvelu")) beep(fresh.some(a => a.kind === "laite_pois" || a.level === "bad"));
+  }
+  if (TAB === "kaverit") seenAlerts = maxAlertSeq();
+  updateAlertBadge();
+}
+function notifState() {
+  if (!("Notification" in window)) return "Selain ei tue työpöytäilmoituksia.";
+  return {granted: "Työpöytäilmoitukset sallittu.", denied: "Työpöytäilmoitukset estetty selaimen asetuksissa.", default: "Työpöytäilmoituksia ei ole vielä sallittu."}[Notification.permission];
+}
+function fillWatch() {
+  const w = S.config.watch;
+  $("wList").value = w.list.join(" "); $("wQuiet").value = w.quiet_min; $("wScope").value = w.scope;
+  $("wDesktop").checked = !!w.desktop; $("wSound").checked = !!w.sound; $("wSms").checked = !!w.sms;
+  $("notifState").textContent = notifState();
+}
+function renderWatch() {
+  const ws = S.watch_status || [];
+  $("wEmpty").style.display = ws.length ? "none" : "";
+  $("wBody").innerHTML = ws.map(x => `<tr class="${x.active ? "live" : ""}">
+    <td>${who({call: x.call || x.key, name: x.name, id: x.id})}</td>
+    <td>${x.active ? '<span class="livebadge">LÄHETYS</span>' : x.start ? '<span class="muted">kuultu</span>' : '<span class="muted">ei kuultu</span>'}</td>
+    <td>${x.start ? fmtShort(x.start) + ` <span class="muted">${ago(x.start)}</span>` : ""}</td>
+    <td>${x.start ? where(x) : ""}</td><td class="muted">${esc(x.via || "")}</td></tr>`).join("");
+  const al = S.alerts;
+  $("alertCount").textContent = al.length ? `(${al.length})` : "";
+  $("alertEmpty").style.display = al.length ? "none" : "";
+  const KIND = {palvelu: "Palvelu", kaveri: "Kaveri", laite_pois: '<span class="bad">Laite pois</span>', laite_ok: '<span class="ok">Laite palasi</span>', testi: "Testi"};
+  $("alertBody").innerHTML = al.map(a => a.kind === "palvelu"
+    ? `<tr><td>${fmtTime(a.time)}</td><td>${esc(a.service_title)}</td><td class="wrap" colspan="2"><b class="${a.level === "bad" ? "bad" : ""}">${esc(a.title)}</b><div class="muted">${esc(a.body)}</div></td><td></td></tr>`
+    : `<tr><td>${fmtTime(a.time)}</td><td>${KIND[a.kind] || esc(a.kind)}</td>
+    <td>${who({call: a.call, name: a.name, id: a.id})}</td><td>${where(a)}</td><td class="muted">${esc(a.via || "")}</td></tr>`).join("");
+}
+$("btnWSave").onclick = async () => {
+  const j = await saveCfg({watch: {list: $("wList").value, quiet_min: $("wQuiet").value, scope: $("wScope").value,
+    desktop: $("wDesktop").checked, sound: $("wSound").checked, sms: $("wSms").checked}});
+  $("wErr").innerHTML = j.ok ? '<span class="ok">Tallennettu</span>' : esc(j.error);
+  if (j.ok) { S.config = j.config; fillWatch(); }
+};
+$("btnWTest").onclick = () => { beep(false); api("/api/alerts/test", {}); };
+$("btnNotif").onclick = async () => { if ("Notification" in window) { await Notification.requestPermission(); } $("notifState").textContent = notifState(); };
+
+// ---------------- laitteet ----------------
+let devDraft = null;
+function fillDevices() {
+  const d = S.config.devices;
+  devDraft = d.list.map(x => ({...x}));
+  $("dOff").value = d.offline_min; $("dSms").checked = !!d.sms;
+  $("dKeyHint").innerHTML = S.config.bm_api_key ? '<span class="ok">API-avain käytössä – hallintapainikkeet toimivat omille laitteillesi.</span>'
+    : 'Hallintapainikkeet (puheryhmien lisäys ja poisto, tyhjennys, katkaisu, nollaus) vaativat API-avaimen: Asetukset → Brandmeister API-avain.';
+}
+async function saveDevices(list) {
+  const j = await saveCfg({devices: {list: list || devDraft, offline_min: $("dOff").value, sms: $("dSms").checked}});
+  $("dErr").innerHTML = j.ok ? '<span class="ok">Tallennettu</span>' : esc(j.error);
+  if (j.ok) { S.config = j.config; devDraft = S.config.devices.list.map(x => ({...x})); }
+  return j.ok;
+}
+$("btnDAdd").onclick = async () => { const id = $("dId").value.trim(); if (!id) return; devDraft = devDraft || [];
+  if (!devDraft.some(d => String(d.id) === id)) devDraft.push({id, note: ""}); if (await saveDevices()) $("dId").value = ""; };
+$("btnDSave").onclick = () => saveDevices();
+$("btnDRefresh").onclick = () => api("/api/devices/refresh", {});
+$("btnDFind").onclick = async () => {
+  const c = $("dCall").value.trim(); if (!c) return; $("dFound").innerHTML = '<span class="muted">Haetaan…</span>';
+  const j = await api("/api/devices/lookup?call=" + encodeURIComponent(c));
+  if (!j.ok) { $("dFound").innerHTML = `<span class="bad">${esc(j.error)}</span>`; return; }
+  $("dFound").innerHTML = j.devices.length ? `<table style="margin-top:8px"><tbody>` + j.devices.map(d => `<tr><td><b>${esc(d.callsign)}</b> ${esc(d.id)}</td>
+    <td>${esc(d.hardware || "")}</td><td class="wrap">${esc(d.city || "")}</td><td>${esc(d.statusText || "")}</td>
+    <td><button data-pick="${esc(d.id)}">Lisää seurantaan</button></td></tr>`).join("") + `</tbody></table>` : '<span class="muted">Ei laitteita tällä kutsulla.</span>';
+  $("dFound").querySelectorAll("[data-pick]").forEach(b => b.onclick = async () => {
+    devDraft = devDraft || []; if (!devDraft.some(d => String(d.id) === b.dataset.pick)) devDraft.push({id: b.dataset.pick, note: ""});
+    if (await saveDevices()) { b.textContent = "Lisätty ✓"; b.disabled = true; } });
+};
+const SLOTNAME = s => s === 0 ? "simplex" : "TS" + s;
+function renderDevices() {
+  if (TAB !== "laitteet" || document.activeElement && document.activeElement.closest && document.activeElement.closest("#devCards")) return;
+  const devs = S.devices || [], key = !!S.config.bm_api_key;
+  $("devEmpty").style.display = devs.length ? "none" : "";
+  const html = devs.map(d => {
+    const status = d.error ? `<span class="bad">${esc(d.error)}</span>` : d.online == null ? '<span class="muted">tarkistetaan…</span>'
+      : d.online ? '<span class="online">● Verkossa</span>' : '<span class="offline">● Ei verkossa</span>';
+    const slots = [...new Set([...(d.static || []).map(s => s.slot), ...(d.dynamic || []).map(s => s.slot), d.default_slot ?? 0])].sort();
+    const chips = (arr, cls) => (arr || []).map(s => `<span class="tgchip ${cls}" title="${SLOTNAME(s.slot)}"><span class="tg">${s.tg}</span><span class="muted">${SLOTNAME(s.slot)}</span>${cls === "" && key ? `<button data-act="delete" data-id="${d.id}" data-slot="${s.slot}" data-tg="${s.tg}" title="Poista pysyvä TG">×</button>` : ""}</span>`).join("") || '<span class="muted">ei</span>';
+    const act = d.activity;
+    return `<div class="devcard">
+      <div class="top"><span class="call clk" data-q="${esc(d.callsign || d.id)}">${esc(d.callsign || "?")}</span><span class="muted">ID ${d.id}</span>${status}
+        <span class="muted">${d.last_seen ? "nähty " + ago(d.last_seen) : ""}</span><span class="spacer"></span>
+        <button data-rm="${d.id}" title="Poista seurannasta">Poista seurannasta</button></div>
+      <div class="muted" style="margin:4px 0 8px">${esc([d.hardware, d.firmware, d.city, d.tx ? d.tx + (d.rx && d.rx !== d.tx ? "/" + d.rx : "") + " MHz" : "", d.colorcode != null ? "CC" + d.colorcode : "", d.statusText].filter(Boolean).join(" · "))}</div>
+      ${act ? `<div style="margin-bottom:6px">Viimeisin liikenne: ${who({call: act.call, name: act.name})} → <span class="tg">TG ${esc(act.tg)}</span> <span class="muted">${act.stop ? ago(act.stop) : "nyt"}</span></div>` : ""}
+      <div><b>Pysyvät:</b> ${chips(d.static, "")}</div>
+      <div style="margin-top:4px"><b>Dynaamiset:</b> ${chips(d.dynamic, "dyn")} ${(d.timed || []).length ? "<b>Ajastetut:</b> " + chips(d.timed, "dyn") : ""}</div>
+      ${key ? `<div class="row form" style="margin-top:10px">
+        <div><label>Lisää pysyvä TG</label><input type="text" class="addtg" style="width:90px" placeholder="244">
+          <select class="addslot">${[0, 1, 2].map(s => `<option value="${s}" ${s === (d.default_slot ?? 0) ? "selected" : ""}>${SLOTNAME(s)}</option>`).join("")}</select>
+          <button data-act="add" data-id="${d.id}">Lisää</button></div>
+        <div>${slots.map(s => `<button data-act="drop_dynamic" data-id="${d.id}" data-slot="${s}">Tyhjennä dynaamiset (${SLOTNAME(s)})</button>
+          <button data-act="drop_call" data-id="${d.id}" data-slot="${s}">Katkaise puhelu (${SLOTNAME(s)})</button>`).join(" ")}
+          <button data-act="reset" data-id="${d.id}">Nollaa yhteys</button></div>
+        <span class="err devmsg"></span></div>` : ""}
+    </div>`;
+  }).join("");
+  if ($("devCards").dataset.html !== html) { $("devCards").innerHTML = html; $("devCards").dataset.html = html; }
+}
+$("devCards").addEventListener("click", async e => {
+  const rm = e.target.closest("[data-rm]");
+  if (rm) { await saveDevices((S.config.devices.list || []).filter(d => String(d.id) !== rm.dataset.rm)); return; }
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const card = b.closest(".devcard"), msg = card.querySelector(".devmsg");
+  const body = {id: Number(b.dataset.id), action: b.dataset.act, slot: Number(b.dataset.slot || 0)};
+  if (b.dataset.act === "add") { body.tg = Number(card.querySelector(".addtg").value); body.slot = Number(card.querySelector(".addslot").value);
+    if (!body.tg) { msg.textContent = "Anna puheryhmä"; return; } }
+  if (b.dataset.act === "delete") body.tg = Number(b.dataset.tg);
+  if (b.dataset.act === "reset" && !confirm("Nollataanko laitteen yhteys Brandmeisteriin? Laite yhdistää uudelleen hetken kuluttua.")) return;
+  b.disabled = true; if (msg) msg.textContent = "…";
+  const j = await api("/api/device/action", body);
+  b.disabled = false;
+  if (msg) msg.innerHTML = j.ok ? '<span class="ok">Tehty</span>' : esc(j.error);
+});
+
+// ---------------- tilastot ----------------
+let STATS = null, statsTimer = null;
+function fmtCompact(n) { return n >= 10000 ? (n / 1000).toFixed(n >= 100000 ? 0 : 1).replace(".", ",") + " t." : n.toLocaleString("fi-FI"); }
+async function loadStats() {
+  const sel = $("sTg"), cur = sel.value;
+  const tgs = [...new Set([...S.talkgroups.map(r => r.tg)])].sort((a, b) => a - b);
+  const opts = `<option value="">Kaikki seuratut</option>` + tgs.map(t => `<option value="${t}">TG ${t} ${esc(tgLabel(t))}</option>`).join("");
+  if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; sel.value = cur; }
+  if (!$("bmTg").value) { const ex = S.config.talkgroups.find(p => /^\d+$/.test(p)) || (S.config.talkgroups[0] || "").replace(/[*?]/g, ""); $("bmTg").value = ex; }
+  const j = await api(`/api/stats?hours=${$("sHours").value}${sel.value ? "&tg=" + sel.value : ""}`);
+  if (!j.ok) return;
+  STATS = j; renderStats();
+  clearTimeout(statsTimer); statsTimer = setTimeout(() => { if (TAB === "tilastot") loadStats(); }, 60000);
+}
+function renderStats() {
+  const j = STATS;
+  $("sTiles").innerHTML = [["Puheluita", fmtCompact(j.total_calls)], ["Puheaika", dur(j.total_airtime)], ["Eri asemia", fmtCompact(j.unique)],
+    ["Vilkkain " + (j.bucket === 3600 ? "tunti" : "päivä"), (() => { const b = j.bins.reduce((m, x) => x.calls > m.calls ? x : m, {calls: -1}); return b.calls > 0 ? fmtBin(b.t, j.bucket) : "–"; })()]]
+    .map(([l, v]) => `<div class="tile"><div class="lbl">${l}</div><div class="val">${v}</div></div>`).join("");
+  drawColumns(j);
+  $("sTable").innerHTML = `<table><thead><tr><th>${j.bucket === 3600 ? "Tunti" : "Päivä"}</th><th class="num">Puheluita</th><th class="num">Puheaika</th></tr></thead><tbody>` +
+    j.bins.map(b => `<tr><td>${fmtBin(b.t, j.bucket)}</td><td class="num">${b.calls}</td><td class="num">${dur(b.airtime)}</td></tr>`).join("") + `</tbody></table>`;
+  $("sNote").textContent = j.oldest ? `Tilastot perustuvat tämän ohjelman tallentamiin puheluihin ${fmtShort(j.oldest)} alkaen (seuratut puheryhmät).` : "Ei vielä tallennettuja puheluita.";
+  const maxT = Math.max(1, ...j.talkers.map(x => x.airtime));
+  $("sTalk").innerHTML = j.talkers.map(x => `<tr><td>${who({call: x.call, id: x.id})}</td><td>${esc(x.name)}</td><td class="num">${x.calls}</td>
+    <td class="num">${dur(x.airtime)}</td><td style="width:30%"><div class="hbar"><div style="width:${(x.airtime / maxT * 100).toFixed(1)}%"></div></div></td></tr>`).join("") || `<tr><td colspan="5" class="muted">Ei dataa</td></tr>`;
+  const maxG = Math.max(1, ...j.groups.map(x => x.airtime));
+  $("sGroups").innerHTML = j.groups.map(x => `<tr><td class="tg">${x.tg}</td><td>${esc(x.name)}</td><td class="num">${x.calls}</td><td class="num">${x.users}</td>
+    <td class="num">${dur(x.airtime)}</td><td style="width:25%"><div class="hbar"><div style="width:${(x.airtime / maxG * 100).toFixed(1)}%"></div></div></td></tr>`).join("") || `<tr><td colspan="6" class="muted">Ei dataa</td></tr>`;
+}
+function fmtBin(t, bucket) { const d = new Date(t * 1000);
+  return bucket === 3600 ? d.toLocaleDateString("fi-FI", {weekday: "short"}) + " " + String(d.getHours()).padStart(2, "0") + ":00"
+    : d.toLocaleDateString("fi-FI", {weekday: "short", day: "numeric", month: "numeric"}); }
+function niceMax(v) { if (v <= 5) return 5; const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= v) return m * p; return 10 * p; }
+function drawColumns(j) {
+  const svg = $("sSvg"), W = svg.clientWidth || 900, H = 190, L = 36, R = 6, T = 10, B = 24;
+  const bins = j.bins, n = bins.length, maxV = niceMax(Math.max(...bins.map(b => b.calls), 1));
+  const band = (W - L - R) / n, bw = Math.min(24, Math.max(2, band - 2));
+  const y = v => T + (H - T - B) * (1 - v / maxV);
+  let g = "";
+  for (let i = 0; i <= 4; i++) { const v = maxV * i / 4, yy = y(v);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#26313d" stroke-width="1"/><text x="${L - 6}" y="${yy + 4}" text-anchor="end" fill="#7d8b99" font-size="11">${Math.round(v)}</text>`; }
+  const every = n > 30 ? Math.ceil(n / 12) : (n > 12 ? 3 : 1);
+  bins.forEach((b, i) => {
+    const x = L + i * band + (band - bw) / 2, h = Math.max(0, y(0) - y(b.calls)), r = Math.min(4, bw / 2, h);
+    if (b.calls > 0) g += `<path d="M${x},${y(0)} V${y(0) - h + r} Q${x},${y(0) - h} ${x + r},${y(0) - h} H${x + bw - r} Q${x + bw},${y(0) - h} ${x + bw},${y(0) - h + r} V${y(0)} Z" fill="#3987e5"/>`;
+    g += `<rect x="${L + i * band}" y="${T}" width="${band}" height="${H - T - B}" fill="transparent" data-i="${i}"/>`;
+    if (i % every === 0) { const d = new Date(b.t * 1000);
+      g += `<text x="${L + i * band + band / 2}" y="${H - 6}" text-anchor="middle" fill="#7d8b99" font-size="11">${j.bucket === 3600 ? String(d.getHours()).padStart(2, "0") : d.getDate() + "." + (d.getMonth() + 1) + "."}</text>`; }
+  });
+  g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="#3a4754" stroke-width="1"/>`;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = g;
+}
+$("sSvg").addEventListener("mousemove", e => {
+  const r = e.target.closest("rect[data-i]"), tip = $("sTip");
+  if (!r || !STATS) { tip.style.display = "none"; return; }
+  const b = STATS.bins[Number(r.dataset.i)];
+  tip.innerHTML = `<b>${fmtBin(b.t, STATS.bucket)}</b><br>${b.calls} puhelua · ${dur(b.airtime)}`;
+  const box = $("sChart").getBoundingClientRect();
+  tip.style.display = "block"; tip.style.left = Math.min(box.width - 160, e.clientX - box.left + 12) + "px"; tip.style.top = (e.clientY - box.top - 40) + "px";
+});
+$("sSvg").addEventListener("mouseleave", () => { $("sTip").style.display = "none"; });
+$("sTg").onchange = loadStats; $("sHours").onchange = loadStats;
+window.addEventListener("resize", () => { if (STATS && TAB === "tilastot") drawColumns(STATS); });
+$("btnSTable").onclick = () => { const v = $("sTable").style.display === "none"; $("sTable").style.display = v ? "" : "none"; $("btnSTable").textContent = v ? "Piilota taulukko" : "Näytä taulukkona"; };
+$("btnBm").onclick = async () => {
+  const tg = $("bmTg").value.trim(); if (!/^\d+$/.test(tg)) { $("bmState").textContent = "Anna puheryhmän numero"; return; }
+  $("bmState").textContent = "Haetaan Brandmeisteriltä…"; $("bmBody").innerHTML = "";
+  const j = await api("/api/stats/bm?tg=" + tg);
+  if (!j.ok) { $("bmState").textContent = j.error; return; }
+  $("bmState").textContent = `TG ${j.tg} ${j.name || ""}: ${j.total_users.toLocaleString("fi-FI")} asemaa, ${j.total_calls.toLocaleString("fi-FI")} avausta` + (j.oldest ? ` (vanhin ${fmtShort(j.oldest)})` : "");
+  const mx = Math.max(1, ...j.users.map(u => u.count));
+  $("bmBody").innerHTML = j.users.map((u, i) => `<tr><td class="muted">${i + 1}</td><td>${who({call: u.call, id: u.id})}</td><td>${esc(u.name)}</td>
+    <td class="num">${u.count.toLocaleString("fi-FI")}</td><td>${fmtShort(u.last)} <span class="muted">${ago(u.last)}</span></td>
+    <td style="width:28%"><div class="hbar"><div style="width:${(u.count / mx * 100).toFixed(1)}%"></div></div></td></tr>`).join("");
+};
+
+// ---------------- APRS-viestit ----------------
+let aprsSel = null;
+const APRS_ST = {"kuitattu": "ok", "vastaanotettu": "warn", "lähetetty": "warn", "jonossa": "warn", "uudelleen": "warn", "lähetetty (ei kuittausta)": "ok", "ei kuittauspyyntöä": "muted"};
+function renderAprs() {
+  const M = S.messaging, a = M.aprs, bases = M.watch_bases || [];
+  $("aprsWho").textContent = bases.length ? bases.map(b => b + "*").join(", ") : "";
+  const msgs = M.aprs_msgs || [];
+  let empty = "";
+  if (!S.config.messaging.login) empty = "Aseta oma APRS-IS-tunnus ja passcode välilehdellä Syötteet ja viestit, niin viestit näkyvät tässä.";
+  else if (!a.connected) empty = "APRS-IS-yhteys ei ole auki" + (a.error ? ": " + esc(a.error) : "") + ".";
+  else if (!msgs.length) empty = `Ei viestejä vielä. Näytetään kutsujen ${esc(bases.map(b => b + "*").join(", "))} kaikki saapuvat ja lähtevät APRS-viestit.`;
+  $("aprsEmpty").innerHTML = empty; $("aprsEmpty").style.display = msgs.length ? "none" : "";
+  const html = msgs.map((m, i) => {
+    const mine = bases.includes((m.from || "").split("-")[0]);
+    const st = m.status || ""; const cls = APRS_ST[st] || "bad";
+    const key = `${m.from}|${m.to}|${m.msgid}|${m.time}`;
+    return `<tr class="aprsrow${aprsSel === key ? " live" : ""}" data-key="${esc(key)}" data-i="${i}" style="cursor:pointer">
+      <td>${fmtTime(m.time)}</td>
+      <td style="white-space:nowrap"><span class="call clk" data-q="${esc((m.from || "").split("-")[0])}">${esc(m.from)}</span> <span class="muted">→</span> <span class="call">${esc(m.to)}</span></td>
+      <td class="wrap">${mine ? '<span class="muted">↑</span> ' : ""}${esc(m.text)}</td>
+      <td class="${cls}" style="white-space:nowrap">${esc(st)}${m.tries > 1 ? ` (${m.tries}×)` : ""}${m.copies > 1 ? ` <span class="muted">(${m.copies}×)</span>` : ""}</td></tr>`;
+  }).join("");
+  if ($("aprsBody").dataset.html !== html) { $("aprsBody").innerHTML = html; $("aprsBody").dataset.html = html; }
+  // lähettäjävaihtoehdot: oma tunnus + seurattujen kutsujen SSID:t, jotka esiintyvät viesteissä
+  const login = (S.config.messaging.login || "").toUpperCase();
+  const own = new Set(login ? [login] : []);
+  msgs.forEach(m => [m.from, m.to].forEach(c => { if (c && bases.includes(c.split("-")[0])) own.add(c); }));
+  const opts = [...own].sort((x, y) => x === login ? -1 : y === login ? 1 : x.localeCompare(y)).map(c => `<option value="${esc(c)}">${esc(c)}${c === login ? " (ohjelma)" : ""}</option>`).join("");
+  if ($("rFrom").dataset.opts !== opts) { const cur = $("rFrom").value; $("rFrom").innerHTML = opts; $("rFrom").dataset.opts = opts; if (cur && own.has(cur)) $("rFrom").value = cur; }
+  $("aprsReply").style.display = login ? "" : "none";
+}
+$("aprsBody").addEventListener("click", e => {
+  if (e.target.closest(".clk")) return;
+  const tr = e.target.closest("tr[data-key]"); if (!tr) return;
+  const m = (S.messaging.aprs_msgs || [])[Number(tr.dataset.i)]; if (!m) return;
+  const bases = S.messaging.watch_bases || [];
+  const mine = bases.includes((m.from || "").split("-")[0]);
+  aprsSel = tr.dataset.key;
+  // vastaus: saapuneeseen -> lähettäjälle, vastaanottajan tunnuksella; omaan lähtevään -> samalle vastaanottajalle
+  $("rTo").value = mine ? m.to : m.from;
+  const frm = mine ? m.from : m.to;
+  if ([...$("rFrom").options].some(o => o.value === frm)) $("rFrom").value = frm;
+  $("rText").focus(); updateCount(); renderAprs();
+});
+function updateCount() {
+  const n = $("rText").value.length, parts = Math.max(1, Math.ceil(n / 64));
+  $("rCount").textContent = n ? `${n} merkkiä${n > 67 ? ` · ${parts} viestiä` : ""}` : "";
+}
+$("rText").addEventListener("input", updateCount);
+$("rText").addEventListener("keydown", e => { if (e.key === "Enter") $("rSend").click(); });
+$("rSend").onclick = async () => {
+  $("rMsg").textContent = "Lähetetään…";
+  const j = await api("/api/aprs/send", {from: $("rFrom").value, to: $("rTo").value, text: $("rText").value});
+  if (j.ok) { $("rMsg").innerHTML = `<span class="ok">Lähetetty${j.parts > 1 ? ` (${j.parts} osaa)` : ""} – tila päivittyy listaan</span>`; $("rText").value = ""; updateCount(); }
+  else $("rMsg").innerHTML = `<span class="bad">${esc(j.error)}</span>`;
+};
+
+// ---------------- palvelut ----------------
+const SVC = ["lightning", "warnings", "space", "aurora", "radiation", "traffic"];
+function svcSec(n) { return document.querySelector(`.svc[data-svc="${n}"]`); }
+function fillServices() {
+  const c = S.config.services, st = S.services;
+  $("locText").value = c.location.label || (c.location.lat != null ? c.location.lat + ", " + c.location.lon : "");
+  const tSec = svcSec("traffic");
+  tSec.querySelector("[data-provs]").innerHTML = st.provinces.map(p => `<label><input type="checkbox" value="${esc(p)}">${esc(p)}</label>`).join("");
+  tSec.querySelector("[data-types]").innerHTML = Object.entries(st.traffic_types).map(([k, v]) => `<label><input type="checkbox" value="${k}">${esc(v)}</label>`).join("");
+  SVC.forEach(n => {
+    const sec = svcSec(n), cfg = c[n];
+    const en = sec.querySelector(`[data-en]`); en.checked = !!cfg.enabled;
+    sec.querySelectorAll("[data-k]").forEach(el => {
+      const k = el.dataset.k; let v = cfg[k];
+      if (k === "center") v = cfg.center ? cfg.center.label : "";
+      if (k === "roads") v = (v || []).join(" ");
+      if (el.type === "checkbox") el.checked = !!v; else el.value = v ?? "";
+    });
+    if (n === "traffic") {
+      sec.querySelectorAll("[data-provs] input").forEach(i => i.checked = (cfg.provinces || []).includes(i.value));
+      sec.querySelectorAll("[data-types] input").forEach(i => i.checked = (cfg.types || []).includes(i.value));
+    }
+    sec.querySelector("[data-err]").textContent = "";
+  });
+  renderServices();
+}
+function collectSvc(n) {
+  const sec = svcSec(n), o = {};
+  sec.querySelectorAll("[data-k]").forEach(el => { o[el.dataset.k] = el.type === "checkbox" ? el.checked : el.value; });
+  if (n === "traffic") {
+    o.provinces = [...sec.querySelectorAll("[data-provs] input:checked")].map(i => i.value);
+    o.types = [...sec.querySelectorAll("[data-types] input:checked")].map(i => i.value);
+  }
+  return o;
+}
+async function saveSvc(n, extra) {
+  const err = svcSec(n).querySelector("[data-err]");
+  const j = await saveCfg({services: {[n]: {...collectSvc(n), ...(extra || {})}}});
+  if (j.ok) { S.config = j.config; err.innerHTML = '<span class="ok">Tallennettu</span>'; setTimeout(() => err.textContent = "", 2500); }
+  else err.textContent = j.error;
+  return j;
+}
+document.querySelectorAll("[data-save]").forEach(b => b.onclick = () => saveSvc(b.dataset.save));
+document.querySelectorAll("[data-en]").forEach(cb => cb.onchange = async () => {
+  const n = cb.dataset.en, j = await saveSvc(n, {enabled: cb.checked});
+  if (!j.ok) cb.checked = !cb.checked;
+  renderServices();
+});
+$("btnLocSave").onclick = async () => {
+  const j = await saveCfg({services: {location: {text: $("locText").value}}});
+  $("locErr").innerHTML = j.ok ? '<span class="ok">Tallennettu</span>' : esc(j.error);
+  if (j.ok) { S.config = j.config; }
+};
+$("btnLocGeo").onclick = () => {
+  if (!navigator.geolocation) { $("locErr").textContent = "Selain ei tue sijaintia"; return; }
+  $("locErr").textContent = "Haetaan sijaintia…";
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude.toFixed(5), lon = pos.coords.longitude.toFixed(5);
+    $("locText").value = lat + ", " + lon;
+    const j = await saveCfg({services: {location: {text: lat + ", " + lon}}});
+    $("locErr").innerHTML = j.ok ? '<span class="ok">Sijainti tallennettu</span>' : esc(j.error);
+    if (j.ok) S.config = j.config;
+  }, e => { $("locErr").textContent = "Sijaintia ei saatu: " + e.message; }, {timeout: 15000});
+};
+const openDetails = new Set();
+document.addEventListener("toggle", e => { const d = e.target; if (d.dataset && d.dataset.did) { d.open ? openDetails.add(d.dataset.did) : openDetails.delete(d.dataset.did); } }, true);
+const COLORFI = {yellow: "Keltainen", orange: "Oranssi", red: "Punainen"};
+function renderServices() {
+  if (!S || !S.services) return;
+  const c = S.config.services, st = S.services, L = st.location;
+  $("locShow").innerHTML = L.lat != null ? `<b>${L.lat.toFixed(4)}, ${L.lon.toFixed(4)}</b> · lokaattori <b>${esc(L.locator)}</b>` : '<span class="warn">Sijaintia ei ole asetettu</span>';
+  SVC.forEach(n => {
+    const sec = svcSec(n), on = !!c[n].enabled, s = st[n] || {};
+    sec.classList.toggle("off", !on);
+    sec.querySelector(".swtxt").textContent = on ? "Päällä" : "Pois";
+    if (document.activeElement !== sec.querySelector("[data-en]")) sec.querySelector("[data-en]").checked = on;
+    sec.querySelector(".tcenter") && (sec.querySelector(".tcenter").style.opacity = c.traffic.use_location ? .45 : 1);
+    sec.querySelector("[data-st]").innerHTML = !on ? "Pois päältä." :
+      (s.error ? `<span class="bad">${esc(s.error)}</span>` : s.checked ? `Tarkistettu ${ago(s.checked)}` : "Ensimmäinen tarkistus käynnissä…") +
+      (s.last_event ? ` · viimeisin hälytys ${ago(s.last_event)}` : "");
+    let v = "";
+    if (n === "lightning" && on) {
+      const near = s.nearest;
+      v = `<div class="tiles" style="padding:10px 0 0"><div class="tile"><div class="lbl">Iskuja 60 min / ${c.lightning.radius_km} km</div><div class="val">${s.count_60min ?? "–"}</div></div>
+        <div class="tile"><div class="lbl">Lähin isku</div><div class="val">${near ? Math.round(near.km) + " km" : "–"}</div><div class="muted">${near ? esc(near.dir) + " · " + ago(near.time) : ""}</div></div></div>` +
+        ((s.strikes || []).length ? `<table style="margin-top:8px"><tbody>${s.strikes.slice(0, 6).map(x => `<tr><td>${fmtTime(x.time)}</td><td class="num">${x.km} km</td><td>${esc(x.dir)}</td><td class="muted">${x.ground ? "maasalama" : "pilvisalama"}</td></tr>`).join("")}</tbody></table>` : "");
+    }
+    if (n === "warnings" && on) {
+      const it = s.items || [];
+      v = it.length ? `<div class="muted" style="margin-top:8px">Klikkaa nähdäksesi tarkemmin</div><table><tbody>${it.map(w => `<tr><td style="vertical-align:top"><span class="wcol ${esc(w.color)}">${COLORFI[w.color] || esc(w.color)}</span></td>
+        <td class="wrap"><details${openDetails.has(w.id) ? " open" : ""} data-did="${esc(w.id)}"><summary style="cursor:pointer"><b>${esc(w.short || w.headline)}</b></summary>
+        <div style="margin-top:4px">${esc(w.description)}</div><div class="muted">${esc(w.headline)}</div></details></td></tr>`).join("")}</tbody></table>`
+        : (s.checked ? '<div class="muted" style="margin-top:8px">Ei voimassa olevia varoituksia sijainnissasi.</div>' : "");
+    }
+    if (n === "space" && on) {
+      const kp = s.kp, thr = c.space.kp_threshold;
+      v = `<div class="tiles" style="padding:10px 0 0"><div class="tile"><div class="lbl">Kp nyt</div><div class="bigkp ${kp >= thr ? "warn" : ""}">${kp != null ? kp.toFixed(1).replace(".", ",") : "–"}</div><div class="muted">${kp >= 5 ? "myrsky" : kp >= 4 ? "levoton" : kp != null ? "rauhallinen" : ""}</div></div>
+        <div class="tile"><div class="lbl">Suurin 6 h</div><div class="val">${s.kp_max6h != null ? s.kp_max6h.toFixed(1).replace(".", ",") : "–"}</div></div></div>` +
+        ((s.recent || []).length ? `<div class="muted" style="margin-top:10px">NOAA:n viimeisimmät ilmoitukset (Kp-raja ${thr} tai purkaukset)</div><table><tbody>${s.recent.slice(0, 5).map(x => `<tr><td>${fmtShort(x.time)}</td><td class="wrap">${esc(x.title)}</td></tr>`).join("")}</tbody></table>` : "");
+    }
+    if (n === "aurora" && on && s.nearest) {
+      const thr = c.aurora.threshold_nt, lvlTxt = ["rauhallista", "mahdollisia", "todennäköisiä", "voimakkaita"][s.level || 0];
+      const mx = Math.max(thr * 2, ...(s.stations || []).map(x => x.range));
+      v = `<div class="tiles" style="padding:10px 0 0">
+        <div class="tile"><div class="lbl">${esc(s.nearest.name)} (${s.nearest.km} km)</div><div class="val ${s.level ? "warn" : ""}">${s.nearest.range} nT/h</div><div class="muted">${lvlTxt}</div></div>
+        <div class="tile"><div class="lbl">Pimeys</div><div class="val">${s.dark ? "pimeää" : "valoisaa"}</div><div class="muted">aurinko ${String(s.sun).replace(".", ",")}°</div></div>
+        <div class="tile"><div class="lbl">Pilvisyys</div><div class="val">${s.clouds != null ? Math.round(s.clouds) + "/8" : "–"}</div><div class="muted">${esc(s.cloud_station || "")}</div></div></div>
+        <table style="margin-top:8px"><tbody>${(s.stations || []).map(x => `<tr><td>${esc(x.name)}</td><td class="num">${x.range} nT/h</td>
+        <td style="width:45%"><div class="hbar"><div style="width:${Math.min(100, x.range / mx * 100).toFixed(1)}%"></div></div></td></tr>`).join("")}</tbody></table>
+        <div class="muted" style="margin-top:4px">Asemat pohjoisesta etelään. Raja ${thr} nT/h.</div>`;
+    }
+    if (n === "radiation" && on && s.fin_max) {
+      const f = x => x.toFixed(3).replace(".", ","), thr = c.radiation.threshold;
+      v = `<div class="tiles" style="padding:10px 0 0">
+        ${s.nearest ? `<div class="tile"><div class="lbl">Lähin: ${esc(s.nearest.name)} (${s.nearest.km} km)</div><div class="val ${s.nearest.dr >= thr ? "bad" : ""}">${f(s.nearest.dr)}</div><div class="muted">µSv/h</div></div>` : ""}
+        ${s.area_max ? `<div class="tile"><div class="lbl">Korkein ${c.radiation.radius_km ? c.radiation.radius_km + " km säteellä" : "Suomessa"} (${s.count} asemaa)</div><div class="val ${s.area_max.dr >= thr ? "bad" : ""}">${f(s.area_max.dr)}</div><div class="muted">${esc(s.area_max.name)}</div></div>` : ""}
+        <div class="tile"><div class="lbl">Korkein koko Suomessa</div><div class="val">${f(s.fin_max.dr)}</div><div class="muted">${esc(s.fin_max.name)}</div></div></div>
+        <table style="margin-top:8px"><tbody>${(s.stations || []).map(x => `<tr><td>${esc(x.name)}</td><td class="num">${x.km != null ? x.km + " km" : ""}</td><td class="num ${x.dr >= thr ? "bad" : ""}">${f(x.dr)} µSv/h</td></tr>`).join("")}</tbody></table>`;
+    }
+    if (n === "traffic" && on) {
+      const it = s.items || [];
+      v = it.length ? `<div class="muted" style="margin-top:8px">${s.active} voimassa olevaa tiedotetta valituilla ehdoilla · klikkaa nähdäksesi tarkemmin</div><div class="scroll" style="max-height:360px"><table><tbody>${it.map(x => `<tr><td class="wrap">
+        <details${openDetails.has(x.id) ? " open" : ""} data-did="${esc(x.id)}"><summary style="cursor:pointer"><b>${esc(x.short || x.title)}</b></summary>
+        <div style="margin-top:4px">${esc(x.what)}</div><div class="muted">${esc(x.where)}</div>${x.comment ? `<div class="muted">${esc(x.comment)}</div>` : ""}</details></td>
+        <td class="muted" style="white-space:nowrap;vertical-align:top">${esc(x.why)}<br>${x.time ? fmtShort(x.time) : ""}</td></tr>`).join("")}</tbody></table></div>`
+        : (s.checked ? '<div class="muted" style="margin-top:8px">Ei tiedotteita valituilla ehdoilla.</div>' : "");
+    }
+    const view = sec.querySelector("[data-view]");
+    if (view.dataset.html !== v) { view.innerHTML = v; view.dataset.html = v; }
+  });
+}
+
+player.onLevel = db => { $("pVu").style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + "%"; };
+player.on(() => { renderPlayer(); render(); });
+$("pVol").value = player.volume;
+$("pVol").oninput = e => player.setVolume(e.target.value);
+$("pChips").addEventListener("click", e => { const b = e.target.closest("[data-leave]"); if (b) player.toggle(Number(b.dataset.leave)); });
+setInterval(render, 1000);
+connect();
+</script>
+</body>
+</html>

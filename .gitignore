@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+*.spec
+installer/Output/
+# omat asetukset ja lokit eivät kuulu repoon
+config.json
+*.log
+calls.csv
+sms_data.csv
+raw_data_events.jsonl
+feeds_state.json
+tg_names.json
+.DS_Store

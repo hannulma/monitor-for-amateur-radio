@@ -1,0 +1,166 @@
+# Monitor for BrandMeister
+
+[![Release](https://img.shields.io/github/v/release/hannulma/monitor-for-brandmeister?include_prereleases&label=release)](https://github.com/hannulma/monitor-for-brandmeister/releases)
+[![CI](https://github.com/hannulma/monitor-for-brandmeister/actions/workflows/ci.yml/badge.svg)](https://github.com/hannulma/monitor-for-brandmeister/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**An unofficial desktop monitor for the [BrandMeister](https://brandmeister.network) DMR network** – follow
+talkgroup activity in real time, listen to talkgroups, get alerts when friends come on the air, watch your
+repeaters and hotspots, and receive weather, space-weather, traffic and other open-data alerts on your
+DMR radio via APRS.
+
+🇫🇮 **[Suomenkielinen ohje → README.fi.md](README.fi.md)**
+
+> [!NOTE]
+> **Beta.** The core features are tested against the live BrandMeister network, but some features have had
+> limited real-world testing. Bug reports and feedback are very welcome in
+> [Issues](https://github.com/hannulma/monitor-for-brandmeister/issues).
+> The user interface is currently in **Finnish**; an English UI is planned.
+
+![Monitor view](docs/screenshot-monitor.png)
+
+## Features
+
+- **Talkgroup monitor** – watch talkgroups by number or wildcard (`244*`, `2441?`): who is talking right now,
+  last activity, duration, via which repeater/hotspot, number of calls and total airtime.
+- **Live audio** – listen to one or several talkgroups directly in the app (Hoseline audio stream), with the
+  current talker, talker alias and level meter.
+- **Friend alerts** – desktop notification, sound and/or a DMR text message when a station on your list
+  keys up anywhere on the network.
+- **Station card** – click any callsign for registry data, APRS SSID, repeaters/hotspots and where and when
+  the station was last heard.
+- **Repeater & hotspot watch** – online/offline alerts, static and dynamic talkgroups, last traffic. With a
+  BrandMeister API key you can also add/remove static talkgroups, drop dynamic groups, drop the current call
+  or reset the connection of *your own* devices.
+- **Statistics** – activity per hour/day, top talkers, busiest talkgroups, and BrandMeister's own per-talkgroup
+  user history.
+- **APRS messaging** – see all APRS messages to and from every SSID of your callsign (including DMR ↔ APRS
+  messages through the BrandMeister APRS gateway) and reply directly from the app.
+- **Radio commands** – send `TG244`, `WHO`-style queries (`KUKA OH2ABC`), `NYT` (now active) or feed commands
+  from your DMR radio and get the answer back as a text message.
+- **News feeds → DMR SMS** – new RSS/Atom/JSON Feed items sent to your radio as short text messages.
+- **Open-data alert services** (each with its own on/off switch):
+
+  | Service | Source |
+  |---|---|
+  | ⚡ Lightning near you | Finnish Meteorological Institute (FMI) open data |
+  | ⚠ Official weather warnings for your exact location | FMI CAP warnings |
+  | ☀ Space weather (Kp index, solar flares) | NOAA SWPC |
+  | 🌌 Local aurora alert (magnetometers, darkness and cloud cover aware) | FMI magnetometer network |
+  | ☢ Radiation monitoring | STUK (Radiation and Nuclear Safety Authority of Finland) |
+  | 🚧 Road traffic announcements by radius, region or road number | Fintraffic Digitraffic |
+
+  Messages are condensed to fit a single 67-character APRS/DMR text message, e.g.
+  `Tie 101 Espoo, Kalevalantie: Liikennevalot, epäkunnossa` or
+  `Keltainen liikennesää: lumi/räntä, to 14–pe 12 (30 %)`.
+
+Several services use Finnish open data and are most useful in Finland; the BrandMeister features work worldwide.
+
+![Services](docs/screenshot-services.png)
+
+## Download
+
+Get the latest version from **[Releases](https://github.com/hannulma/monitor-for-brandmeister/releases)**:
+
+| OS | File |
+|---|---|
+| Windows 10/11 | `MonitorForBrandMeister-<version>-windows-setup.exe` (installer) or `…-windows-portable.zip` |
+| macOS Apple Silicon (M1–M4) | `MonitorForBrandMeister-<version>-macos-apple-silicon.dmg` |
+| macOS Intel | `MonitorForBrandMeister-<version>-macos-intel.dmg` |
+| Linux x86_64 | `MonitorForBrandMeister-<version>-linux-x86_64.tar.gz` |
+| Any OS with Python ≥ 3.9 | `pip install monitor_for_brandmeister-<version>-py3-none-any.whl` |
+
+The app runs a small local web server and opens its user interface in your browser at
+`http://127.0.0.1:8765/`. Nothing is exposed to your network. Starting the app again while it is running just
+opens the page; use **Asetukset → Sulje ohjelma** (Settings → Quit) to stop it.
+
+### First launch (unsigned builds)
+
+The builds are not code-signed (signing certificates cost money for a hobby project):
+
+- **Windows:** SmartScreen may say *“Windows protected your PC”* → click **More info → Run anyway**.
+- **macOS:** open the `.dmg`, drag the app to *Applications*. On first launch macOS refuses to open it →
+  open **System Settings → Privacy & Security** and click **Open Anyway** (or right-click the app → *Open*).
+- **Linux:** `tar xzf MonitorForBrandMeister-*.tar.gz && ./monitor-for-brandmeister/monitor-for-brandmeister`
+
+### Install with pip
+
+```bash
+pip install monitor_for_brandmeister-<version>-py3-none-any.whl   # from Releases
+monitor-for-brandmeister            # or: python -m bmmonitor
+```
+
+Options: `--port 9000`, `--no-browser`, `--demo` (fake traffic, no network), `--diag` (show raw data from
+BrandMeister), `-v` (verbose).
+
+## Quick start
+
+1. **Talkgroups:** *Asetukset* (Settings) → enter talkgroups separated by spaces, e.g. `244* 91 3100`.
+   `*` matches any digits, `?` exactly one.
+2. **Listen:** click the speaker button next to a talkgroup.
+3. **Friends:** *Kaverit* → add callsigns or DMR IDs, allow desktop notifications.
+4. **Devices:** *Laitteet* → add your hotspot/repeater by ID or search by callsign.
+5. **Alerts on your radio (optional):** *Syötteet ja viestit* → set an APRS-IS login (your callsign with an
+   unused SSID, e.g. `OH2ABC-13`) and the recipient = your radio's APRS SSID configured in
+   BrandMeister SelfCare (e.g. `OH2ABC-7`), then *Send test message*.
+6. **Services:** *Palvelut* → set your location (coordinates or Maidenhead locator) and switch on the services you want.
+
+### Commands from your radio
+
+Send a private text message to the BrandMeister APRS gateway of your country (*country code + 999*, e.g.
+**244999** in Finland) in the form `<app APRS login> <command>`, e.g. `OH2ABC-13 TG244`.
+
+| Command | Answer |
+|---|---|
+| `APUA` | list of commands |
+| `TG244` | who is talking now / talked last, when and how long |
+| `KUKA OH2ABC` | when and where the station was last heard |
+| `NYT` | active transmissions in your monitored talkgroups |
+| feed command, e.g. `SAA` | latest item of that feed |
+
+Only your own callsign and the configured recipients may send commands by default.
+
+## Privacy
+
+Everything runs on your own computer. Settings, logs and statistics are stored locally:
+
+- Windows: `%APPDATA%\BMMonitor\`
+- macOS: `~/Library/Application Support/BMMonitor/`
+- Linux: `~/.config/BMMonitor/`
+
+Your APRS-IS passcode and optional BrandMeister API key are stored only in `config.json` in that folder.
+
+## Data sources and APIs
+
+BrandMeister Last Heard (socket.io) and Halligan API v2, BrandMeister Hoseline audio, APRS-IS, FMI open data,
+NOAA SWPC, STUK (via FMI open data), Fintraffic Digitraffic. See [docs/TECHNICAL.md](docs/TECHNICAL.md) for
+endpoints, protocols and implementation notes.
+
+Please be considerate with public services: the app uses conservative polling intervals and the same public
+interfaces as the official web pages.
+
+## Development
+
+```bash
+git clone https://github.com/hannulma/monitor-for-brandmeister
+cd monitor-for-brandmeister
+pip install -e ".[test]"
+pytest
+python -m bmmonitor --demo        # UI with fake traffic
+```
+
+**Releasing:** bump `__version__` in `bmmonitor/__init__.py`, commit, then
+`git tag v<version> && git push origin v<version>`. GitHub Actions builds the Windows installer, macOS disk
+images (Apple Silicon and Intel), the Linux binary and the Python package and publishes them as a release
+(versions like `0.8.0b1` are marked as pre-releases).
+
+## Disclaimer
+
+This is an independent hobby project and is **not affiliated with, endorsed by or supported by the
+BrandMeister team**. BrandMeister is the name of its respective owners. Use the network and its interfaces
+according to the [BrandMeister policies](https://wiki.brandmeister.network/index.php/Policies_and_Rules) and
+your amateur radio licence.
+
+## License
+
+[MIT](LICENSE) © 2026 hannulma
