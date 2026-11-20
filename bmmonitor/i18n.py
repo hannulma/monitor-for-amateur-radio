@@ -142,6 +142,10 @@ EN: dict[str, str] = {
     "NYT": "NOW",
     "{n}s sitten": "{n}s ago", "{n}min sitten": "{n}min ago", "{n}h sitten": "{n}h ago", "{n}pv sitten": "{n}d ago",
     "{label}: ei liikennettä ohjelman käynnistyksen jälkeen": "{label}: no traffic since the program started",
+    # --- check-in ---
+    "Asemaa {c} ei ole kuultu tällä kierroksella": "Station {c} has not been heard in this round",
+    "Asemaa {c} ei ole kirjattu": "Station {c} has not been logged",
+    "Check-in-kierrosta ei ole käynnissä": "No check-in round in progress",
     # --- päivitykset ---
     "Päivityksen tarkistus epäonnistui: {e}": "Update check failed: {e}",
     "Tarkistussumma ei täsmää – päivitystä ei asennettu": "Checksum mismatch – the update was not installed",

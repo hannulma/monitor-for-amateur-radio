@@ -132,6 +132,40 @@
   .feedrow input.fname { width: 110px; }
   .feedrow input.furl { flex: 1; min-width: 200px; }
   .ok { color: var(--live); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  /* check-in */
+  .cibar { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+  .cibar label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .cibar input:disabled, .cibar select:disabled { opacity: .75; }
+  .cirun { padding: 8px 12px; border-radius: 8px; background: rgba(61,220,132,.12); border: 1px solid rgba(61,220,132,.4); color: var(--live); font-weight: 600; }
+  .cistats { display: flex; gap: 20px; flex-wrap: wrap; }
+  .cistats .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cistats .l { font-size: 11px; color: var(--muted); }
+  .cigrid { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 1250px) { .cigrid { grid-template-columns: minmax(0, 1fr); } }
+  .citool { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .citool input { width: 150px; background: var(--bg); color: var(--text); border: 1px solid var(--accent); border-radius: 6px; padding: 7px 9px; font: 14px ui-monospace, Menlo, Consolas, monospace; text-transform: uppercase; }
+  .cirow { display: grid; grid-template-columns: 34px 92px minmax(0, 1.4fr) minmax(0, 1.3fr) minmax(0, .9fr) 44px 128px; gap: 0 10px; align-items: center; padding: 4px 14px; min-height: 46px; border-top: 1px solid #1f2933; }
+  .cirow.head { min-height: 0; padding: 7px 14px; color: var(--muted); font-size: 11px; border-top: 0; border-bottom: 1px solid var(--line); }
+  .cirow .ccall { font: 700 17px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .5px; color: #fff; cursor: pointer; }
+  .cirow .cname { color: var(--muted); margin-left: 8px; }
+  .cirow .cvia, .cirow .ckunta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cirow.live { background: rgba(61,220,132,.10); box-shadow: inset 3px 0 0 var(--live); }
+  .cirow.match { background: rgba(79,179,255,.16); box-shadow: inset 3px 0 0 var(--accent); }
+  .cirow.done:not(.match) { opacity: .6; }
+  .cirow.done .ccall { color: var(--muted); }
+  .cibadge { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-right: 3px; }
+  .cibadge.air { background: var(--live); color: #04121e; }
+  .cibadge.ovl { border: 1px solid var(--warn); color: var(--warn); }
+  .cibadge.new { border: 1px solid var(--accent); color: var(--accent); }
+  .cibtn { min-height: 36px; width: 100%; font-weight: 600; }
+  .cibtn.log { background: var(--accent); color: #04121e; border-color: var(--accent); }
+  .cibtn.logged { background: rgba(61,220,132,.12); color: var(--live); border-color: rgba(61,220,132,.45); }
+  .cilist { max-height: 62vh; overflow-y: auto; }
+  .cifoot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); }
+  #ciNew { background: rgba(79,179,255,.15); color: var(--accent); border-color: rgba(79,179,255,.4); font-weight: 600; }
+  #ciLog input[data-f=via] { min-width: 118px; } #ciLog input[data-f=kunta] { min-width: 84px; } #ciLog input[data-f=info] { min-width: 96px; }
+  #ciLog input { width: 100%; min-width: 70px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; font: inherit; }
+  #ciLog td { padding: 4px 5px; } #ciLog td:last-child { font-size: 12px; }
   .updpill { background: rgba(61,220,132,.15); color: var(--live); border: 1px solid rgba(61,220,132,.4); }
   .prog { height: 6px; background: #22303d; border-radius: 3px; overflow: hidden; max-width: 320px; margin-top: 6px; }
   .prog div { height: 100%; background: var(--live); transition: width .3s; }
@@ -153,6 +187,7 @@
   <button data-tab="kaverit">Kaverit<span class="badge" id="alertBadge" style="display:none"></span></button>
   <button data-tab="laitteet">Laitteet</button>
   <button data-tab="tilastot">Tilastot</button>
+  <button data-tab="checkin">Check-in</button>
   <button data-tab="palvelut">Palvelut</button>
   <button data-tab="viestit">Syötteet ja viestit</button>
   <button data-tab="asetukset">Asetukset</button>
@@ -388,6 +423,52 @@
   </section>
 
   <!-- ============ TILASTOT ============ -->
+  <section data-tab="checkin" class="wide form">
+    <h2>Check-in-netti <span class="count" id="ciState"></span></h2>
+    <div class="inner cibar">
+      <div><label for="ciTg">Netti</label><select id="ciTg"></select>
+        <input id="ciTgOther" type="text" placeholder="TG" style="width:80px; display:none"></div>
+      <div><label for="ciRound">Kierros</label><input id="ciRound" type="text" style="width:70px"></div>
+      <div><label for="ciDate">Päivämäärä</label><input id="ciDate" type="text" style="width:110px"></div>
+      <div><label for="ciOp">Operaattori</label><input id="ciOp" type="text" style="width:110px; text-transform:uppercase"></div>
+      <div><button class="primary" id="ciStart">Aloita kierros</button> <button id="ciStop" style="display:none">Päätä kierros</button></div>
+      <div id="ciRun" class="cirun" style="display:none"></div>
+      <span style="flex:1"></span>
+      <div class="cistats" id="ciStats"></div>
+    </div>
+    <div class="hint" id="ciErr" style="padding:0 14px 10px"></div>
+  </section>
+  <div class="cigrid" data-tab="checkin">
+    <section>
+      <h2>Kuullut asemat <span class="count muted" style="text-transform:none">saapumisjärjestyksessä – rivit eivät vaihda paikkaa</span></h2>
+      <div class="citool">
+        <label for="ciQ" class="muted">Hae kutsu</label>
+        <input id="ciQ" type="text" placeholder="esim. KXA" autocomplete="off" spellcheck="false">
+        <span class="hint" style="margin:0">Enter kirjaa, kun haku osuu yhteen kirjaamattomaan asemaan. Esc tyhjentää.</span>
+      </div>
+      <div class="cirow head"><span>#</span><span>Tila</span><span>Kutsu / nimi</span><span>RPT / hotspot</span><span>Kunta</span><span>Avauksia</span><span>Kirjaus</span></div>
+      <div class="cilist" id="ciList"></div>
+      <div class="muted" id="ciEmpty" style="padding:14px">Aloita kierros, niin puheryhmässä avaavat asemat tulevat tähän.</div>
+      <div class="cifoot"><button id="ciNew" style="display:none"></button>
+        <span class="hint" style="margin:0">Lista ei vieritä itsestään. Kutsua klikkaamalla aukeaa aseman kortti.</span></div>
+    </section>
+    <section>
+      <h2>Kierroksen loki <span class="count" id="ciLogCount"></span></h2>
+      <div class="scroll" style="max-height:62vh">
+        <table><thead><tr><th>NRO</th><th>Kutsu</th><th>RPT/HOTSPOT</th><th>KUNTA</th><th>Lisätietoja</th><th>Oper</th><th>BM-laite</th></tr></thead>
+          <tbody id="ciLog"></tbody></table>
+        <div class="muted" id="ciLogEmpty" style="padding:14px">Ei kirjattuja asemia.</div>
+      </div>
+      <div class="inner" style="border-top:1px solid var(--line)">
+        <button class="primary" id="ciCopyNew">Kopioi uudet rivit</button>
+        <button id="ciCopyAll">Kopioi kaikki</button>
+        <a id="ciCsv" href="/api/checkin/export?fmt=csv"><button>Lataa CSV</button></a>
+        <span id="ciCopyMsg" class="ok" style="margin-left:6px"></span>
+        <div class="hint">Rivit kopioituvat taulukon sarakejärjestyksessä (NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, BM-laite) ilman otsikkoriviä. Liitä ne Google-taulukkoon ensimmäiseen tyhjään riviin sarakkeeseen A. "Kopioi uudet rivit" kopioi vain edellisen kopioinnin jälkeen kirjatut.</div>
+        <div class="hint" id="ciArchive"></div>
+      </div>
+    </section>
+  </div>
   <section data-tab="tilastot" class="wide form">
     <h2>Aktiivisuus seuratuissa puheryhmissä
       <select class="filter" id="sTg"><option value="">Kaikki seuratut</option></select>
@@ -625,6 +706,7 @@ function render() {
       : T("Ei yhteyttä") + (st.error ? ` (${st.error})` : ""));
   $("watching").textContent = T("Seurataan: {list}", {list: S.config.talkgroups.join(", ") || "–"});
   renderUpdate();
+  if (TAB === "checkin") renderCheckin();
 
   // Puheryhmät
   const rows = [...S.talkgroups].sort((a, b) => {
@@ -754,6 +836,185 @@ function fillSettings() {
     .map(([k, v]) => `${esc(T(k))}: ${esc(v)}`).join("<br>");
 }
 
+// ---------------- check-in ----------------
+const CI_NETS = {244: "Suomi", 248: "Viro", 91: "Worldwide"};
+const ciRows = new Map();
+let ciRoundKey = null, ciNewBelow = 0, ciLogSig = "";
+function ciCfg() { return S.config.checkin || {}; }
+function fillCheckinForm() {
+  const c = S.checkin; if (!c) return;
+  const tgs = [...new Set([...(c.nets || [244, 248, 91]), ...(c.tg ? [c.tg] : []), ...(ciCfg().tg ? [ciCfg().tg] : [])])];
+  const cur = c.active ? c.tg : (ciCfg().tg || 244);
+  $("ciTg").innerHTML = tgs.map(t => `<option value="${t}">TG ${t}${CI_NETS[t] ? " · " + esc(T(CI_NETS[t])) : ""}</option>`).join("")
+    + `<option value="other">${esc(T("Muu puheryhmä…"))}</option>`;
+  $("ciTg").value = String(cur);
+  $("ciTgOther").style.display = "none";
+  if (c.active) {
+    $("ciRound").value = c.round || ""; $("ciDate").value = c.date || ""; $("ciOp").value = c.operator || "";
+  } else {
+    const r = String(c.round || "");
+    $("ciRound").value = /^\d+$/.test(r) ? String(+r + 1) : "";
+    const d = new Date(); $("ciDate").value = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+    $("ciOp").value = ciCfg().operator || ((S.config.messaging && S.config.messaging.login) || "").split("-")[0];
+  }
+}
+$("ciTg").onchange = () => { const o = $("ciTg").value === "other"; $("ciTgOther").style.display = o ? "" : "none"; if (o) $("ciTgOther").focus(); };
+$("ciStart").onclick = async () => {
+  const c = S.checkin;
+  if (c && c.log && c.log.length && !confirm(T("Aloitetaanko uusi kierros? Edellisen kierroksen loki on tallessa CSV-tiedostona."))) return;
+  const tg = $("ciTg").value === "other" ? $("ciTgOther").value : $("ciTg").value;
+  const j = await api("/api/checkin", {action: "start", tg, round: $("ciRound").value, date: $("ciDate").value, operator: $("ciOp").value});
+  $("ciErr").textContent = j.ok ? "" : j.error;
+  if (j.ok) { S.checkin = j.checkin; renderCheckin(); $("ciQ").focus(); }
+};
+$("ciStop").onclick = async () => {
+  if (!confirm(T("Päätetäänkö kierros? Loki tallennetaan CSV-tiedostona."))) return;
+  const j = await api("/api/checkin", {action: "stop"}); if (j.ok) { S.checkin = j.checkin; fillCheckinForm(); renderCheckin(); }
+};
+function ciMatches(q) {
+  q = q.trim().toUpperCase();
+  return q ? S.checkin.stations.filter(st => st.call.includes(q)) : [];
+}
+async function ciToggle(call) {
+  const c = S.checkin, st = c.stations.find(x => x.call === call); if (!st) return;
+  let j;
+  if (st.nro) {
+    const msg = st.nro <= c.copied_upto
+      ? T("Perutaanko aseman {c} kirjaus (NRO {n})? Rivi on jo kopioitu taulukkoon – sen jälkeiset numerot siirtyvät yhdellä.", {c: call, n: st.nro})
+      : T("Perutaanko aseman {c} kirjaus (NRO {n})?", {c: call, n: st.nro});
+    if (!confirm(msg)) return;
+    j = await api("/api/checkin", {action: "unlog", call});
+  } else {
+    j = await api("/api/checkin", {action: "log", call});
+  }
+  if (j.ok) { S.checkin = j.checkin; renderCheckin(); } else alert(j.error);
+}
+$("ciQ").addEventListener("input", () => {
+  renderCheckin();
+  const m = ciMatches($("ciQ").value).find(st => !st.nro) || ciMatches($("ciQ").value)[0];
+  if (m && ciRows.get(m.call)) ciRows.get(m.call).scrollIntoView({block: "nearest"});
+});
+$("ciQ").addEventListener("keydown", async e => {
+  if (e.key === "Escape") { $("ciQ").value = ""; renderCheckin(); return; }
+  if (e.key !== "Enter") return;
+  const q = $("ciQ").value.trim().toUpperCase(), all = ciMatches(q), open = all.filter(st => !st.nro);
+  const exact = open.find(st => st.call === q);
+  const pick = exact || (open.length === 1 ? open[0] : null);
+  if (pick) { await ciToggle(pick.call); $("ciQ").value = ""; renderCheckin(); }
+  else if (open.length > 1) { $("ciErr").textContent = T("Haku osuu {n} asemaan – tarkenna", {n: open.length}); setTimeout(() => { $("ciErr").textContent = ""; }, 4000); }
+});
+$("ciList").addEventListener("click", e => {
+  const b = e.target.closest("button[data-call]"); if (b) { ciToggle(b.dataset.call); return; }
+  const c = e.target.closest(".ccall"); if (c) openStation(c.textContent);
+});
+$("ciList").addEventListener("scroll", () => {
+  const l = $("ciList"); if (l.scrollTop + l.clientHeight >= l.scrollHeight - 8) { ciNewBelow = 0; ciNewBtn(); }
+});
+$("ciNew").onclick = () => { const l = $("ciList"); l.scrollTop = l.scrollHeight; ciNewBelow = 0; ciNewBtn(); };
+function ciNewBtn() {
+  $("ciNew").style.display = ciNewBelow ? "" : "none";
+  $("ciNew").textContent = T("↓ {n} uutta asemaa listan lopussa", {n: ciNewBelow});
+}
+function ciSet(el, sel, txt) { const x = el.querySelector(sel); if (x.textContent !== txt) x.textContent = txt; }
+function ciRowHtml() {
+  return `<span class="cidx muted"></span><span class="cst"></span><span><span class="ccall"></span><span class="cname"></span></span>
+    <span class="cvia"></span><span class="ckunta"></span><span class="ckeys muted"></span><span><button class="cibtn"></button></span>`;
+}
+function renderCheckin() {
+  const c = S.checkin; if (!c) return;
+  const tNow = now();
+  // yläpalkki
+  ["ciTg", "ciTgOther", "ciRound", "ciDate", "ciOp"].forEach(id => { $(id).disabled = c.active; });
+  $("ciStart").style.display = c.active ? "none" : "";
+  $("ciStop").style.display = c.active ? "" : "none";
+  $("ciRun").style.display = c.active ? "" : "none";
+  if (c.active) $("ciRun").textContent = T("● Kierros {r} käynnissä · TG {tg} · {d}", {r: c.round, tg: c.tg, d: dur(tNow - c.started)});
+  $("ciState").textContent = !c.active && c.ended ? T("Kierros {r} päättyi {t}", {r: c.round, t: fmtShort(c.ended)}) : "";
+  const logged = c.log.length, heard = c.stations.length;
+  $("ciStats").innerHTML = [[logged, "kirjattu", ""], [heard - logged, "odottaa", "warn"], [heard, "kuultu verkossa", ""], [c.unique_repeaters, "eri toistinta", ""]]
+    .map(([v, l, cls]) => `<div><div class="v ${cls}">${v}</div><div class="l">${esc(T(l))}</div></div>`).join("");
+  $("ciArchive").textContent = T("Päättyneet kierrokset tallentuvat kansioon {p}", {p: c.archive});
+  // kuullut asemat: rivit luodaan kerran ja päivitetään paikallaan
+  const key = `${c.started}:${c.tg}`, list = $("ciList");
+  if (key !== ciRoundKey) { list.innerHTML = ""; ciRows.clear(); ciRoundKey = key; ciNewBelow = 0; }
+  $("ciEmpty").style.display = heard ? "none" : "";
+  $("ciEmpty").textContent = c.active ? T("Odotetaan ensimmäistä asemaa puheryhmässä {tg}…", {tg: c.tg}) : T("Aloita kierros, niin puheryhmässä avaavat asemat tulevat tähän.");
+  const q = $("ciQ").value.trim().toUpperCase(), own = (c.operator || "").toUpperCase();
+  for (const st of c.stations) {
+    let row = ciRows.get(st.call);
+    if (!row) {
+      const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 8;
+      row = document.createElement("div"); row.className = "cirow"; row.innerHTML = ciRowHtml();
+      list.appendChild(row); ciRows.set(st.call, row);
+      if (!atBottom && ciRows.size > 1) ciNewBelow++;
+    }
+    ciSet(row, ".cidx", String(st.idx));
+    ciSet(row, ".ccall", st.call);
+    ciSet(row, ".cname", st.name || "");
+    ciSet(row, ".cvia", st.via || "");
+    row.querySelector(".cvia").title = st.dev || "";
+    ciSet(row, ".ckunta", st.kunta || "");
+    ciSet(row, ".ckeys", String(st.keys));
+    const badges = (st.on_air ? `<span class="cibadge air">${esc(T("LÄHETYS"))}</span>` : "")
+      + (st.overlap ? `<span class="cibadge ovl">${esc(T("päällekkäin"))}${st.overlap > 1 ? " ×" + st.overlap : ""}</span>` : "")
+      + (!st.nro && tNow - st.first < 60 ? `<span class="cibadge new">${esc(T("uusi"))}</span>` : "");
+    const stEl = row.querySelector(".cst"); if (stEl.dataset.h !== badges) { stEl.innerHTML = badges; stEl.dataset.h = badges; }
+    row.classList.toggle("live", !!st.on_air);
+    row.classList.toggle("done", !!st.nro);
+    row.classList.toggle("match", !!q && st.call.includes(q));
+    const b = row.querySelector("button");
+    const label = st.nro ? `✓ NRO ${st.nro}${st.by && st.by !== own ? " · " + st.by : ""}` : T("Kuultu – kirjaa");
+    if (b.textContent !== label) b.textContent = label;
+    b.dataset.call = st.call;
+    b.className = "cibtn " + (st.nro ? "logged" : "log");
+    b.title = st.nro ? T("Peru kirjaus") : T("Kirjaa {c} lokiin", {c: st.call});
+  }
+  ciNewBtn();
+  // loki: rakennetaan uudelleen vain kun se muuttuu eikä kenttää muokata
+  const rows = [...c.log].sort((a, b) => a.nro - b.nro);
+  $("ciLogCount").textContent = rows.length ? `(${rows.length})` : "";
+  $("ciLogEmpty").style.display = rows.length ? "none" : "";
+  const newRows = rows.filter(r => r.nro > c.copied_upto).length;
+  $("ciCopyNew").textContent = T("Kopioi uudet rivit ({n})", {n: newRows});
+  $("ciCopyNew").disabled = !newRows;
+  const sig = JSON.stringify(rows.map(r => [r.nro, r.call, r.via, r.kunta, r.info, r.oper, r.dev, r.nro <= c.copied_upto]));
+  const editing = $("ciLog").contains(document.activeElement);
+  if (sig !== ciLogSig && !editing) {
+    ciLogSig = sig;
+    $("ciLog").innerHTML = rows.map(r => `<tr${r.nro <= c.copied_upto ? ` class="muted" title="${esc(T("Kopioitu taulukkoon"))}"` : ""}>
+      <td class="num">${r.nro}</td><td><b>${esc(r.call)}</b></td>
+      <td><input data-call="${esc(r.call)}" data-f="via" value="${esc(r.via)}" aria-label="RPT/HOTSPOT ${esc(r.call)}"></td>
+      <td><input data-call="${esc(r.call)}" data-f="kunta" value="${esc(r.kunta)}" aria-label="KUNTA ${esc(r.call)}"></td>
+      <td><input data-call="${esc(r.call)}" data-f="info" value="${esc(r.info)}" placeholder="–" aria-label="${esc(T("Lisätietoja"))} ${esc(r.call)}"></td>
+      <td class="muted">${esc(r.oper)}</td><td style="white-space:nowrap">${esc(r.dev)}</td></tr>`).join("");
+  }
+}
+$("ciLog").addEventListener("change", async e => {
+  const i = e.target.closest("input[data-f]"); if (!i) return;
+  const j = await api("/api/checkin", {action: "edit", call: i.dataset.call, field: i.dataset.f, value: i.value});
+  if (j.ok) S.checkin = j.checkin; else alert(j.error);
+});
+$("ciLog").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("input")) e.target.blur(); });
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* vanha tapa alla */ }
+  const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+  ta.remove(); return ok;
+}
+async function ciCopy(onlyNew) {
+  const c = S.checkin, since = onlyNew ? c.copied_upto : 0;
+  const r = await fetch(`/api/checkin/export?fmt=tsv&since=${since}`); const text = await r.text();
+  if (!text) return;
+  const ok = await copyText(text);
+  const n = text.split("\n").length;
+  $("ciCopyMsg").className = ok ? "ok" : "bad";
+  $("ciCopyMsg").textContent = ok ? T("{n} riviä kopioitu – liitä taulukkoon", {n}) : T("Kopiointi ei onnistunut");
+  if (ok) { const top = Math.max(0, ...c.log.map(x => x.nro)); const j = await api("/api/checkin", {action: "copied", upto: top}); if (j.ok) { S.checkin = j.checkin; renderCheckin(); } }
+  setTimeout(() => { $("ciCopyMsg").textContent = ""; }, 6000);
+}
+$("ciCopyNew").onclick = () => ciCopy(true);
+$("ciCopyAll").onclick = () => ciCopy(false);
+
 // ---------------- kieli ja päivitykset ----------------
 function initLang() {
   let l = S.config.language;
@@ -820,7 +1081,7 @@ let TAB = "seuranta";
 function showTab(tab) {
   TAB = tab;
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-  document.querySelectorAll("main > section, main > .svcgrid").forEach(s => { s.style.display = s.dataset.tab === tab ? "" : "none"; });
+  document.querySelectorAll("main > section, main > .svcgrid, main > .cigrid").forEach(s => { s.style.display = s.dataset.tab === tab ? "" : "none"; });
   if (!S) return;
   if (tab === "asetukset") fillSettings();
   if (tab === "viestit") fillMsg();
@@ -828,6 +1089,7 @@ function showTab(tab) {
   if (tab === "laitteet") fillDevices();
   if (tab === "tilastot") loadStats();
   if (tab === "palvelut") fillServices();
+  if (tab === "checkin") { fillCheckinForm(); renderCheckin(); }
 }
 $("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); });
 $("btnSave").onclick = async () => {

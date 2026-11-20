@@ -32,6 +32,12 @@ DMR radio via APRS.
 - **Repeater & hotspot watch** – online/offline alerts, static and dynamic talkgroups, last traffic. With a
   BrandMeister API key you can also add/remove static talkgroups, drop dynamic groups, drop the current call
   or reset the connection of *your own* devices.
+- **Check-in nets** – log weekly check-in nets (e.g. FinDMR TG 244, Estonia TG 248, Worldwide TG 91). Stations
+  keying up in the net talkgroup appear in order of arrival and **rows never move**, even when traffic overlaps;
+  overlapping keyups are marked. Click **Heard – log** (or type part of the callsign and press Enter) to give the
+  station the next log number. The log uses the FinDMR sheet columns (NRO, callsign, RPT/HOTSPOT, KUNTA,
+  Lisätietoja, Oper) plus the BrandMeister device (callsign and city), and **Copy new rows** puts the rows on the
+  clipboard ready to paste into Google Sheets. Finished rounds are saved as CSV.
 - **Statistics** – activity per hour/day, top talkers, busiest talkgroups, and BrandMeister's own per-talkgroup
   user history.
 - **APRS messaging** – see all APRS messages to and from every SSID of your callsign (including DMR ↔ APRS

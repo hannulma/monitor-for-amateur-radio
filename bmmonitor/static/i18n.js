@@ -164,6 +164,42 @@
     "Ei viestejä vielä. Näytetään kutsujen {c} kaikki saapuvat ja lähtevät APRS-viestit.":
       "No messages yet. All incoming and outgoing APRS messages for {c} are shown here.",
 
+    // ---- check-in ----
+    "Check-in": "Check-in",
+    "Check-in-netti": "Check-in net", "Netti": "Net", "Kierros": "Round", "Päivämäärä": "Date", "Operaattori": "Operator",
+    "Aloita kierros": "Start round", "Päätä kierros": "End round",
+    "Suomi": "Finland", "Viro": "Estonia", "Worldwide": "Worldwide", "Muu puheryhmä…": "Other talkgroup…",
+    "kirjattu": "logged", "odottaa": "waiting", "kuultu verkossa": "heard on network", "eri toistinta": "repeaters",
+    "Kuullut asemat": "Heard stations",
+    "saapumisjärjestyksessä – rivit eivät vaihda paikkaa": "in order of arrival – rows never move",
+    "Hae kutsu": "Find callsign", "esim. KXA": "e.g. KXA",
+    "Enter kirjaa, kun haku osuu yhteen kirjaamattomaan asemaan. Esc tyhjentää.":
+      "Enter logs the station when the search matches exactly one unlogged station. Esc clears.",
+    "Tila": "Status", "Kutsu / nimi": "Callsign / name", "RPT / hotspot": "RPT / hotspot", "Kunta": "Town", "Kirjaus": "Log",
+    "Aloita kierros, niin puheryhmässä avaavat asemat tulevat tähän.": "Start a round and stations keying up in the talkgroup appear here.",
+    "Odotetaan ensimmäistä asemaa puheryhmässä {tg}…": "Waiting for the first station in talkgroup {tg}…",
+    "Lista ei vieritä itsestään. Kutsua klikkaamalla aukeaa aseman kortti.": "The list never scrolls by itself. Click a callsign to open the station card.",
+    "↓ {n} uutta asemaa listan lopussa": "↓ {n} new stations at the end of the list",
+    "Kierroksen loki": "Round log", "Ei kirjattuja asemia.": "No logged stations.",
+    "Kopioi uudet rivit": "Copy new rows", "Kopioi uudet rivit ({n})": "Copy new rows ({n})", "Kopioi kaikki": "Copy all", "Lataa CSV": "Download CSV",
+    "Rivit kopioituvat taulukon sarakejärjestyksessä (NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, BM-laite) ilman otsikkoriviä. Liitä ne Google-taulukkoon ensimmäiseen tyhjään riviin sarakkeeseen A. \"Kopioi uudet rivit\" kopioi vain edellisen kopioinnin jälkeen kirjatut.":
+      "Rows are copied in the sheet's column order (NRO, callsign, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, BM device) without a header row. Paste them into column A of the first empty row of the Google sheet. \"Copy new rows\" copies only the rows logged since the last copy.",
+    "Päättyneet kierrokset tallentuvat kansioon {p}": "Finished rounds are saved in {p}",
+    "LÄHETYS": "ON AIR", "päällekkäin": "overlapping", "uusi": "new",
+    "Kuultu – kirjaa": "Heard – log", "Peru kirjaus": "Undo log", "Kirjaa {c} lokiin": "Log {c}",
+    "● Kierros {r} käynnissä · TG {tg} · {d}": "● Round {r} running · TG {tg} · {d}",
+    "Kierros {r} päättyi {t}": "Round {r} ended {t}",
+    "Aloitetaanko uusi kierros? Edellisen kierroksen loki on tallessa CSV-tiedostona.": "Start a new round? The previous round's log is saved as a CSV file.",
+    "Päätetäänkö kierros? Loki tallennetaan CSV-tiedostona.": "End the round? The log is saved as a CSV file.",
+    "Perutaanko aseman {c} kirjaus (NRO {n})?": "Undo logging {c} (NRO {n})?",
+    "Perutaanko aseman {c} kirjaus (NRO {n})? Rivi on jo kopioitu taulukkoon – sen jälkeiset numerot siirtyvät yhdellä.":
+      "Undo logging {c} (NRO {n})? The row has already been copied to the sheet – the following numbers shift by one.",
+    "Haku osuu {n} asemaan – tarkenna": "The search matches {n} stations – type more",
+    "Kopioitu taulukkoon": "Copied to the sheet",
+    "{n} riviä kopioitu – liitä taulukkoon": "{n} rows copied – paste them into the sheet",
+    "Kopiointi ei onnistunut": "Copying failed",
+    "BM-laite": "BM device", "Oper": "Oper", "Lisätietoja": "Additional info",
+
     // ---- kuuntelu ----
     "KUUNTELU": "LISTENING", "YHDISTETÄÄN": "CONNECTING", "VIRHE": "ERROR",
     "Odotetaan liikennettä…": "Waiting for traffic…",

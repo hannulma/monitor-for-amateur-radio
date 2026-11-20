@@ -176,3 +176,70 @@ def test_update_versions():
     assert a["name"] == "MonitorForBrandMeister-0.9.0b1-macos-universal.dmg"
     assert a["url"].endswith("/releases/download/v0.9.0b1/MonitorForBrandMeister-0.9.0b1-macos-universal.dmg")
     assert U.find_asset(rel[0], "windows-setup")["name"].endswith("-windows-setup.exe")
+
+
+def test_checkin_round(tmp_path):
+    """Check-in: saapumisjärjestys pysyy, päällekkäisyys, kirjaus, numerointi ja vienti."""
+    from bmmonitor.checkin import CheckIn, clean_city, country_prefix
+
+    class Mon:
+        cfg_path = tmp_path / "config.json"
+        cfg = {}
+        def touch(self): pass
+        def save_config(self): pass
+        def tg_name(self, tg): return "Finland"
+
+    assert clean_city("Jarvenpaa, KP20NK") == "Jarvenpaa" and clean_city("Oulu") == "Oulu"
+    assert country_prefix(244) == "244" and country_prefix(91) is None
+    ci = CheckIn(Mon(), api=None)
+    ci.start(244, "177", "20.11.2026", "oh2abc")
+    t = time.time()
+
+    def ev(call, sid, src, start, stop=0, ctx=244207):
+        ci.on_event({"SourceCall": call, "SourceName": "X", "SourceID": src, "DestinationID": 244,
+                     "SessionID": sid, "Start": start, "Stop": stop, "ContextID": ctx,
+                     "Event": "Session-Stop" if stop else "Session-Start"})
+
+    ev("OH2AAA", "a", 2440001, t)
+    ev("ES1BBB", "b", 2480001, t + 1)                 # avaa toisen päälle -> päällekkäin
+    ev("OH2AAA", "a", 2440001, t, t + 3)
+    ev("OH3CCC", "c", 2440002, t + 5, ctx=2440002001)
+    ev("OH2AAA", "d", 2440001, t + 9)                 # uusi avaus: sama rivi, ei siirry
+    ev("OH9ZZZ", "z", 2440009, t - 600)               # ennen kierrosta -> ei mukaan
+    ev("OH4XXX", "x", 2440004, t, 0)
+    ci.on_event({"SourceCall": "OH5TG", "DestinationID": 2441, "Start": t, "SessionID": "o"})   # eri TG
+    calls = [s["call"] for s in ci.s["stations"]]
+    assert calls == ["OH2AAA", "ES1BBB", "OH3CCC", "OH4XXX"]
+    st = {s["call"]: s for s in ci.s["stations"]}
+    assert st["OH2AAA"]["keys"] == 2 and st["ES1BBB"]["overlap"] == 1
+    assert st["ES1BBB"]["via"] == "Ulkomaat" and st["OH3CCC"]["via"] == "Hotspot"
+
+    ci.devices[244207] = {"call": "OH2RUP", "city": "Jarvenpaa, KP20NK"}
+    ci._fill_device(st["OH2AAA"])
+    assert st["OH2AAA"]["via"] == "OH2RUP Jarvenpaa" and st["OH2AAA"]["dev"] == "OH2RUP, Jarvenpaa"
+
+    for c in ("OH3CCC", "OH2AAA", "ES1BBB"):
+        ci.log_station(c)
+    assert [(e["nro"], e["call"], e["oper"]) for e in ci.s["log"]] == [(1, "OH3CCC", "OH2ABC"), (2, "OH2AAA", "OH2ABC"), (3, "ES1BBB", "OH2ABC")]
+    ci.log_station("OH2AAA")                           # kahdesti -> ei uutta riviä
+    assert len(ci.s["log"]) == 3
+    with pytest.raises(ValueError):
+        ci.log_station("OH9NOPE")
+    ci.edit("OH2AAA", "info", "mobiili")
+    ci.edit("OH2AAA", "kunta", "Tuusula")
+    ci.mark_copied(3)
+    ci.unlog("OH3CCC")                                 # numerot tiivistyvät, kopioidut merkitään uudelleen
+    assert [(e["nro"], e["call"]) for e in ci.s["log"]] == [(1, "OH2AAA"), (2, "ES1BBB")] and ci.s["copied_upto"] == 0
+    ci.devices[244207] = {"call": "OH2RUP", "city": "Kerava"}
+    ci._fill_device(st["OH2AAA"])                      # käsin muutettu kunta säilyy
+    tsv = ci.export("tsv")
+    assert tsv.splitlines()[0] == "1\tOH2AAA\tOH2RUP Kerava\tTuusula\tmobiili\tOH2ABC\tOH2RUP, Kerava"
+    assert ci.export("tsv", since=1).count("\n") == 0
+
+    ci.stop()
+    files = list((tmp_path / "checkin").glob("*.csv"))
+    assert len(files) == 1 and "OH2AAA" in files[0].read_text("utf-8-sig")
+    ci2 = CheckIn(Mon(), api=None)                     # tila säilyy uudelleenkäynnistyksessä
+    assert [e["call"] for e in ci2.s["log"]] == ["OH2AAA", "ES1BBB"] and not ci2.s["active"]
+    ci2.start(244)
+    assert ci2.s["round"] == "178" and ci2.s["log"] == []

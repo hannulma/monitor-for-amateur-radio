@@ -102,3 +102,14 @@ The restarted app gets `--wait-for-exit` and the original arguments, waits for t
 port and binds the same port, so the open browser tab reconnects and reloads itself when it sees a new version.
 Child processes are started without PyInstaller's `_PYI_*` variables (`PYINSTALLER_RESET_ENVIRONMENT=1`).
 `BMM_RELEASES_API` overrides the releases URL for testing.
+
+## Check-in nets
+
+`bmmonitor/checkin.py`. Group-call events to the round's talkgroup (from the round's start) are collected per
+callsign in arrival order; a new `SessionID` counts as a keyup and a keyup that starts while another station is
+on the air is counted as overlapping. `ContextID` is the device: 6-digit IDs are repeaters, others hotspots;
+`/v2/device/{id}` gives its callsign and city (the locator suffix is removed). Log entries carry a uid,
+timestamp and operator so that numbering can later move to a shared service (Google Apps Script) for several
+operators. State is kept in `checkin.json`; a finished round is written to `checkin/<date>_TG<tg>_kierros<n>.csv`.
+API: `POST /api/checkin` (`start`, `stop`, `log`, `unlog`, `edit`, `copied`) and
+`GET /api/checkin/export?fmt=tsv|csv&since=<nro>`.

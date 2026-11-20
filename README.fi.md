@@ -74,6 +74,26 @@ katkaisu ja yhteyden nollaus. Avain luodaan BrandMeister SelfCaressa.
 Puhelut tunneittain/päivittäin (14 päivän historia), eniten puhuneet, vilkkaimmat ryhmät sekä BrandMeisterin
 oma historiakysely: ryhmässä kuullut asemat puhekertoineen.
 
+### Check-in
+Viikoittaisten check-in-nettien (esim. FinDMR TG 244, Viro TG 248, Worldwide TG 91) kirjaamiseen.
+Aloita kierros valitsemalla netti, kierrosnumero, päivämäärä ja operaattori. Puheryhmässä avaavat asemat
+tulevat listaan **saapumisjärjestyksessä, eikä lista koskaan järjesty uudelleen**: uusi avaus samalta
+asemalta ei siirrä riviä, kirjattu rivi jää paikalleen himmennettynä ja lista ei vieritä itsestään
+(uusista kertoo "↓ N uutta asemaa" -painike). Merkinnät: **LÄHETYS** (puhuu nyt), **päällekkäin** (avasi
+toisen päälle eikä välttämättä kuulunut) ja **uusi**.
+
+Kun kuulet aseman, paina **Kuultu – kirjaa** tai kirjoita hakuun pari kutsun merkkiä ja paina Enter.
+Lokinumero (NRO) annetaan kirjausjärjestyksessä. Kierroksen loki on samoissa sarakkeissa kuin FinDMR:n
+kierrostaulukko: NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper ja viimeisenä **BM-laite** (toistimen tai
+hotspotin kutsu ja paikkakunta BrandMeisterin tiedoista). RPT/HOTSPOT ja KUNTA täytetään valmiiksi
+(toistin → kutsu ja paikkakunta, muuten "Hotspot"; maakohtaisessa netissä toisen maan asema → "Ulkomaat"),
+ja ne sekä Lisätietoja ovat muokattavissa.
+
+**Kopioi uudet rivit** vie edellisen kopioinnin jälkeen kirjatut rivit leikepöydälle ilman otsikkoriviä:
+liitä ne Google-taulukon ensimmäiseen tyhjään riviin sarakkeeseen A. Lokin saa myös CSV-tiedostona, ja
+päättynyt kierros tallentuu automaattisesti CSV:nä kansioon `checkin/`. Keskeneräinen kierros säilyy, vaikka
+ohjelma käynnistettäisiin uudelleen.
+
 ### Palvelut
 Jokaisella palvelulla on oma **päälle/pois-kytkin**; kaikki ovat oletuksena pois päältä. Aseta ensin
 **oma sijainti** koordinaatteina (`60.17, 24.94`), lokaattorina (`KP20LE`) tai selaimen sijainnilla.
@@ -160,6 +180,7 @@ Asetukset, lokit ja tilastot tallentuvat vain omalle koneelle:
 | `config.json` | asetukset (myös APRS-passcode ja API-avain) |
 | `calls.csv` | seuratut puhelut (aukeaa Excelissä) |
 | `monitor.log` | loki, kun ohjelma toimii ilman komentoikkunaa |
+| `checkin.json`, `checkin/*.csv` | käynnissä oleva check-in-kierros ja päättyneiden kierrosten lokit |
 | `tg_names.json`, `feeds_state.json` | välimuistit |
 
 ## Kehitys

@@ -27,6 +27,7 @@ from aiohttp import web
 
 from .i18n import set_lang, tr
 from .updater import Updater
+from .checkin import CheckIn
 from . import APP_ID, APP_NAME, __version__
 from .messaging import DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message, ws_options
 from .bmapi import BMApi, BMApiError
@@ -194,6 +195,7 @@ class Monitor:
         self.services = ServiceHub(self)
         self.hub.command_handler = self.commands.handle
         self.updater = Updater(self)
+        self.checkin = CheckIn(self, self.api)
 
     def touch(self):
         self.dirty = True
@@ -356,6 +358,8 @@ class Monitor:
         self.heard.update(p, self.tg_name)
         self.watcher.on_event(p, history)
         self.devmon.on_event(p)
+        if is_group_call(p):
+            self.checkin.on_event(p, history)
         tg = p.get("DestinationID")
         pattern = self.matcher.match(tg)
         if not pattern or not is_group_call(p):
@@ -560,6 +564,7 @@ class Monitor:
             "devices": self.devmon.snapshot(),
             "services": self.services.snapshot(),
             "update": self.updater.snapshot(),
+            "checkin": self.checkin.snapshot(),
             "calls": sorted(self.calls, key=lambda c: float(c.get("start") or 0), reverse=True)[:200],
             "data": sorted(self.data, key=lambda c: float(c.get("start") or 0), reverse=True)[:200],
             "paths": {"config": str(self.cfg_path), "calls_csv": str(self.calls_csv),
@@ -963,6 +968,39 @@ def make_app(mon: Monitor) -> web.Application:
         mon.touch()
         return web.json_response({"ok": True})
 
+    async def checkin_action(req):
+        try:
+            body = await req.json()
+            ci, action = mon.checkin, body.get("action")
+            if action == "start":
+                ci.start(body.get("tg"), body.get("round"), body.get("date", ""), body.get("operator", ""))
+            elif action == "stop":
+                ci.stop()
+            elif action == "log":
+                ci.log_station(body.get("call", ""))
+            elif action == "unlog":
+                ci.unlog(body.get("call", ""))
+            elif action == "edit":
+                ci.edit(body.get("call", ""), body.get("field", ""), body.get("value", ""))
+            elif action == "copied":
+                ci.mark_copied(body.get("upto", 0))
+            else:
+                raise ValueError(tr("Tuntematon toiminto"))
+            return web.json_response({"ok": True, "checkin": ci.snapshot()})
+        except ValueError as e:
+            return web.json_response({"ok": False, "error": str(e)}, status=400)
+
+    async def checkin_export(req):
+        fmt = req.query.get("fmt", "tsv")
+        since = int(req.query.get("since", "0") or 0)
+        text = mon.checkin.export("csv" if fmt == "csv" else "tsv", since=since, header=req.query.get("header") == "1")
+        if fmt == "csv":
+            s = mon.checkin.s
+            name = f"checkin_TG{s['tg']}_kierros{s['round']}.csv"
+            return web.Response(body=("\ufeff" + text).encode("utf-8"), content_type="text/csv", charset="utf-8",
+                                headers={"Content-Disposition": f'attachment; filename="{name}"'})
+        return web.Response(text=text, content_type="text/plain", charset="utf-8")
+
     async def update_check(_):
         return web.json_response({"ok": True, "update": await mon.updater.check()})
 
@@ -983,6 +1021,8 @@ def make_app(mon: Monitor) -> web.Application:
 
     app.router.add_get("/api/ping", ping)
     app.router.add_post("/api/update/check", update_check)
+    app.router.add_post("/api/checkin", checkin_action)
+    app.router.add_get("/api/checkin/export", checkin_export)
     app.router.add_post("/api/update/install", update_install)
     app.router.add_post("/api/shutdown", shutdown)
     app.router.add_get("/api/station", station)
@@ -1098,6 +1138,7 @@ async def run(args):
     tasks = [asyncio.create_task(mon.broadcast_loop()), asyncio.create_task(mon.load_tg_names()),
              asyncio.create_task(mon.hub.run()), asyncio.create_task(mon.devmon.run()),
              asyncio.create_task(mon.services.run())]
+    tasks.append(asyncio.create_task(mon.checkin.run()))
     if not args.demo:
         tasks.append(asyncio.create_task(mon.updater.run()))
     tasks.append(asyncio.create_task(demo_loop(mon) if args.demo else bm_loop(mon)))
