@@ -84,19 +84,25 @@ jobs:
           --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
-      - name: Smoke test (connects to BrandMeister)
+      - name: Smoke test (starts, connects to BrandMeister, quits)
         shell: pwsh
         run: |
           $log = Join-Path $env:APPDATA "BMMonitor\monitor.log"
+          Remove-Item $log -ErrorAction SilentlyContinue
+          $p = Start-Process -FilePath "dist\MonitorForBrandMeister\MonitorForBrandMeister.exe" -ArgumentList "--no-browser","--port","8799" -PassThru
           $ok = $false
-          foreach ($i in 1..3) {
-            Remove-Item $log -ErrorAction SilentlyContinue
-            $p = Start-Process -FilePath "dist\MonitorForBrandMeister\MonitorForBrandMeister.exe" -ArgumentList "--diag" -PassThru
-            if (-not $p.WaitForExit(60000)) { $p.Kill() }
-            if (Test-Path $log) { Get-Content $log; if (Select-String -Path $log -Pattern "YHDISTETTY" -Quiet) { $ok = $true; break } }
-            Start-Sleep 10
+          foreach ($i in 1..90) {
+            Start-Sleep 1
+            if ($p.HasExited) { Write-Host "Ohjelma sulkeutui, exit code $($p.ExitCode)"; break }
+            if ((Test-Path $log) -and (Select-String -Path $log -Pattern "Yhdistetty Brandmeisteriin" -Quiet)) {
+              try { $ping = Invoke-RestMethod http://127.0.0.1:8799/api/ping; Write-Host "ping: $($ping | ConvertTo-Json -Compress)"; $ok = $true; break } catch { }
+            }
           }
-          if (-not $ok) { Write-Error "Sovellus ei saanut yhteyttä BrandMeisteriin"; exit 1 }
+          try { Invoke-RestMethod -Method Post http://127.0.0.1:8799/api/shutdown | Out-Null } catch { }
+          if (-not $p.WaitForExit(15000)) { Write-Host "Ei sulkeutunut, lopetetaan"; $p.Kill(); $ok = $false }
+          Write-Host "--- monitor.log ---"
+          if (Test-Path $log) { Get-Content $log } else { Write-Host "(ei lokia: $log)"; Get-ChildItem (Join-Path $env:APPDATA "BMMonitor") -ErrorAction SilentlyContinue }
+          if (-not $ok) { Write-Error "Käynnistystesti epäonnistui"; exit 1 }
       - name: Build installer (Inno Setup)
         shell: pwsh
         run: |
