@@ -1037,11 +1037,13 @@ function renderUpdate() {
       <a href="${esc(u.url)}" target="_blank" rel="noopener">${esc(T("Mitä uutta"))} ↗</a><div style="margin-top:8px">`;
     if (u.auto) {
       h += `<button class="primary" id="btnUpdInstall">${esc(T("Päivitä nyt"))}</button>
-        <div class="hint">${esc(T("Uusi versio ladataan, sen tarkistussumma tarkistetaan ja ohjelma käynnistyy uudelleen. Tämä sivu yhdistää automaattisesti."))}</div>`;
+        <div class="hint">${esc(T(u.kind === "windows-setup"
+          ? "Uusi versio ladataan ja sen tarkistussumma tarkistetaan. Sen jälkeen asennusohjelma avautuu: vahvista asennus, niin ohjelma käynnistyy uudelleen ja tämä sivu yhdistää automaattisesti."
+          : "Uusi versio ladataan, sen tarkistussumma tarkistetaan ja ohjelma käynnistyy uudelleen. Tämä sivu yhdistää automaattisesti."))}</div>`;
     } else if (u.kind === "pip" && u.asset) {
       h += `<div class="hint">${esc(T("Päivitä komennolla:"))}</div><code style="user-select:all">pip install --upgrade ${esc(u.asset.url)}</code>`;
     } else if (u.asset) {
-      const hint = u.kind === "windows-portable" ? "Pura zip-tiedosto ja korvaa vanha ohjelmatiedosto, kun ohjelma on suljettu."
+      const hint = u.kind === "windows-portable" ? "Pura zip-tiedosto ja korvaa vanha ohjelmakansio, kun ohjelma on suljettu."
         : u.kind === "macos" ? "Sulje ohjelma, avaa levykuva ja vedä ohjelma Ohjelmat-kansioon (Korvaa)." : "Korvaa vanha ohjelmatiedosto uudella, kun ohjelma on suljettu.";
       h += `<a href="${esc(u.asset.url)}"><button class="primary">${esc(T("Lataa {name}", {name: u.asset.name}))}</button></a><div class="hint">${esc(T(hint))}</div>`;
     } else {

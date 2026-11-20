@@ -93,7 +93,7 @@ ones. Installation downloads the platform asset, verifies it against `SHA256SUMS
 
 | Install kind | How it is updated |
 |---|---|
-| Windows installer (`unins000.exe` next to the exe) | runs the new setup with `/SILENT`; the `[Run]` entry with `skipifnotsilent` restarts the app |
+| Windows installer (`unins000.exe` next to the exe) | opens the new setup with `/UPDATE` (visible wizard: license, folder and task pages skipped); the user confirms and the `[Run]` entry for `IsUpdate` restarts the app |
 | macOS `.app` (writable parent folder) | mounts the dmg, a helper script waits for the app to exit, swaps the bundle with `ditto` (rolls back on failure) and reopens it |
 | Linux binary | a helper script swaps the binary and restarts it |
 | Windows portable / pip | download link or `pip install --upgrade <wheel URL>` |
@@ -113,3 +113,12 @@ timestamp and operator so that numbering can later move to a shared service (Goo
 operators. State is kept in `checkin.json`; a finished round is written to `checkin/<date>_TG<tg>_kierros<n>.csv`.
 API: `POST /api/checkin` (`start`, `stop`, `log`, `unlog`, `edit`, `copied`) and
 `GET /api/checkin/export?fmt=tsv|csv&since=<nro>`.
+
+## Windows build and antivirus false positives
+
+The Windows app is a PyInstaller **one-folder** build (`MonitorForBrandMeister.exe` + `_internal\`) since
+0.10.0b2: one-file builds unpack themselves into a temp folder at every start, which machine-learning
+antivirus heuristics (e.g. Defender's `…!ml` detections) often flag. Updates open the installer visibly
+instead of running it silently. The release job smoke-tests the built exe (`--diag` must connect to
+BrandMeister). If the repository has a `VT_API_KEY` secret (a free VirusTotal API key), the Windows
+installer and exe are uploaded to VirusTotal and the report links are shown in the job summary.

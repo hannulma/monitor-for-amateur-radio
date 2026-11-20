@@ -59,8 +59,10 @@
       "The new version is downloaded, its checksum is verified and the program restarts. This page reconnects automatically.",
     "Päivitä komennolla:": "Update with:",
     "Lataa {name}": "Download {name}",
-    "Pura zip-tiedosto ja korvaa vanha ohjelmatiedosto, kun ohjelma on suljettu.":
-      "Extract the zip file and replace the old program file while the program is closed.",
+    "Pura zip-tiedosto ja korvaa vanha ohjelmakansio, kun ohjelma on suljettu.":
+      "Extract the zip file and replace the old program folder while the program is closed.",
+    "Uusi versio ladataan ja sen tarkistussumma tarkistetaan. Sen jälkeen asennusohjelma avautuu: vahvista asennus, niin ohjelma käynnistyy uudelleen ja tämä sivu yhdistää automaattisesti.":
+      "The new version is downloaded and its checksum is verified. Then the installer opens: confirm the installation and the program restarts; this page reconnects automatically.",
     "Sulje ohjelma, avaa levykuva ja vedä ohjelma Ohjelmat-kansioon (Korvaa).":
       "Quit the program, open the disk image and drag the app to the Applications folder (Replace).",
     "Korvaa vanha ohjelmatiedosto uudella, kun ohjelma on suljettu.": "Replace the old program file with the new one while the program is closed.",

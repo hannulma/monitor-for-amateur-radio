@@ -37,8 +37,12 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "autostart"; Description: "Käynnistä Windowsin käynnistyessä / Start with Windows"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+[InstallDelete]
+; vanhat kirjastot pois ennen uusia (kansiomuotoinen paketti, versiosta 0.10.0b2 alkaen)
+Type: filesandordirs; Name: "{app}\_internal"
+
 [Files]
-Source: "..\dist\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\MonitorForBrandMeister\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ignoreversion
 
 [Icons]
@@ -48,9 +52,23 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 Name: "{userstartup}\{#AppName}"; Filename: "{app}\{#AppExe}"; Parameters: "--no-browser"; Tasks: autostart
 
 [Run]
-Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
-; Ohjelman sisäinen päivitys ajaa asennuksen hiljaisena -> käynnistä ohjelma uudelleen (selainvälilehti yhdistää itse)
+Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent; Check: not IsUpdate
+; Ohjelman sisäinen päivitys (/UPDATE): käynnistä uudelleen ilman uutta selainvälilehteä (vanha yhdistää itse)
+Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Parameters: "--no-browser --wait-for-exit"; Flags: nowait postinstall skipifsilent; Check: IsUpdate
+; Vanhemmat versiot (0.9–0.10.0b1) ajoivat päivityksen hiljaisena
 Filename: "{app}\{#AppExe}"; Parameters: "--no-browser --wait-for-exit"; Flags: nowait skipifnotsilent
+
+[Code]
+function IsUpdate: Boolean;
+begin
+  Result := Pos('/UPDATE', Uppercase(GetCmdTail)) > 0;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  { Päivityksessä näytetään vain "Valmis asentamaan" ja lopetussivu }
+  Result := IsUpdate and ((PageID = wpLicense) or (PageID = wpSelectDir) or (PageID = wpSelectTasks));
+end;
 
 [UninstallRun]
 Filename: "{cmd}"; Parameters: "/C taskkill /IM {#AppExe} /F"; Flags: runhidden; RunOnceId: "StopApp"

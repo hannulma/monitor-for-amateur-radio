@@ -3,7 +3,7 @@
 - Tarkistus kerran vuorokaudessa (ja käsin). Beta-versiota käyttävä saa myös uudet betat,
   vakaata versiota käyttävä vain vakaat versiot.
 - Asennus ladataan, tarkistetaan julkaisun SHA256SUMS.txt-tiedostoa vasten ja asennetaan:
-    Windows (asennusohjelmalla asennettu): uusi asennusohjelma ajetaan hiljaisena, ohjelma käynnistyy uudelleen
+    Windows (asennusohjelmalla asennettu): uusi asennusohjelma avautuu, käyttäjä vahvistaa, ohjelma käynnistyy uudelleen
     macOS: .app vaihdetaan levykuvasta paikalleen apuskriptillä, ohjelma käynnistyy uudelleen
     Linux: ohjelmatiedosto vaihdetaan apuskriptillä, ohjelma käynnistyy uudelleen
   Muissa tapauksissa (Windows ilman asennusta, pip) tarjotaan latauslinkki / komento.
@@ -313,9 +313,9 @@ class Updater:
     def _launch(self, path: Path, tmp: Path):
         pid = os.getpid()
         if self.kind == "windows-setup":
-            flags = 0x00000008 | 0x00000200   # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
-            subprocess.Popen([str(path), "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS"],
-                             creationflags=flags, close_fds=True, env=clean_env())
+            # Asennusohjelma avataan näkyvänä: käyttäjä vahvistaa asennuksen, ohjelma käynnistyy sen jälkeen
+            flags = 0x00000200   # CREATE_NEW_PROCESS_GROUP
+            subprocess.Popen([str(path), "/UPDATE"], creationflags=flags, close_fds=True, env=clean_env())
             return
         if self.kind == "macos":
             bundle = mac_bundle()
