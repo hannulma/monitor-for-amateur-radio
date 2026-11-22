@@ -1,3 +1,3 @@
-__version__ = "0.11.0b5"
+__version__ = "0.11.0b6"
 APP_NAME = "Monitor for BrandMeister"
 APP_ID = "monitor-for-brandmeister"

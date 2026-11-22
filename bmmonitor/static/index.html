@@ -25,6 +25,17 @@
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
   section.wide { grid-column: 1 / -1; }
   section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: center; }
+  section > h2 { cursor: pointer; user-select: none; }
+  section > h2 > .fold { background: none; border: 0; padding: 0 2px; margin: 0 -4px 0 -6px; color: var(--muted); font-size: 11px; line-height: 1; width: 16px; transition: transform .12s; }
+  section > h2 > .fold:hover { color: var(--accent); }
+  section > h2:hover > .fold { color: var(--text); }
+  section.folded > h2 > .fold { transform: rotate(-90deg); }
+  section.folded > h2 { border-bottom: 0; }
+  section.folded > :not(h2) { display: none !important; }
+  section.folded { align-self: start; }
+  .foldall { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  nav.tabs .foldall button { background: none; border: 0; color: var(--muted); padding: 4px 6px; font-size: 12px; }
+  nav.tabs .foldall button:hover { color: var(--accent); }
   section h2 .count { color: var(--text); font-weight: 400; text-transform: none; letter-spacing: 0; }
   .scroll { max-height: 420px; overflow: auto; }
   table { width: 100%; border-collapse: collapse; }
@@ -41,10 +52,11 @@
   .call { font-weight: 600; }
   .pill { font-size: 11px; padding: 1px 6px; border-radius: 10px; background: #22303d; color: var(--muted); }
   .empty { padding: 18px; color: var(--muted); text-align: center; }
-  #settings { grid-column: 1 / -1; padding: 14px; }
-  #settings label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
-  #settings input, #settings textarea, #settings select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
-  #settings textarea { width: 100%; min-height: 60px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .cfg { grid-column: 1 / -1; }
+  .cfg > .inner { padding: 4px 14px 14px; }
+  .cfg label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
+  .cfg input, .cfg textarea, .cfg select { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
+  .cfg textarea { width: 100%; min-height: 60px; font-family: ui-monospace, Menlo, Consolas, monospace; }
   .row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; }
   .hint { color: var(--muted); font-size: 12px; margin-top: 4px; }
   .err { color: var(--bad); margin-left: 10px; }
@@ -68,8 +80,8 @@
   .vu div { height: 100%; width: 0; background: linear-gradient(90deg, var(--live), var(--warn) 75%, var(--bad)); transition: width 90ms linear; }
   #pVol { width: 110px; }
   a { color: var(--accent); }
-  #msgPanel { grid-column: 1 / -1; }
-  #msgPanel .inner { padding: 14px; }
+  .msgp { grid-column: 1 / -1; }
+  .msgp .inner { padding: 14px; }
   .form label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
   .form input[type=text], .form input[type=number], .form input[type=password], .form select, .form textarea { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
   .form textarea { width: 100%; min-height: 54px; font-family: ui-monospace, Menlo, Consolas, monospace; }
@@ -125,9 +137,8 @@
   .toasts { position: fixed; right: 16px; top: 100px; display: flex; flex-direction: column; gap: 8px; z-index: 60; }
   .toast { background: #0b0f13; border: 1px solid var(--live); border-left: 4px solid var(--live); border-radius: 8px; padding: 10px 14px; min-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,.5); cursor: pointer; }
   .toast.bad { border-color: var(--bad); }
-  #msgPanel label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
-  #msgPanel input[type=text], #msgPanel input[type=number], #msgPanel input[type=password] { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
-  #msgPanel h3 { font-size: 13px; color: var(--text); margin: 18px 0 6px; font-weight: 600; }
+  .msgp label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
+  .msgp input[type=text], .msgp input[type=number], .msgp input[type=password] { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
   .feedrow { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
   .feedrow input.fname { width: 110px; }
   .feedrow input.furl { flex: 1; min-width: 200px; }
@@ -200,10 +211,13 @@
   <button data-tab="palvelut">Palvelut</button>
   <button data-tab="viestit">Syötteet ja viestit</button>
   <button data-tab="asetukset">Asetukset</button>
+  <span class="foldall"><button id="foldOpen" title="Avaa kaikki tämän välilehden osiot">Avaa kaikki</button><button id="foldClose" title="Pienennä kaikki tämän välilehden osiot otsikoiksi">Pienennä kaikki</button></span>
 </nav>
 
 <main>
-  <section id="settings" data-tab="asetukset">
+  <section id="settings" class="cfg form" data-tab="asetukset" data-fold="cfg-monitor">
+    <h2>Seuranta ja historia</h2>
+    <div class="inner">
     <div class="row">
       <div style="flex:1; min-width:280px">
         <label for="tgInput">Seurattavat puheryhmät</label>
@@ -233,7 +247,11 @@
         <span class="err" id="saveErr"></span>
       </div>
     </div>
-    <h3>Brandmeister API-avain (vapaaehtoinen)</h3>
+    </div>
+  </section>
+  <section class="cfg form" data-tab="asetukset" data-fold="cfg-apikey">
+    <h2>Brandmeister API-avain (vapaaehtoinen)</h2>
+    <div class="inner">
     <div class="row">
       <div style="flex:1;min-width:280px">
         <label for="apiKey">API-avain laitteen hallintaan</label>
@@ -244,27 +262,40 @@
       </div>
       <div><button id="btnKeySave">Tallenna avain</button> <button id="btnKeyDel">Poista avain</button> <span id="keyState" class="muted"></span></div>
     </div>
-    <div class="paths" id="paths"></div>
-    <h3>Kieli</h3>
+    </div>
+  </section>
+  <section class="cfg form" data-tab="asetukset" data-fold="cfg-lang">
+    <h2>Kieli</h2>
+    <div class="inner">
     <div class="row">
       <div><label for="langSel">Käyttöliittymän kieli</label>
         <select id="langSel" data-noi18n><option value="fi">Suomi</option><option value="en">English</option></select></div>
       <div class="hint" style="max-width:560px">Kieli koskee myös ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
         Ilmatieteen laitoksen varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).</div>
     </div>
-    <h3>Versio ja päivitykset</h3>
+    </div>
+  </section>
+  <section class="cfg form" data-tab="asetukset" data-fold="cfg-update">
+    <h2>Versio ja päivitykset</h2>
+    <div class="inner">
     <div id="updBox"></div>
     <div class="row">
       <div><label><input id="updAuto" type="checkbox"> Tarkista päivitykset automaattisesti (kerran päivässä)</label></div>
       <div><button id="btnUpdCheck">Tarkista nyt</button></div>
     </div>
-    <h3>Ohjelma</h3>
+    </div>
+  </section>
+  <section class="cfg form" data-tab="asetukset" data-fold="cfg-program">
+    <h2>Ohjelma</h2>
+    <div class="inner">
     <div class="row"><div><button id="btnQuit">Sulje ohjelma</button></div>
       <div class="hint" style="max-width:520px">Sulkee taustalla toimivan ohjelman. Ohjelman voi avata uudelleen käynnistämällä sen; jos se on jo käynnissä,
         käynnistys avaa vain tämän sivun. <span id="verInfo"></span></div></div>
+    <div class="paths" id="paths"></div>
+    </div>
   </section>
 
-  <section id="msgPanel" data-tab="viestit">
+  <section id="msgPanel" class="msgp" data-tab="viestit" data-fold="msg-main">
     <h2>Syötteet → DMR-tekstiviestit</h2>
     <div class="inner form">
       <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. Brandmeister välittää ne DMR-tekstiviesteinä
@@ -304,7 +335,11 @@
         <div><button id="btnTest">Lähetä testiviesti</button></div>
       </div>
       <div id="aprsStatus" style="margin-top:12px"></div>
-      <h3>Komennot radiosta</h3>
+    </div>
+  </section>
+  <section class="msgp form" data-tab="viestit" data-fold="msg-cmd">
+    <h2>Komennot radiosta</h2>
+    <div class="inner">
       <div class="note">Lähetä radiosta tekstiviesti Brandmeisterin APRS-palvelunumeroon <b>244999</b> (yksityisviesti) muodossa
         <code>&lt;oma APRS-IS-tunnus&gt; &lt;komento&gt;</code>, esim. <code id="cmdExample">OH2ABC-13 TG244</code>. Ohjelma vastaa radioosi.<br>
         Komennot: <b>APUA</b> · <b>TG244</b> (kuka puhui viimeksi) · <b>KUKA OH2ABC</b> (milloin ja missä kuultu) ·
@@ -316,14 +351,21 @@
           <input type="text" id="mCmdAllow" placeholder="OH1ABC OH3XYZ" style="width:100%">
           <div class="hint">Oletuksena komentoja saa lähettää oma kutsusi ja vastaanottajien kutsut (kaikki SSID:t).</div></div>
       </div>
-      <h3>Syötteiden tila</h3>
+      <div class="row" style="margin-top:10px"><div><button class="primary" id="btnCmdSave">Tallenna</button></div></div>
+    </div>
+  </section>
+  <section class="msgp" data-tab="viestit" data-fold="msg-feeds">
+    <h2>Syötteiden tila</h2>
+    <div class="scroll" style="max-height:none">
       <table><thead><tr><th>Syöte</th><th>Tarkistettu</th><th>Uusin otsikko</th><th>Tila</th></tr></thead><tbody id="feedStatus"></tbody></table>
-      <h3>Viestiloki</h3>
+    </div>
+  </section>
+  <section class="msgp" data-tab="viestit" data-fold="msg-log">
+    <h2>Viestiloki</h2>
       <div class="scroll" style="max-height:260px">
         <table><thead><tr><th>Aika</th><th>Suunta</th><th>Kenelle / keneltä</th><th>Teksti</th><th>Tila</th></tr></thead><tbody id="msgLog"></tbody></table>
         <div class="empty" id="msgLogEmpty">Ei viestejä vielä.</div>
       </div>
-    </div>
   </section>
 
   <section class="wide" data-tab="seuranta">
@@ -1171,6 +1213,53 @@ function showTab(tab) {
   if (tab === "checkin") { fillCheckinForm(); renderCheckin(); }
 }
 $("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); });
+
+// Osioiden pienentäminen otsikoiksi. Tila muistetaan tässä selaimessa.
+const FOLD_KEY = "bmm.folded";
+let folded = new Set();
+try { folded = new Set(JSON.parse(localStorage.getItem(FOLD_KEY) || "[]")); } catch (e) { folded = new Set(); }
+function foldId(sec) {
+  if (sec.dataset.fold) return sec.dataset.fold;
+  const host = sec.closest("[data-tab]");
+  const tab = host ? host.dataset.tab : "x";
+  const key = sec.dataset.svc || sec.id;
+  if (key) return tab + ":" + key;
+  const all = [...document.querySelectorAll("main section")].filter(x => { const h = x.closest("[data-tab]"); return h && h.dataset.tab === tab; });
+  return tab + ":" + all.indexOf(sec);
+}
+function setFold(sec, on, save = true) {
+  sec.classList.toggle("folded", on);
+  const b = sec.querySelector(":scope > h2 > .fold");
+  if (b) { b.setAttribute("aria-expanded", on ? "false" : "true"); b.title = on ? T("Avaa osio") : T("Pienennä osio otsikoksi"); }
+  if (!save) return;
+  const id = sec.dataset.foldId;
+  if (on) folded.add(id); else folded.delete(id);
+  try { localStorage.setItem(FOLD_KEY, JSON.stringify([...folded])); } catch (e) { /* ei tallennusta */ }
+}
+document.querySelectorAll("main section").forEach(sec => {
+  const h = sec.querySelector(":scope > h2");
+  if (!h) return;
+  sec.dataset.foldId = foldId(sec);
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "fold"; b.textContent = "▼";
+  h.prepend(b);
+  h.addEventListener("click", e => {
+    const t = e.target.closest("input, select, textarea, label, a, button");
+    if (t && t !== b) return;          // otsikon omat valinnat ja kytkimet toimivat normaalisti
+    setFold(sec, !sec.classList.contains("folded"));
+  });
+  setFold(sec, folded.has(sec.dataset.foldId), false);
+});
+function foldTab(on) {
+  document.querySelectorAll("main section").forEach(sec => {
+    const host = sec.closest("[data-tab]");
+    if (host && host.dataset.tab === TAB && sec.querySelector(":scope > h2 > .fold")) setFold(sec, on);
+  });
+}
+$("btnCmdSave").onclick = () => $("btnMsgSave").click();
+$("foldOpen").onclick = () => foldTab(false);
+$("foldClose").onclick = () => foldTab(true);
+function unfold(id) { const s = document.querySelector(`main section[data-fold="${id}"]`); if (s && s.classList.contains("folded")) setFold(s, false); }
 $("btnSave").onclick = async () => {
   $("saveErr").textContent = "";
   const r = await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"},
@@ -1206,7 +1295,7 @@ $("langSel").onchange = async e => {
 };
 $("updAuto").onchange = e => saveCfg({update_check: e.target.checked});
 $("btnUpdCheck").onclick = async () => { $("btnUpdCheck").disabled = true; await api("/api/update/check", {}); $("btnUpdCheck").disabled = false; };
-$("updPill").onclick = () => showTab("asetukset");
+$("updPill").onclick = () => { showTab("asetukset"); unfold("cfg-update"); };
 $("updBox").addEventListener("click", async e => {
   if (e.target.id !== "btnUpdInstall") return;
   if (!confirm(T("Päivitetäänkö ohjelma versioon {v}? Ohjelma käynnistyy uudelleen.", {v: S.update.latest}))) return;
