@@ -80,7 +80,9 @@ Aloita kierros valitsemalla netti, kierrosnumero, päivämäärä ja operaattori
 tulevat listaan **saapumisjärjestyksessä, eikä lista koskaan järjesty uudelleen**: uusi avaus samalta
 asemalta ei siirrä riviä, kirjattu rivi jää paikalleen himmennettynä ja lista ei vieritä itsestään
 (uusista kertoo "↓ N uutta asemaa" -painike). Merkinnät: **LÄHETYS** (puhuu nyt), **päällekkäin** (avasi
-toisen päälle eikä välttämättä kuulunut) ja **uusi**.
+toisen päälle eikä välttämättä kuulunut) ja **uusi**. Kun jo kirjattu asema lähettää uudelleen, lokin
+yläpuolelle tulee ilmoitus (esim. "OH1X (NRO 5, jo kirjattu) lähettää nyt"); sitä klikkaamalla lista
+vierittyy aseman riville.
 
 Kun kuulet aseman, paina **Kuultu – kirjaa** tai kirjoita hakuun pari kutsun merkkiä ja paina Enter.
 Lokinumero (NRO) annetaan kirjausjärjestyksessä. Kierroksen loki on samoissa sarakkeissa kuin FinDMR:n

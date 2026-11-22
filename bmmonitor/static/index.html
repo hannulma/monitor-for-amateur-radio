@@ -162,6 +162,15 @@
   .cibtn.logged { background: rgba(61,220,132,.12); color: var(--live); border-color: rgba(61,220,132,.45); }
   .cilist { max-height: 62vh; overflow-y: auto; }
   .cifoot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); }
+  .cicol { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .cirepeats { display: flex; flex-direction: column; gap: 6px; }
+  .cirepeats:empty { display: none; }
+  .cirepeat { text-align: left; width: 100%; min-height: 40px; padding: 8px 12px; border-radius: 8px; font-weight: 600;
+              border: 1px solid var(--warn); color: var(--warn); background: rgba(255,181,71,.10); cursor: pointer; }
+  .cirepeat .when { font-weight: 400; margin-left: 6px; }
+  .cirepeat.live::before { content: "● "; }
+  .cirow.flash { animation: ciflash 1.6s ease-out; }
+  @keyframes ciflash { 0%, 40% { background: rgba(255,181,71,.35); } 100% { background: transparent; } }
   #ciNew { background: rgba(79,179,255,.15); color: var(--accent); border-color: rgba(79,179,255,.4); font-weight: 600; }
   #ciLog input[data-f=via] { min-width: 118px; } #ciLog input[data-f=kunta] { min-width: 84px; } #ciLog input[data-f=info] { min-width: 96px; }
   #ciLog input { width: 100%; min-width: 70px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; font: inherit; }
@@ -472,6 +481,8 @@
         <span class="hint" style="margin:0">Lista ei vieritä itsestään. Kutsua klikkaamalla aukeaa aseman kortti.</span>
         <span class="hint" id="ciHidden" style="margin:0"></span></div>
     </section>
+    <div class="cicol">
+    <div id="ciRepeat" class="cirepeats" aria-live="polite"></div>
     <section>
       <h2>Kierroksen loki <span class="count" id="ciLogCount"></span></h2>
       <div class="scroll" style="max-height:62vh">
@@ -488,6 +499,7 @@
         <div class="hint" id="ciArchive"></div>
       </div>
     </section>
+    </div>
   </div>
   <section data-tab="tilastot" class="wide form">
     <h2>Aktiivisuus seuratuissa puheryhmissä
@@ -930,6 +942,12 @@ $("ciList").addEventListener("click", e => {
 $("ciList").addEventListener("scroll", () => {
   const l = $("ciList"); if (l.scrollTop + l.clientHeight >= l.scrollHeight - 8) { ciNewBelow = 0; ciNewBtn(); }
 });
+$("ciRepeat").addEventListener("click", e => {
+  const b = e.target.closest("button[data-call]"); if (!b) return;
+  const row = ciRows.get(b.dataset.call); if (!row) return;
+  row.scrollIntoView({block: "center", behavior: "smooth"});
+  row.classList.remove("flash"); void row.offsetWidth; row.classList.add("flash");
+});
 $("ciNew").onclick = () => { const l = $("ciList"); l.scrollTop = l.scrollHeight; ciNewBelow = 0; ciNewBtn(); };
 function ciNewBtn() {
   $("ciNew").style.display = ciNewBelow ? "" : "none";
@@ -991,6 +1009,13 @@ function renderCheckin() {
     b.title = st.nro ? T("Peru kirjaus") : T("Kirjaa {c} lokiin", {c: st.call});
   }
   ciNewBtn();
+  // jo kirjattu asema lähettää uudelleen: ilmoitus lokin yläpuolelle (enintään 3, uusin ensin)
+  const again = c.stations.filter(st => st.nro && (st.on_air || tNow - st.last < 30) && st.keys > 1)
+    .sort((a, b) => (b.on_air - a.on_air) || (b.last - a.last)).slice(0, 3);
+  const rh = again.map(st => `<button class="cirepeat${st.on_air ? " live" : ""}" data-call="${esc(st.call)}">`
+    + esc(T("{c} (NRO {n}, jo kirjattu)", {c: st.call, n: st.nro}))
+    + `<span class="when">${esc(st.on_air ? T("lähettää nyt") : T("lähetti {ago}", {ago: ago(st.last)}))}</span></button>`).join("");
+  if ($("ciRepeat").dataset.h !== rh) { $("ciRepeat").innerHTML = rh; $("ciRepeat").dataset.h = rh; }
   $("ciHidden").textContent = c.id_only ? T("{n} asemaa pelkällä DMR ID:llä piilotettu (asema näkyy, kun kutsu saadaan).", {n: c.id_only}) : "";
   // loki: rakennetaan uudelleen vain kun se muuttuu eikä kenttää muokata
   const rows = [...c.log].sort((a, b) => a.nro - b.nro);

@@ -182,6 +182,7 @@
     "Odotetaan ensimmäistä asemaa puheryhmässä {tg}…": "Waiting for the first station in talkgroup {tg}…",
     "Lista ei vieritä itsestään. Kutsua klikkaamalla aukeaa aseman kortti.": "The list never scrolls by itself. Click a callsign to open the station card.",
     "↓ {n} uutta asemaa listan lopussa": "↓ {n} new stations at the end of the list",
+    "{c} (NRO {n}, jo kirjattu)": "{c} (NRO {n}, already logged)", "lähettää nyt": "transmitting now", "lähetti {ago}": "transmitted {ago}",
     "{n} asemaa pelkällä DMR ID:llä piilotettu (asema näkyy, kun kutsu saadaan).": "{n} stations with only a DMR ID hidden (a station appears once its callsign is known).",
     "Kierroksen loki": "Round log", "Ei kirjattuja asemia.": "No logged stations.",
     "Kopioi uudet rivit": "Copy new rows", "Kopioi uudet rivit ({n})": "Copy new rows ({n})", "Kopioi kaikki": "Copy all", "Lataa CSV": "Download CSV",

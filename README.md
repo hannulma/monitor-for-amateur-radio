@@ -34,7 +34,7 @@ DMR radio via APRS.
   or reset the connection of *your own* devices.
 - **Check-in nets** – log weekly check-in nets (e.g. FinDMR TG 244, Estonia TG 248, Worldwide TG 91). Stations
   keying up in the net talkgroup appear in order of arrival and **rows never move**, even when traffic overlaps;
-  overlapping keyups are marked. Click **Heard – log** (or type part of the callsign and press Enter) to give the
+  overlapping keyups are marked, and a notice above the log shows when an already logged station transmits again. Click **Heard – log** (or type part of the callsign and press Enter) to give the
   station the next log number. The log uses the FinDMR sheet columns (NRO, callsign, RPT/HOTSPOT, KUNTA,
   Lisätietoja, Oper); RPT/HOTSPOT comes from the BrandMeister device (callsign and city). With the optional
   [Google Sheets script](sheets/README.md) entries go straight into the shared sheet and several operators can
