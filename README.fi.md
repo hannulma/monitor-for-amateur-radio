@@ -89,7 +89,15 @@ hotspotin kutsu ja paikkakunta BrandMeisterin tiedoista). RPT/HOTSPOT ja KUNTA t
 (toistin → kutsu ja paikkakunta, muuten "Hotspot"; maakohtaisessa netissä toisen maan asema → "Ulkomaat"),
 ja ne sekä Lisätietoja ovat muokattavissa.
 
-**Kopioi uudet rivit** vie edellisen kopioinnin jälkeen kirjatut rivit leikepöydälle ilman otsikkoriviä:
+**Google-taulukko:** kun taulukon omistaja on lisännyt taulukkoon skriptin ([ohje](sheets/README.md)),
+ylläpitäjä yhdistää ohjelman taulukkoon skriptin osoitteella ja kertakäyttöisellä parituskoodilla. Sen
+jälkeen kirjaukset menevät taulukkoon heti, lokinumeron antaa taulukko ja useampi ylläpitäjä voi kirjata
+samaan aikaan – kunkin ylläpitäjän kirjaukset näkyvät muillakin muutamassa sekunnissa. Jokaisella
+ylläpitäjällä on oma avain (Windowsissa ja macOS:ssä käyttöjärjestelmän salasanavarastossa), pyynnöt
+allekirjoitetaan, eikä taulukkoon voi kirjoittaa ilman omistajan lisäämää avainta.
+
+Ilman taulukkoa **Kopioi uudet rivit** vie edellisen kopioinnin jälkeen kirjatut rivit leikepöydälle ilman
+otsikkoriviä sarakkeisiin A–H (G jätetään tyhjäksi taulukon huomautuksia varten, BM-laite sarakkeeseen H):
 liitä ne Google-taulukon ensimmäiseen tyhjään riviin sarakkeeseen A. Lokin saa myös CSV-tiedostona, ja
 päättynyt kierros tallentuu automaattisesti CSV:nä kansioon `checkin/`. Keskeneräinen kierros säilyy, vaikka
 ohjelma käynnistettäisiin uudelleen.

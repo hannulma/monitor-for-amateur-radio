@@ -146,6 +146,17 @@ EN: dict[str, str] = {
     "Asemaa {c} ei ole kuultu tällä kierroksella": "Station {c} has not been heard in this round",
     "Asemaa {c} ei ole kirjattu": "Station {c} has not been logged",
     "Check-in-kierrosta ei ole käynnissä": "No check-in round in progress",
+    "Taulukkoon ei saatu yhteyttä: {e}": "Could not connect to the sheet: {e}",
+    "Tarkista skriptin osoite ja että verkkosovelluksen käyttöoikeus on \"Kuka tahansa\".":
+        "Check the script address and that the web app access is \"Anyone\".",
+    "Taulukko vastasi odottamattomasti (HTTP {s}). {h}": "The sheet responded unexpectedly (HTTP {s}). {h}",
+    "Taulukko hylkäsi pyynnön": "The sheet rejected the request",
+    "Taulukon avainta ei löytynyt – yhdistä uudelleen parituskoodilla": "The sheet key was not found – connect again with a pairing code",
+    "Skriptin osoitteen pitää olla muotoa https://script.google.com/macros/s/…/exec": "The script address must look like https://script.google.com/macros/s/…/exec",
+    "Taulukko: {e}": "Sheet: {e}",
+    "Tunnistus epäonnistui – yhdistä uudelleen uudella parituskoodilla": "Authentication failed – reconnect with a new pairing code",
+    "Tietokoneen kello on väärässä – korjaa kello ja yritä uudelleen": "The computer's clock is wrong – fix it and try again",
+    "Liikaa pyyntöjä – odota hetki": "Too many requests – wait a moment",
     # --- päivitykset ---
     "Päivityksen tarkistus epäonnistui: {e}": "Update check failed: {e}",
     "Tarkistussumma ei täsmää – päivitystä ei asennettu": "Checksum mismatch – the update was not installed",

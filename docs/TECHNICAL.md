@@ -122,3 +122,21 @@ antivirus heuristics (e.g. Defender's `…!ml` detections) often flag. Updates o
 instead of running it silently. The release job smoke-tests the built exe (`--diag` must connect to
 BrandMeister). If the repository has a `VT_API_KEY` secret (a free VirusTotal API key), the Windows
 installer and exe are uploaded to VirusTotal and the report links are shown in the job summary.
+
+## Check-in Google Sheet
+
+`sheets/Code.gs` is a container-bound Apps Script web app (execute as owner, access anyone; scopes
+`spreadsheets.currentonly` and `script.container.ui`). The owner's sheet menu creates one-time pairing codes
+(15 min); `op:"pair"` exchanges a code for a per-operator 256-bit key stored in Script Properties. Every other
+request carries `call, ts, nonce, action, data, sig` with `sig = HMAC-SHA256(key, call\nts\nnonce\naction\ndata)`
+(UTF-8); the script rejects unknown operators, timestamps off by more than 5 min, reused nonces (CacheService)
+and more than 120 requests/min per operator. Actions: `hello`, `start` (finds `Kierros <round> …` or copies the
+`LOGIPOHJA…` template), `log` (assigns NRO under a script lock, Oper = authenticated operator), `unlog`
+(deletes the row and renumbers), `edit` (`via`, `kunta`, `info` only), `list`. Values starting with `= + - @`
+are written as text; every change is appended to the hidden `Check-in-tapahtumat` sheet.
+
+The app (`bmmonitor/sheetsync.py`) posts with `allow_redirects=False` and fetches the 302 target with GET
+(Apps Script's response pattern). The sheet is authoritative while connected: the app polls `list` every 5 s
+and replaces its log with the sheet rows. The key is stored with `keyring` (Windows Credential Manager, macOS
+Keychain; config file fallback). `node sheets/test/test.js` runs the script against simulated Google services
+(`sheets/test/gas-mock.js`), which can also serve it over HTTP for end-to-end tests (`BMM_SHEET_TEST=1`).

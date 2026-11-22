@@ -28,6 +28,7 @@ from aiohttp import web
 from .i18n import set_lang, tr
 from .updater import Updater
 from .checkin import CheckIn
+from .sheetsync import SheetError
 from . import APP_ID, APP_NAME, __version__
 from .messaging import DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message, ws_options
 from .bmapi import BMApi, BMApiError
@@ -973,22 +974,29 @@ def make_app(mon: Monitor) -> web.Application:
             body = await req.json()
             ci, action = mon.checkin, body.get("action")
             if action == "start":
-                ci.start(body.get("tg"), body.get("round"), body.get("date", ""), body.get("operator", ""))
+                await ci.a_start(body.get("tg"), body.get("round"), body.get("date", ""), body.get("operator", ""))
             elif action == "stop":
                 ci.stop()
             elif action == "log":
-                ci.log_station(body.get("call", ""))
+                await ci.a_log(body.get("call", ""))
             elif action == "unlog":
-                ci.unlog(body.get("call", ""))
+                await ci.a_unlog(body.get("call", ""))
             elif action == "edit":
-                ci.edit(body.get("call", ""), body.get("field", ""), body.get("value", ""))
+                await ci.a_edit(body.get("call", ""), body.get("field", ""), body.get("value", ""))
+            elif action == "sheet_connect":
+                await ci.connect_sheet(body.get("url", ""), body.get("code", ""), allow_test=bool(os.environ.get("BMM_SHEET_TEST")))
+            elif action == "sheet_disconnect":
+                ci.disconnect_sheet()
+            elif action == "sheet_sync":
+                if ci.sheet and ci.s["active"]:
+                    await ci._remote("list", {})
             elif action == "copied":
                 ci.mark_copied(body.get("upto", 0))
             else:
                 raise ValueError(tr("Tuntematon toiminto"))
             return web.json_response({"ok": True, "checkin": ci.snapshot()})
-        except ValueError as e:
-            return web.json_response({"ok": False, "error": str(e)}, status=400)
+        except (ValueError, SheetError) as e:
+            return web.json_response({"ok": False, "error": str(e), "checkin": mon.checkin.snapshot()}, status=400)
 
     async def checkin_export(req):
         fmt = req.query.get("fmt", "tsv")
@@ -1163,11 +1171,19 @@ def main():
     ap.add_argument("--config", help="asetustiedoston polku")
     ap.add_argument("--demo", action="store_true", help="keksitty testiliikenne, ei yhteyttä BM:ään")
     ap.add_argument("--wait-for-exit", action="store_true", help=argparse.SUPPRESS)
+    ap.add_argument("--check-secrets", metavar="FILE", help=argparse.SUPPRESS)
     ap.add_argument("--diag", action="store_true", help="vianetsintä: näytä mitä BM lähettää (30 s)")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
     if args.diag:
         diagnose()
+        return
+    if args.check_secrets:          # julkaisun itsetesti: toimiiko salasanavarasto paketissa
+        from . import secret_store
+        ok = secret_store.put("selftest", "x1") and secret_store.get("selftest") == "x1"
+        secret_store.delete("selftest")
+        backend = secret_store._backend.get_keyring() if secret_store._backend else None
+        Path(args.check_secrets).write_text(f"secrets {'OK' if ok else 'UNAVAILABLE'} {backend}\n", encoding="utf-8")
         return
     # Ilman komentoikkunaa (Windows .exe / macOS .app) tulosteet ja loki menevät tiedostoon.
     if sys.stdout is None or sys.stderr is None:

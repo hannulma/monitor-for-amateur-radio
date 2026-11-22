@@ -184,8 +184,8 @@
     "↓ {n} uutta asemaa listan lopussa": "↓ {n} new stations at the end of the list",
     "Kierroksen loki": "Round log", "Ei kirjattuja asemia.": "No logged stations.",
     "Kopioi uudet rivit": "Copy new rows", "Kopioi uudet rivit ({n})": "Copy new rows ({n})", "Kopioi kaikki": "Copy all", "Lataa CSV": "Download CSV",
-    "Rivit kopioituvat taulukon sarakejärjestyksessä (NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, BM-laite) ilman otsikkoriviä. Liitä ne Google-taulukkoon ensimmäiseen tyhjään riviin sarakkeeseen A. \"Kopioi uudet rivit\" kopioi vain edellisen kopioinnin jälkeen kirjatut.":
-      "Rows are copied in the sheet's column order (NRO, callsign, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, BM device) without a header row. Paste them into column A of the first empty row of the Google sheet. \"Copy new rows\" copies only the rows logged since the last copy.",
+    "Rivit kopioituvat ilman otsikkoriviä sarakkeisiin A–H: NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, (G tyhjä), BM-laite. Liitä ne Google-taulukkoon ensimmäiseen tyhjään riviin sarakkeeseen A. \"Kopioi uudet rivit\" kopioi vain edellisen kopioinnin jälkeen kirjatut. Jos taulukko on yhdistetty, kopiointia ei tarvita.":
+      "Rows are copied without a header row into columns A–H: NRO, callsign, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, (G empty), BM device. Paste them into column A of the first empty row of the Google sheet. \"Copy new rows\" copies only the rows logged since the last copy. When the sheet is connected, copying is not needed.",
     "Päättyneet kierrokset tallentuvat kansioon {p}": "Finished rounds are saved in {p}",
     "LÄHETYS": "ON AIR", "päällekkäin": "overlapping", "uusi": "new",
     "Kuultu – kirjaa": "Heard – log", "Peru kirjaus": "Undo log", "Kirjaa {c} lokiin": "Log {c}",
@@ -202,6 +202,16 @@
     "Kopiointi ei onnistunut": "Copying failed",
     "BM-laite": "BM device", "Oper": "Oper", "Lisätietoja": "Additional info",
 
+    "Google-taulukko": "Google Sheet", "Päivitä nyt": "Refresh now", "Irrota taulukko": "Disconnect sheet",
+    "Skriptin osoite": "Script address", "Parituskoodi": "Pairing code", "Yhdistä": "Connect",
+    "Kun taulukko on yhdistetty, kirjaukset menevät taulukkoon heti ja lokinumeron antaa taulukko, joten useampi ylläpitäjä voi kirjata samaan aikaan. Taulukon omistaja antaa skriptin osoitteen ja kertakäyttöisen parituskoodin (taulukon valikko Check-in → Lisää ylläpitäjä). Ilman taulukkoa lokin voi kopioida leikepöydän kautta.":
+      "When the sheet is connected, entries go to the sheet immediately and the sheet assigns the log numbers, so several operators can log at the same time. The sheet owner gives you the script address and a one-time pairing code (sheet menu Check-in → Add operator). Without a sheet, copy the log via the clipboard.",
+    "Yhdistetään…": "Connecting…",
+    "Irrotetaanko taulukko? Avain poistetaan tältä koneelta, ja yhdistäminen vaatii uuden parituskoodin.":
+      "Disconnect the sheet? The key is removed from this computer and reconnecting needs a new pairing code.",
+    "virhe": "error", "yhdistetty": "connected", "ei käytössä – loki kopioidaan leikepöydän kautta": "not in use – copy the log via the clipboard",
+    "Ylläpitäjä {c}": "Operator {c}", "välilehti {s}": "tab {s}", "päivitetty {ago}": "updated {ago}",
+    "avain salasanavarastossa": "key in the system keychain", "avain asetustiedostossa": "key in the settings file",
     // ---- kuuntelu ----
     "KUUNTELU": "LISTENING", "YHDISTETÄÄN": "CONNECTING", "VIRHE": "ERROR",
     "Odotetaan liikennettä…": "Waiting for traffic…",

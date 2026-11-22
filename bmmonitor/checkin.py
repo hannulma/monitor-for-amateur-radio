@@ -21,7 +21,9 @@ import re
 import time
 import uuid
 
+from . import secret_store
 from .i18n import tr
+from .sheetsync import SheetClient, SheetError, pair, valid_url
 
 log = logging.getLogger("bmmonitor.checkin")
 
@@ -29,6 +31,8 @@ NETS = [244, 248, 91]                    # oletusvalinnat käyttöliittymässä
 COLUMNS = ["NRO", "Kutsu", "RPT/HOTSPOT", "KUNTA", "Lisätietoja", "Oper", "BM-laite"]
 EDITABLE = ("via", "kunta", "info")
 MAX_STATIONS = 1000
+SYNC_EVERY = 5                           # s, taulukon tilan haku kierroksen aikana
+SECRET_NAME = "checkin-sheet-key"
 _LOCATOR = re.compile(r",?\s*\b[A-R]{2}\d{2}([A-X]{2})?\b", re.I)
 
 
@@ -61,6 +65,9 @@ class CheckIn:
         self._sessions: set = set()
         self.s = self._empty()
         self._load()
+        self.sheet: SheetClient | None = None
+        self.sheet_state = {"error": None, "synced": None, "sheet": None, "key_store": None}
+        self._load_sheet()
 
     # ---------------- tila ----------------
     def _empty(self) -> dict:
@@ -101,7 +108,8 @@ class CheckIn:
                 "stations": [{**st, "nro": logged[st["call"]]["nro"] if st["call"] in logged else None,
                               "by": logged[st["call"]]["oper"] if st["call"] in logged else None}
                              for st in s["stations"]],
-                "log": s["log"], "unique_repeaters": len(rpts), "archive": str(self.archive_dir)}
+                "log": s["log"], "unique_repeaters": len(rpts), "archive": str(self.archive_dir),
+                "sheet": self.sheet_snapshot()}
 
     # ---------------- kierros ----------------
     def start(self, tg, round_no=None, date: str = "", operator: str = "") -> dict:
@@ -204,7 +212,7 @@ class CheckIn:
             st["via"] = via
         if not st.get("edited_kunta"):
             st["kunta"] = city
-        for e in self.s["log"]:
+        for e in ([] if self.sheet else self.s["log"]):
             if e["call"] == st["call"]:
                 e["dev"] = st["dev"]
                 if not e.get("edited_via"):
@@ -221,6 +229,7 @@ class CheckIn:
     async def run(self):
         """Hakee laitetiedot (kutsu, paikkakunta) BrandMeisterista taustalla."""
         self.queue = asyncio.Queue()
+        asyncio.get_running_loop().create_task(self.sync_loop())
         for st in self.s["stations"]:
             if st.get("dev_id"):
                 self._want_device(st["dev_id"])
@@ -281,6 +290,128 @@ class CheckIn:
         self.s["copied_upto"] = max(0, min(int(upto), len(self.s["log"])))
         self._changed()
 
+    # ---------------- Google-taulukko ----------------
+    def _sheet_cfg(self) -> dict:
+        return self.mon.cfg.setdefault("checkin", {}).setdefault("sheet", {})
+
+    def _load_sheet(self):
+        c = self.mon.cfg.get("checkin", {}).get("sheet") or {}
+        if not (c.get("url") and c.get("call")):
+            return
+        key = secret_store.get(SECRET_NAME) if c.get("key_store") == "keyring" else c.get("key")
+        if key:
+            self.sheet = SheetClient(c["url"], c["call"], key)
+            self.sheet_state["key_store"] = c.get("key_store")
+        else:
+            self.sheet_state["error"] = tr("Taulukon avainta ei löytynyt – yhdistä uudelleen parituskoodilla")
+
+    def sheet_snapshot(self) -> dict:
+        c = self.mon.cfg.get("checkin", {}).get("sheet") or {}
+        return {"connected": self.sheet is not None, "call": c.get("call"), "url": c.get("url"),
+                "host": self.sheet.host if self.sheet else None, **self.sheet_state}
+
+    async def connect_sheet(self, url: str, code: str, allow_test: bool = False):
+        url = (url or "").strip()
+        if not valid_url(url, allow_test):
+            raise ValueError(tr("Skriptin osoitteen pitää olla muotoa https://script.google.com/macros/s/…/exec"))
+        call, key = await pair(url, code)
+        stored = secret_store.put(SECRET_NAME, key)
+        c = self._sheet_cfg()
+        c.clear()
+        c.update(url=url, call=call, key_store="keyring" if stored else "config")
+        if not stored:
+            c["key"] = key
+        self.mon.save_config()
+        self.sheet = SheetClient(url, call, key)
+        self.sheet_state.update(error=None, synced=None, sheet=None, key_store=c["key_store"])
+        await self.sheet.request("hello")
+        if self.s["active"]:
+            await self._remote_start()
+        self._changed()
+
+    def disconnect_sheet(self):
+        secret_store.delete(SECRET_NAME)
+        self.mon.cfg.setdefault("checkin", {})["sheet"] = {}
+        self.mon.save_config()
+        self.sheet = None
+        self.sheet_state = {"error": None, "synced": None, "sheet": None, "key_store": None}
+        self._changed()
+
+    async def _remote(self, action: str, data: dict) -> dict:
+        try:
+            res = await self.sheet.request(action, {"round": self.s["round"], **data})
+        except SheetError as e:
+            self.sheet_state["error"] = str(e)
+            self.mon.touch()
+            raise ValueError(tr("Taulukko: {e}", e=e)) from None
+        self.sheet_state.update(error=None, synced=time.time())
+        if res.get("sheet"):
+            self.sheet_state["sheet"] = res["sheet"]
+        if "rows" in res:
+            self._apply_rows(res["rows"])
+        return res
+
+    async def _remote_start(self):
+        await self._remote("start", {"date": self.s["date"], "tg": self.s["tg"]})
+
+    def _apply_rows(self, rows: list[dict]):
+        """Taulukon rivit ovat totuus: lokinumerot, kirjaajat ja muokkaukset kaikilta ylläpitäjiltä."""
+        old = {e["call"]: e for e in self.s["log"]}
+        st = {x["call"]: x for x in self.s["stations"]}
+        new = []
+        for r in rows:
+            call = str(r.get("call") or "").upper()
+            if not call:
+                continue
+            prev = old.get(call, {})
+            new.append({"uid": prev.get("uid") or uuid.uuid4().hex[:12], "nro": r.get("nro") or 0, "call": call,
+                        "name": (st.get(call) or {}).get("name", prev.get("name", "")),
+                        "via": r.get("via", ""), "kunta": r.get("kunta", ""), "info": r.get("info", ""),
+                        "oper": r.get("oper", ""), "dev": r.get("dev", ""),
+                        "repeater": (st.get(call) or {}).get("repeater", prev.get("repeater", False)),
+                        "ts": prev.get("ts") or time.time()})
+        new.sort(key=lambda e: e["nro"])
+        if new != self.s["log"]:
+            self.s["log"] = new
+            self.save()
+        self.mon.touch()
+
+    async def sync_loop(self):
+        while True:
+            await asyncio.sleep(SYNC_EVERY)
+            if self.sheet and self.s["active"]:
+                try:
+                    await self._remote("list", {})
+                except ValueError:
+                    pass                                   # virhe näkyy tilassa, yritetään uudelleen
+
+    # ---- toiminnot, jotka kulkevat taulukon kautta kun se on yhdistetty ----
+    async def a_start(self, tg, round_no=None, date: str = "", operator: str = ""):
+        self.start(tg, round_no, date, operator)
+        if self.sheet:
+            await self._remote_start()
+
+    async def a_log(self, call: str):
+        if not self.sheet:
+            return self.log_station(call)
+        call = (call or "").strip().upper()
+        st = next((x for x in self.s["stations"] if x["call"] == call), None)
+        if st is None:
+            raise ValueError(tr("Asemaa {c} ei ole kuultu tällä kierroksella", c=call))
+        await self._remote("log", {"call": call, "via": st["via"], "kunta": st["kunta"], "info": "", "dev": st["dev"]})
+
+    async def a_unlog(self, call: str):
+        if not self.sheet:
+            return self.unlog(call)
+        await self._remote("unlog", {"call": (call or "").strip().upper()})
+
+    async def a_edit(self, call: str, field: str, value: str):
+        if not self.sheet:
+            return self.edit(call, field, value)
+        if field not in EDITABLE:
+            raise ValueError(tr("Virheellinen parametri"))
+        await self._remote("edit", {"call": (call or "").strip().upper(), "field": field, "value": str(value or "")[:200]})
+
     # ---------------- vienti ----------------
     def rows(self, since: int = 0) -> list[list[str]]:
         out = []
@@ -292,8 +423,9 @@ class CheckIn:
     def export(self, fmt: str = "tsv", since: int = 0, header: bool = False) -> str:
         rows = self.rows(since)
         if fmt == "tsv":
-            lines = (["\t".join(COLUMNS)] if header else []) + [
-                "\t".join(c.replace("\t", " ").replace("\n", " ") for c in r) for r in rows]
+            # leikepöytä taulukkoon: sarakkeet A–F, G tyhjä (taulukon huomautukset), H BM-laite
+            lines = (["\t".join(COLUMNS[:6] + ["", COLUMNS[6]])] if header else []) + [
+                "\t".join(c.replace("\t", " ").replace("\n", " ") for c in r[:6] + [""] + r[6:]) for r in rows]
             return "\n".join(lines)
         buf = io.StringIO()
         w = csv.writer(buf, delimiter=";")

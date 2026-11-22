@@ -438,6 +438,25 @@
     </div>
     <div class="hint" id="ciErr" style="padding:0 14px 10px"></div>
   </section>
+  <section data-tab="checkin" class="wide form">
+    <h2>Google-taulukko <span class="count" id="ciSheetState" style="text-transform:none"></span></h2>
+    <div class="inner">
+      <div id="ciSheetOn" style="display:none; align-items:center; gap:12px; flex-wrap:wrap">
+        <span id="ciSheetInfo"></span>
+        <button id="ciSheetSync">Päivitä nyt</button>
+        <button id="ciSheetOff">Irrota taulukko</button>
+      </div>
+      <div id="ciSheetForm" class="cibar">
+        <div><label for="ciSheetUrl">Skriptin osoite</label>
+          <input id="ciSheetUrl" type="text" style="width:440px" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false"></div>
+        <div><label for="ciSheetCode">Parituskoodi</label>
+          <input id="ciSheetCode" type="text" style="width:110px; text-transform:uppercase" placeholder="ABC-123" autocomplete="off" spellcheck="false"></div>
+        <div><button class="primary" id="ciSheetConnect">Yhdistä</button></div>
+        <div class="hint" style="max-width:520px; margin:0">Kun taulukko on yhdistetty, kirjaukset menevät taulukkoon heti ja lokinumeron antaa taulukko, joten useampi ylläpitäjä voi kirjata samaan aikaan. Taulukon omistaja antaa skriptin osoitteen ja kertakäyttöisen parituskoodin (taulukon valikko Check-in → Lisää ylläpitäjä). Ilman taulukkoa lokin voi kopioida leikepöydän kautta.</div>
+      </div>
+      <div class="bad" id="ciSheetErr" style="margin-top:6px"></div>
+    </div>
+  </section>
   <div class="cigrid" data-tab="checkin">
     <section>
       <h2>Kuullut asemat <span class="count muted" style="text-transform:none">saapumisjärjestyksessä – rivit eivät vaihda paikkaa</span></h2>
@@ -464,7 +483,7 @@
         <button id="ciCopyAll">Kopioi kaikki</button>
         <a id="ciCsv" href="/api/checkin/export?fmt=csv"><button>Lataa CSV</button></a>
         <span id="ciCopyMsg" class="ok" style="margin-left:6px"></span>
-        <div class="hint">Rivit kopioituvat taulukon sarakejärjestyksessä (NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, BM-laite) ilman otsikkoriviä. Liitä ne Google-taulukkoon ensimmäiseen tyhjään riviin sarakkeeseen A. "Kopioi uudet rivit" kopioi vain edellisen kopioinnin jälkeen kirjatut.</div>
+        <div class="hint">Rivit kopioituvat ilman otsikkoriviä sarakkeisiin A–H: NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, (G tyhjä), BM-laite. Liitä ne Google-taulukkoon ensimmäiseen tyhjään riviin sarakkeeseen A. "Kopioi uudet rivit" kopioi vain edellisen kopioinnin jälkeen kirjatut. Jos taulukko on yhdistetty, kopiointia ei tarvita.</div>
         <div class="hint" id="ciArchive"></div>
       </div>
     </section>
@@ -934,6 +953,7 @@ function renderCheckin() {
   $("ciStats").innerHTML = [[logged, "kirjattu", ""], [heard - logged, "odottaa", "warn"], [heard, "kuultu verkossa", ""], [c.unique_repeaters, "eri toistinta", ""]]
     .map(([v, l, cls]) => `<div><div class="v ${cls}">${v}</div><div class="l">${esc(T(l))}</div></div>`).join("");
   $("ciArchive").textContent = T("Päättyneet kierrokset tallentuvat kansioon {p}", {p: c.archive});
+  renderSheet(c);
   // kuullut asemat: rivit luodaan kerran ja päivitetään paikallaan
   const key = `${c.started}:${c.tg}`, list = $("ciList");
   if (key !== ciRoundKey) { list.innerHTML = ""; ciRows.clear(); ciRoundKey = key; ciNewBelow = 0; }
@@ -1011,6 +1031,36 @@ async function ciCopy(onlyNew) {
   $("ciCopyMsg").textContent = ok ? T("{n} riviä kopioitu – liitä taulukkoon", {n}) : T("Kopiointi ei onnistunut");
   if (ok) { const top = Math.max(0, ...c.log.map(x => x.nro)); const j = await api("/api/checkin", {action: "copied", upto: top}); if (j.ok) { S.checkin = j.checkin; renderCheckin(); } }
   setTimeout(() => { $("ciCopyMsg").textContent = ""; }, 6000);
+}
+$("ciSheetConnect").onclick = async () => {
+  $("ciSheetConnect").disabled = true; $("ciSheetErr").textContent = T("Yhdistetään…");
+  const j = await api("/api/checkin", {action: "sheet_connect", url: $("ciSheetUrl").value.trim(), code: $("ciSheetCode").value.trim()});
+  $("ciSheetConnect").disabled = false;
+  $("ciSheetErr").textContent = j.ok ? "" : j.error;
+  if (j.checkin) { S.checkin = j.checkin; renderCheckin(); }
+  if (j.ok) $("ciSheetCode").value = "";
+};
+$("ciSheetOff").onclick = async () => {
+  if (!confirm(T("Irrotetaanko taulukko? Avain poistetaan tältä koneelta, ja yhdistäminen vaatii uuden parituskoodin."))) return;
+  const j = await api("/api/checkin", {action: "sheet_disconnect"}); if (j.checkin) { S.checkin = j.checkin; renderCheckin(); }
+};
+$("ciSheetSync").onclick = async () => { const j = await api("/api/checkin", {action: "sheet_sync"}); if (j.checkin) { S.checkin = j.checkin; renderCheckin(); } };
+function renderSheet(c) {
+  const sh = c.sheet || {};
+  $("ciSheetOn").style.display = sh.connected ? "flex" : "none";
+  $("ciSheetForm").style.display = sh.connected ? "none" : "";
+  if (!sh.connected && !$("ciSheetUrl").value && sh.url) $("ciSheetUrl").value = sh.url;
+  $("ciSheetState").innerHTML = sh.connected
+    ? (sh.error ? `<span class="bad">● ${esc(T("virhe"))}</span>` : `<span class="ok">● ${esc(T("yhdistetty"))}</span>`)
+    : `<span class="muted">${esc(T("ei käytössä – loki kopioidaan leikepöydän kautta"))}</span>`;
+  if (sh.connected) {
+    const parts = [T("Ylläpitäjä {c}", {c: sh.call})];
+    if (sh.sheet) parts.push(T("välilehti {s}", {s: sh.sheet}));
+    if (sh.synced) parts.push(T("päivitetty {ago}", {ago: ago(sh.synced)}));
+    parts.push(sh.key_store === "keyring" ? T("avain salasanavarastossa") : T("avain asetustiedostossa"));
+    $("ciSheetInfo").textContent = parts.join(" · ");
+    if (!$("ciSheetErr").dataset.local) $("ciSheetErr").textContent = sh.error || "";
+  }
 }
 $("ciCopyNew").onclick = () => ciCopy(true);
 $("ciCopyAll").onclick = () => ciCopy(false);

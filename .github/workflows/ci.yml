@@ -24,3 +24,13 @@ jobs:
           pip install ".[test]"
       - name: Tests
         run: pytest -q
+
+  sheets-script:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Apps Script tests (simulated Google services)
+        run: node sheets/test/test.js

@@ -79,9 +79,9 @@ jobs:
           pip install . pyinstaller
       - name: Build exe
         run: >
-          pyinstaller --noconfirm --clean --onedir --noconsole --name MonitorForBrandMeister
+          pyinstaller --noconfirm --clean --onedir --noconsole --name MonitorForBrandMeister --collect-submodules win32ctypes
           --add-data "bmmonitor/static;bmmonitor/static"
-          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore
+          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
       - name: Smoke test (starts, connects to BrandMeister, quits)
@@ -103,6 +103,11 @@ jobs:
           Write-Host "--- monitor.log ---"
           if (Test-Path $log) { Get-Content $log } else { Write-Host "(ei lokia: $log)"; Get-ChildItem (Join-Path $env:APPDATA "BMMonitor") -ErrorAction SilentlyContinue }
           if (-not $ok) { Write-Error "Käynnistystesti epäonnistui"; exit 1 }
+          $st = Join-Path $env:RUNNER_TEMP "secrets.txt"
+          $p = Start-Process -FilePath "dist\MonitorForBrandMeister\MonitorForBrandMeister.exe" -ArgumentList "--check-secrets",$st -PassThru
+          $p.WaitForExit(60000) | Out-Null
+          Get-Content $st
+          if (-not (Select-String -Path $st -Pattern "secrets OK" -Quiet)) { Write-Error "Salasanavarasto ei toimi paketissa"; exit 1 }
       - name: Build installer (Inno Setup)
         shell: pwsh
         run: |
@@ -186,7 +191,7 @@ jobs:
           --name "Monitor for BrandMeister"
           --osx-bundle-identifier io.github.hannulma.monitorforbrandmeister
           --add-data "bmmonitor/static:bmmonitor/static"
-          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore
+          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
       - name: Verify architectures and smoke test
@@ -210,6 +215,8 @@ jobs:
             sleep 10
           done
           [ "$ok" = 1 ] || { echo "::error::Sovellus ei saanut yhteyttä BrandMeisteriin"; exit 1; }
+          "$BIN" --check-secrets "$RUNNER_TEMP/secrets.txt" || true
+          cat "$RUNNER_TEMP/secrets.txt" || echo "::warning::Avainnippu-testiä ei saatu ajettua (CI-koneen avainnippu voi olla lukittu)"
       - name: Build dmg
         run: |
           VERSION=$(python3 -c "import re;print(re.search(r'__version__ = \"([^\"]+)\"', open('bmmonitor/__init__.py').read()).group(1))")
@@ -240,7 +247,7 @@ jobs:
         run: >
           pyinstaller --noconfirm --clean --onefile --name monitor-for-brandmeister
           --add-data "bmmonitor/static:bmmonitor/static"
-          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore
+          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
       - name: Package

@@ -233,7 +233,7 @@ def test_checkin_round(tmp_path):
     ci.devices[244207] = {"call": "OH2RUP", "city": "Kerava"}
     ci._fill_device(st["OH2AAA"])                      # käsin muutettu kunta säilyy
     tsv = ci.export("tsv")
-    assert tsv.splitlines()[0] == "1\tOH2AAA\tOH2RUP Kerava\tTuusula\tmobiili\tOH2ABC\tOH2RUP, Kerava"
+    assert tsv.splitlines()[0] == "1\tOH2AAA\tOH2RUP Kerava\tTuusula\tmobiili\tOH2ABC\t\tOH2RUP, Kerava"
     assert ci.export("tsv", since=1).count("\n") == 0
 
     ci.stop()
@@ -243,3 +243,12 @@ def test_checkin_round(tmp_path):
     assert [e["call"] for e in ci2.s["log"]] == ["OH2AAA", "ES1BBB"] and not ci2.s["active"]
     ci2.start(244)
     assert ci2.s["round"] == "178" and ci2.s["log"] == []
+
+
+def test_sheet_signature_matches_apps_script():
+    """Allekirjoitus vastaa Apps Scriptin laskemaa (vektori laskettu Node.js:n HMAC-SHA256:lla, UTF-8)."""
+    from bmmonitor.sheetsync import sign, valid_url
+    assert sign("k" * 64, "OH2ABC", 1795000000, "abcdef0123456789", "edit", '{"value":"Järvenpää"}') == "c3cba856808a6fead5bdc2d84c3c0e4f4a6757dac07e3998c93a08abfa5e8131"
+    assert valid_url("https://script.google.com/macros/s/AKfycbx_abc-123/exec")
+    assert not valid_url("https://evil.example.com/macros/s/x/exec") and not valid_url("http://127.0.0.1:8840/exec")
+    assert valid_url("http://127.0.0.1:8840/exec", allow_test=True)
