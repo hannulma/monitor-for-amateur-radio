@@ -402,7 +402,7 @@
           <input type="text" id="mCmdAllow" placeholder="OH1ABC OH3XYZ" style="width:100%">
           <div class="hint">Oletuksena komentoja saa lähettää oma kutsusi ja vastaanottajien kutsut (kaikki SSID:t).</div></div>
       </div>
-      <div class="frow" style="margin-top:14px"><button class="primary" id="btnCmdSave">Tallenna</button></div>
+      <div class="frow svcsave"><button class="primary" id="btnCmdSave">Tallenna</button><span class="err" id="cmdErr"></span></div>
     </div>
   </section>
   <section class="msgp" data-tab="viestit" data-fold="msg-feeds">
@@ -1368,7 +1368,11 @@ function foldTab(on) {
   });
   if (TAB === "laitteet") document.querySelectorAll("#devCards .devcard").forEach(c => setDevFold(c, on));
 }
-$("btnCmdSave").onclick = () => $("btnMsgSave").click();
+$("btnCmdSave").onclick = async () => {   // sama tallennus kuin yläosassa, tulos näytetään tässäkin
+  $("cmdErr").textContent = "";
+  await $("btnMsgSave").onclick();
+  $("cmdErr").innerHTML = $("msgErr").innerHTML;
+};
 $("foldOpen").onclick = () => foldTab(false);
 $("foldClose").onclick = () => foldTab(true);
 function unfold(id) { const s = document.querySelector(`main section[data-fold="${id}"]`); if (s && s.classList.contains("folded")) setFold(s, false); }
@@ -1388,7 +1392,7 @@ $("btnMsgSave").onclick = async () => {
     const r = await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messaging: collectMsg()})});
     j = await r.json();
   } catch (e) { $("msgErr").textContent = String(e); return; }
-  if (!j.ok) $("msgErr").textContent = j.error; else { $("msgErr").innerHTML = '<span class="ok">Tallennettu</span>'; setTimeout(fillMsg, 300); }
+  if (!j.ok) $("msgErr").textContent = j.error; else { $("msgErr").innerHTML = '<span class="ok">Tallennettu</span>'; if (j.config) S.config = j.config; fillMsg(); }
 };
 $("mEnabled").onchange = async () => {   // kytkin tallentaa heti, kuten Palvelut-välilehdellä
   const on = $("mEnabled").checked;
