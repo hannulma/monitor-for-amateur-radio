@@ -469,7 +469,8 @@
       <div class="cilist" id="ciList"></div>
       <div class="muted" id="ciEmpty" style="padding:14px">Aloita kierros, niin puheryhmässä avaavat asemat tulevat tähän.</div>
       <div class="cifoot"><button id="ciNew" style="display:none"></button>
-        <span class="hint" style="margin:0">Lista ei vieritä itsestään. Kutsua klikkaamalla aukeaa aseman kortti.</span></div>
+        <span class="hint" style="margin:0">Lista ei vieritä itsestään. Kutsua klikkaamalla aukeaa aseman kortti.</span>
+        <span class="hint" id="ciHidden" style="margin:0"></span></div>
     </section>
     <section>
       <h2>Kierroksen loki <span class="count" id="ciLogCount"></span></h2>
@@ -990,6 +991,7 @@ function renderCheckin() {
     b.title = st.nro ? T("Peru kirjaus") : T("Kirjaa {c} lokiin", {c: st.call});
   }
   ciNewBtn();
+  $("ciHidden").textContent = c.id_only ? T("{n} asemaa pelkällä DMR ID:llä piilotettu (asema näkyy, kun kutsu saadaan).", {n: c.id_only}) : "";
   // loki: rakennetaan uudelleen vain kun se muuttuu eikä kenttää muokata
   const rows = [...c.log].sort((a, b) => a.nro - b.nro);
   $("ciLogCount").textContent = rows.length ? `(${rows.length})` : "";

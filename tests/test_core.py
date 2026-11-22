@@ -208,8 +208,17 @@ def test_checkin_round(tmp_path):
     ev("OH9ZZZ", "z", 2440009, t - 600)               # ennen kierrosta -> ei mukaan
     ev("OH4XXX", "x", 2440004, t, 0)
     ci.on_event({"SourceCall": "OH5TG", "DestinationID": 2441, "Start": t, "SessionID": "o"})   # eri TG
-    calls = [s["call"] for s in ci.s["stations"]]
-    assert calls == ["OH2AAA", "ES1BBB", "OH3CCC", "OH4XXX"]
+    # avauksen alku pelkällä DMR ID:llä, kutsu myöhemmin samassa avauksessa -> yksi rivi, yksi avaus
+    ci.on_event({"SourceCall": "", "SourceID": 3228648, "DestinationID": 244, "SessionID": "k", "Start": t + 20})
+    assert "3228648" not in [s["call"] for s in ci.snapshot()["stations"]] and ci.snapshot()["id_only"] == 1
+    ci.on_event({"SourceCall": "KE7UYB", "SourceName": "David", "SourceID": 3228648, "DestinationID": 244,
+                 "SessionID": "k", "Start": t + 20, "Stop": t + 24, "Event": "Session-Stop"})
+    ci.on_event({"SourceCall": "", "SourceID": 2449999, "DestinationID": 244, "SessionID": "q", "Start": t + 30})
+    snap = ci.snapshot()
+    ke = [s for s in snap["stations"] if s["call"] == "KE7UYB"]
+    assert len(ke) == 1 and ke[0]["keys"] == 1 and ke[0]["idx"] == 5 and snap["id_only"] == 1
+    calls = [s["call"] for s in ci.snapshot()["stations"]]
+    assert calls == ["OH2AAA", "ES1BBB", "OH3CCC", "OH4XXX", "KE7UYB"]
     st = {s["call"]: s for s in ci.s["stations"]}
     assert st["OH2AAA"]["keys"] == 2 and st["ES1BBB"]["overlap"] == 1
     assert st["ES1BBB"]["via"] == "Ulkomaat" and st["OH3CCC"]["via"] == "Hotspot"

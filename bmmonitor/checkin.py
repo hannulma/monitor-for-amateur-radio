@@ -72,7 +72,7 @@ class CheckIn:
     # ---------------- tila ----------------
     def _empty(self) -> dict:
         return {"active": False, "tg": None, "round": None, "date": "", "operator": "", "started": None,
-                "ended": None, "stations": [], "log": [], "copied_upto": 0}
+                "ended": None, "stations": [], "log": [], "copied_upto": 0, "next_idx": 1}
 
     def _load(self):
         try:
@@ -81,6 +81,8 @@ class CheckIn:
                 self.s.update({k: data.get(k, v) for k, v in self._empty().items()})
                 for st in self.s["stations"]:
                     st["on_air"] = False
+                    if str(st.get("call", "")).isdigit():     # vanhan version pelkän ID:n rivit piiloon
+                        st["call"], st["idx"] = "", None
         except FileNotFoundError:
             pass
         except Exception as e:  # noqa: BLE001
@@ -107,7 +109,8 @@ class CheckIn:
                 "nets": NETS,
                 "stations": [{**st, "nro": logged[st["call"]]["nro"] if st["call"] in logged else None,
                               "by": logged[st["call"]]["oper"] if st["call"] in logged else None}
-                             for st in s["stations"]],
+                             for st in s["stations"] if st["call"]],
+                "id_only": sum(1 for st in s["stations"] if not st["call"]),
                 "log": s["log"], "unique_repeaters": len(rpts), "archive": str(self.archive_dir),
                 "sheet": self.sheet_snapshot()}
 
@@ -164,21 +167,41 @@ class CheckIn:
         start = float(p.get("Start") or 0) or time.time()
         if start < (s["started"] or 0) - 5:
             return                                           # ennen kierroksen alkua
-        call = (p.get("SourceCall") or "").strip().upper() or str(p.get("SourceID") or "")
-        if not call:
+        # Asema tunnistetaan DMR ID:stä: BrandMeister lähettää joskus avauksen alun pelkällä ID:llä ja
+        # kutsun vasta myöhemmin. Pelkän ID:n asemat pysyvät piilossa, kunnes kutsu tiedetään.
+        src = p.get("SourceID")
+        call = (p.get("SourceCall") or "").strip().upper()
+        if call.isdigit():
+            call = ""
+        if not call and not src:
             return
-        by_call = {st["call"]: st for st in s["stations"]}
-        st = by_call.get(call)
+        st_call = next((x for x in s["stations"] if call and x["call"] == call), None)
+        st_id = next((x for x in s["stations"] if src and x.get("id") == src), None)
+        if st_call and st_id and st_call is not st_id and not st_id["call"]:
+            for k in ("keys", "overlap"):                 # yhdistä piilotettu ID-rivi kutsulliseen
+                st_call[k] += st_id[k]
+            st_call["first"] = min(st_call["first"], st_id["first"])
+            st_call["on_air"] = st_call["on_air"] or st_id["on_air"]
+            s["stations"].remove(st_id)
+            st_id = None
+        st = st_call or st_id
         stop = float(p.get("Stop") or 0)
         ended = bool(stop) or p.get("Event") == "Session-Stop"
-        sid = p.get("SessionID") or f"{p.get('SourceID')}-{int(start)}"
+        sid = p.get("SessionID") or f"{src}-{int(start)}"
         if st is None:
             if len(s["stations"]) >= MAX_STATIONS:
                 return
-            st = {"idx": len(s["stations"]) + 1, "call": call, "name": "", "id": p.get("SourceID"),
+            st = {"idx": None, "call": "", "name": "", "id": src,
                   "first": start, "last": start, "keys": 0, "on_air": False, "overlap": 0,
                   "dev_id": None, "link": "", "via": "", "kunta": "", "dev": "", "repeater": False}
             s["stations"].append(st)
+        if call and not st["call"]:
+            st["call"] = call
+            s["stations"].remove(st)                      # tulee näkyviin: aina listan loppuun
+            s["stations"].append(st)
+        if st["call"] and not st.get("idx"):
+            st["idx"] = s.get("next_idx") or max((x.get("idx") or 0 for x in s["stations"]), default=0) + 1
+            s["next_idx"] = st["idx"] + 1
         st["name"] = (p.get("SourceName") or st["name"] or "").strip()
         st["last"] = max(st["last"], stop or start)
         dev_id = p.get("ContextID")
