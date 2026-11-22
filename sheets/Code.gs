@@ -21,8 +21,8 @@ var CONFIG = {
   TEMPLATE_PREFIX: 'LOGIPOHJA',          // uuden kierroksen pohjavälilehti (nimen alku)
   TAB_PREFIX: 'Kierros',                 // kierrosvälilehdet: "Kierros 176 151126"
   FIRST_ROW: 3,                          // ensimmäinen tietorivi
-  // sarakkeet (A=1): NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, BM-laite
-  COLS: { nro: 1, call: 2, via: 3, kunta: 4, info: 5, oper: 6, dev: 8 },
+  // sarakkeet (A=1): NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper
+  COLS: { nro: 1, call: 2, via: 3, kunta: 4, info: 5, oper: 6 },
   CELL_DATE: 'D1',
   CELL_ROUND: 'F1',
   CELL_OPER: 'G2',
@@ -244,8 +244,9 @@ function logStation_(op, d) {
   var nro = rows.reduce(function (m, r) { return Math.max(m, Number(r.nro) || 0); }, 0) + 1;
   var rowIdx = firstEmptyRow_(sh);
   var dev = clean_(d.dev, FIELD_MAX.dev);
+  // dev (BrandMeisterin laite: kutsu, paikkakunta) käytetään vain toistimen tunnistamiseen listalta
   var row = { nro: nro, call: call, via: clean_(d.via, FIELD_MAX.via), kunta: clean_(d.kunta, FIELD_MAX.kunta),
-              info: clean_(d.info, FIELD_MAX.info), oper: op, dev: dev };
+              info: clean_(d.info, FIELD_MAX.info), oper: op };
   // Alasvetovalikot (esim. RPT/HOTSPOT -> Toistimet-data): käytä listan arvoa, jos sama toistin löytyy.
   // Muuten lisää BrandMeisterin tieto listalle (vain RPT/HOTSPOT); muut kentät jätetään tyhjiksi.
   var unmatched = {}, added = [];
@@ -340,7 +341,7 @@ function readRows_(sh) {
   var C = CONFIG.COLS;
   var last = sh.getLastRow();
   if (last < CONFIG.FIRST_ROW) return [];
-  var width = Math.max(C.nro, C.call, C.via, C.kunta, C.info, C.oper, C.dev);
+  var width = Math.max.apply(null, Object.keys(C).map(function (k) { return C[k]; }));
   var values = sh.getRange(CONFIG.FIRST_ROW, 1, last - CONFIG.FIRST_ROW + 1, width).getValues();
   var out = [];
   for (var i = 0; i < values.length; i++) {
@@ -349,7 +350,7 @@ function readRows_(sh) {
     if (!call) continue;
     out.push({ row: CONFIG.FIRST_ROW + i, nro: Number(v[C.nro - 1]) || null, call: call,
                via: str_(v[C.via - 1]), kunta: str_(v[C.kunta - 1]), info: str_(v[C.info - 1]),
-               oper: str_(v[C.oper - 1]), dev: str_(v[C.dev - 1]) });
+               oper: str_(v[C.oper - 1]) });
   }
   return out;
 }

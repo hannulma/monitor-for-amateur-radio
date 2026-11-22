@@ -132,7 +132,10 @@ request carries `call, ts, nonce, action, data, sig` with `sig = HMAC-SHA256(key
 (UTF-8); the script rejects unknown operators, timestamps off by more than 5 min, reused nonces (CacheService)
 and more than 120 requests/min per operator. Actions: `hello`, `start` (finds `Kierros <round> …` or copies the
 `LOGIPOHJA…` template), `log` (assigns NRO under a script lock, Oper = authenticated operator), `unlog`
-(deletes the row and renumbers), `edit` (`via`, `kunta`, `info` only), `list`. Values starting with `= + - @`
+(deletes the row and renumbers), `edit` (`via`, `kunta`, `info` only), `list`. Columns A–F only; a dropdown
+on RPT/HOTSPOT sourced from another sheet (Toistimet-data) reuses an entry with the same text or repeater
+callsign, otherwise appends the BrandMeister value to the list range (extending the range and the rule when
+full). Values starting with `= + - @`
 are written as text; every change is appended to the hidden `Check-in-tapahtumat` sheet.
 
 The app (`bmmonitor/sheetsync.py`) posts with `allow_redirects=False` and fetches the 302 target with GET

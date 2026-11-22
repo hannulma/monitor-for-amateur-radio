@@ -184,8 +184,8 @@
     "↓ {n} uutta asemaa listan lopussa": "↓ {n} new stations at the end of the list",
     "Kierroksen loki": "Round log", "Ei kirjattuja asemia.": "No logged stations.",
     "Kopioi uudet rivit": "Copy new rows", "Kopioi uudet rivit ({n})": "Copy new rows ({n})", "Kopioi kaikki": "Copy all", "Lataa CSV": "Download CSV",
-    "Rivit kopioituvat ilman otsikkoriviä sarakkeisiin A–H: NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, (G tyhjä), BM-laite. Liitä ne Google-taulukkoon ensimmäiseen tyhjään riviin sarakkeeseen A. \"Kopioi uudet rivit\" kopioi vain edellisen kopioinnin jälkeen kirjatut. Jos taulukko on yhdistetty, kopiointia ei tarvita.":
-      "Rows are copied without a header row into columns A–H: NRO, callsign, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, (G empty), BM device. Paste them into column A of the first empty row of the Google sheet. \"Copy new rows\" copies only the rows logged since the last copy. When the sheet is connected, copying is not needed.",
+    "Rivit kopioituvat ilman otsikkoriviä sarakkeisiin A–F: NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper. Liitä ne Google-taulukkoon ensimmäiseen tyhjään riviin sarakkeeseen A. \"Kopioi uudet rivit\" kopioi vain edellisen kopioinnin jälkeen kirjatut. Jos taulukko on yhdistetty, kopiointia ei tarvita.":
+      "Rows are copied without a header row into columns A–F: NRO, callsign, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper. Paste them into column A of the first empty row of the Google sheet. \"Copy new rows\" copies only the rows logged since the last copy. When the sheet is connected, copying is not needed.",
     "Päättyneet kierrokset tallentuvat kansioon {p}": "Finished rounds are saved in {p}",
     "LÄHETYS": "ON AIR", "päällekkäin": "overlapping", "uusi": "new",
     "Kuultu – kirjaa": "Heard – log", "Peru kirjaus": "Undo log", "Kirjaa {c} lokiin": "Log {c}",

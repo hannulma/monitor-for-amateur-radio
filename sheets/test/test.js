@@ -75,7 +75,7 @@ test('kirjaus antaa juoksevan numeron ja Oper tulee avaimesta', () => {
   assert.strictEqual(b.row.nro, 2);
   const sh = g.__ss.sheets[0];
   // RPT/HOTSPOT sovitetaan Toistimet-data-listaan toistimen kutsun perusteella
-  assert.deepStrictEqual([sh.get(3, 1), sh.get(3, 2), sh.get(3, 3), sh.get(3, 6), sh.get(3, 8)], [1, 'OH2KXA', 'Järvenpää OH2RUP', 'OH2ABC', 'OH2RUP, Jarvenpaa']);
+  assert.deepStrictEqual([sh.get(3, 1), sh.get(3, 2), sh.get(3, 3), sh.get(3, 6), sh.get(3, 7), sh.get(3, 8)], [1, 'OH2KXA', 'Järvenpää OH2RUP', 'OH2ABC', '', '']);
   assert.strictEqual(sh.get(4, 3), 'Ulkomaat');
 });
 test('ääkköset allekirjoituksessa ja taulukossa', () => {

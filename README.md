@@ -36,7 +36,7 @@ DMR radio via APRS.
   keying up in the net talkgroup appear in order of arrival and **rows never move**, even when traffic overlaps;
   overlapping keyups are marked. Click **Heard – log** (or type part of the callsign and press Enter) to give the
   station the next log number. The log uses the FinDMR sheet columns (NRO, callsign, RPT/HOTSPOT, KUNTA,
-  Lisätietoja, Oper) plus the BrandMeister device (callsign and city). With the optional
+  Lisätietoja, Oper); RPT/HOTSPOT comes from the BrandMeister device (callsign and city). With the optional
   [Google Sheets script](sheets/README.md) entries go straight into the shared sheet and several operators can
   log at once (personal keys via one-time pairing codes, signed requests); without it, **Copy new rows** puts
   the rows on the clipboard ready to paste. Finished rounds are saved as CSV.

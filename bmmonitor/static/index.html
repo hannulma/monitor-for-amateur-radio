@@ -165,7 +165,7 @@
   #ciNew { background: rgba(79,179,255,.15); color: var(--accent); border-color: rgba(79,179,255,.4); font-weight: 600; }
   #ciLog input[data-f=via] { min-width: 118px; } #ciLog input[data-f=kunta] { min-width: 84px; } #ciLog input[data-f=info] { min-width: 96px; }
   #ciLog input { width: 100%; min-width: 70px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; font: inherit; }
-  #ciLog td { padding: 4px 5px; } #ciLog td:last-child { font-size: 12px; }
+  #ciLog td { padding: 4px 5px; }
   .updpill { background: rgba(61,220,132,.15); color: var(--live); border: 1px solid rgba(61,220,132,.4); }
   .prog { height: 6px; background: #22303d; border-radius: 3px; overflow: hidden; max-width: 320px; margin-top: 6px; }
   .prog div { height: 100%; background: var(--live); transition: width .3s; }
@@ -474,7 +474,7 @@
     <section>
       <h2>Kierroksen loki <span class="count" id="ciLogCount"></span></h2>
       <div class="scroll" style="max-height:62vh">
-        <table><thead><tr><th>NRO</th><th>Kutsu</th><th>RPT/HOTSPOT</th><th>KUNTA</th><th>Lisätietoja</th><th>Oper</th><th>BM-laite</th></tr></thead>
+        <table><thead><tr><th>NRO</th><th>Kutsu</th><th>RPT/HOTSPOT</th><th>KUNTA</th><th>Lisätietoja</th><th>Oper</th></tr></thead>
           <tbody id="ciLog"></tbody></table>
         <div class="muted" id="ciLogEmpty" style="padding:14px">Ei kirjattuja asemia.</div>
       </div>
@@ -483,7 +483,7 @@
         <button id="ciCopyAll">Kopioi kaikki</button>
         <a id="ciCsv" href="/api/checkin/export?fmt=csv"><button>Lataa CSV</button></a>
         <span id="ciCopyMsg" class="ok" style="margin-left:6px"></span>
-        <div class="hint">Rivit kopioituvat ilman otsikkoriviä sarakkeisiin A–H: NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, (G tyhjä), BM-laite. Liitä ne Google-taulukkoon ensimmäiseen tyhjään riviin sarakkeeseen A. "Kopioi uudet rivit" kopioi vain edellisen kopioinnin jälkeen kirjatut. Jos taulukko on yhdistetty, kopiointia ei tarvita.</div>
+        <div class="hint">Rivit kopioituvat ilman otsikkoriviä sarakkeisiin A–F: NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper. Liitä ne Google-taulukkoon ensimmäiseen tyhjään riviin sarakkeeseen A. "Kopioi uudet rivit" kopioi vain edellisen kopioinnin jälkeen kirjatut. Jos taulukko on yhdistetty, kopiointia ei tarvita.</div>
         <div class="hint" id="ciArchive"></div>
       </div>
     </section>
@@ -997,7 +997,7 @@ function renderCheckin() {
   const newRows = rows.filter(r => r.nro > c.copied_upto).length;
   $("ciCopyNew").textContent = T("Kopioi uudet rivit ({n})", {n: newRows});
   $("ciCopyNew").disabled = !newRows;
-  const sig = JSON.stringify(rows.map(r => [r.nro, r.call, r.via, r.kunta, r.info, r.oper, r.dev, r.nro <= c.copied_upto]));
+  const sig = JSON.stringify(rows.map(r => [r.nro, r.call, r.via, r.kunta, r.info, r.oper, r.nro <= c.copied_upto]));
   const editing = $("ciLog").contains(document.activeElement);
   if (sig !== ciLogSig && !editing) {
     ciLogSig = sig;
@@ -1006,7 +1006,7 @@ function renderCheckin() {
       <td><input data-call="${esc(r.call)}" data-f="via" value="${esc(r.via)}" aria-label="RPT/HOTSPOT ${esc(r.call)}"></td>
       <td><input data-call="${esc(r.call)}" data-f="kunta" value="${esc(r.kunta)}" aria-label="KUNTA ${esc(r.call)}"></td>
       <td><input data-call="${esc(r.call)}" data-f="info" value="${esc(r.info)}" placeholder="–" aria-label="${esc(T("Lisätietoja"))} ${esc(r.call)}"></td>
-      <td class="muted">${esc(r.oper)}</td><td style="white-space:nowrap">${esc(r.dev)}</td></tr>`).join("");
+      <td class="muted">${esc(r.oper)}</td></tr>`).join("");
   }
 }
 $("ciLog").addEventListener("change", async e => {

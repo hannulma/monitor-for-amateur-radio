@@ -233,7 +233,7 @@ def test_checkin_round(tmp_path):
     ci.devices[244207] = {"call": "OH2RUP", "city": "Kerava"}
     ci._fill_device(st["OH2AAA"])                      # käsin muutettu kunta säilyy
     tsv = ci.export("tsv")
-    assert tsv.splitlines()[0] == "1\tOH2AAA\tOH2RUP Kerava\tTuusula\tmobiili\tOH2ABC\t\tOH2RUP, Kerava"
+    assert tsv.splitlines()[0] == "1\tOH2AAA\tOH2RUP Kerava\tTuusula\tmobiili\tOH2ABC"
     assert ci.export("tsv", since=1).count("\n") == 0
 
     ci.stop()

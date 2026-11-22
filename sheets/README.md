@@ -43,7 +43,7 @@ muokkausoikeutta taulukkoon.
    | `TEMPLATE_PREFIX` | `LOGIPOHJA` | välilehti, josta uusi kierros kopioidaan |
    | `TAB_PREFIX` | `Kierros` | kierrosvälilehdet, esim. `Kierros 177 221126` |
    | `FIRST_ROW` | `3` | ensimmäinen tietorivi |
-   | `COLS` | A NRO, B kutsu, C RPT/HOTSPOT, D KUNTA, E Lisätietoja, F Oper, **H BM-laite** | sarakkeet (G jätetään huomautuksille) |
+   | `COLS` | A NRO, B kutsu, C RPT/HOTSPOT, D KUNTA, E Lisätietoja, F Oper | sarakkeet (G:stä eteenpäin ei kosketa) |
    | `CELL_DATE`, `CELL_ROUND`, `CELL_OPER` | `D1`, `F1`, `G2` | päivämäärä, kierrosnumero ja operaattori |
 
    Jos pohjavälilehdellä on kaavoja sarakkeissa A–H riviltä 3 alkaen, skripti korvaa ne kirjoittamillaan

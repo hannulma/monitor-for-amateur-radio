@@ -4,8 +4,8 @@ Ylläpitäjä aloittaa kierroksen (puheryhmä, kierrosnumero, päivämäärä, o
 puheryhmässä avanneet asemat saapumisjärjestykseen (järjestys ei koskaan muutu) ja ylläpitäjä
 kirjaa ne, jotka hän kuuli. Lokinumero annetaan kirjausjärjestyksessä.
 
-Lokin sarakkeet vastaavat FinDMR-kierrostaulukkoa:
-NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper, BM-laite (laitteen kutsu ja paikkakunta).
+Lokin sarakkeet vastaavat FinDMR-kierrostaulukkoa: NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper.
+RPT/HOTSPOT täytetään BrandMeisterin laitetiedoista (toistimen kutsu ja paikkakunta).
 
 Rakenne on valmis useammalle ylläpitäjälle: jokaisella kirjauksella on oma tunniste, aikaleima ja
 kirjaaja, ja lokinumero annetaan yhdessä paikassa (myöhemmin Google-taulukon skripti).
@@ -28,7 +28,7 @@ from .sheetsync import SheetClient, SheetError, pair, valid_url
 log = logging.getLogger("bmmonitor.checkin")
 
 NETS = [244, 248, 91]                    # oletusvalinnat käyttöliittymässä
-COLUMNS = ["NRO", "Kutsu", "RPT/HOTSPOT", "KUNTA", "Lisätietoja", "Oper", "BM-laite"]
+COLUMNS = ["NRO", "Kutsu", "RPT/HOTSPOT", "KUNTA", "Lisätietoja", "Oper"]
 EDITABLE = ("via", "kunta", "info")
 MAX_STATIONS = 1000
 SYNC_EVERY = 5                           # s, taulukon tilan haku kierroksen aikana
@@ -417,15 +417,15 @@ class CheckIn:
         out = []
         for e in sorted(self.s["log"], key=lambda x: x["nro"]):
             if e["nro"] > since:
-                out.append([str(e["nro"]), e["call"], e["via"], e["kunta"], e["info"], e["oper"], e["dev"]])
+                out.append([str(e["nro"]), e["call"], e["via"], e["kunta"], e["info"], e["oper"]])
         return out
 
     def export(self, fmt: str = "tsv", since: int = 0, header: bool = False) -> str:
         rows = self.rows(since)
         if fmt == "tsv":
-            # leikepöytä taulukkoon: sarakkeet A–F, G tyhjä (taulukon huomautukset), H BM-laite
-            lines = (["\t".join(COLUMNS[:6] + ["", COLUMNS[6]])] if header else []) + [
-                "\t".join(c.replace("\t", " ").replace("\n", " ") for c in r[:6] + [""] + r[6:]) for r in rows]
+            # leikepöytä taulukkoon: sarakkeet A–F
+            lines = (["\t".join(COLUMNS)] if header else []) + [
+                "\t".join(c.replace("\t", " ").replace("\n", " ") for c in r) for r in rows]
             return "\n".join(lines)
         buf = io.StringIO()
         w = csv.writer(buf, delimiter=";")
