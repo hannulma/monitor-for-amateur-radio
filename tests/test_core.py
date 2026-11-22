@@ -325,3 +325,9 @@ def test_checkin_link_kinds(tmp_path):
     for call, *_, want in rows:
         assert got[call][0] == want, (call, got[call])
     assert got["OH1TET"][1] == ""
+
+
+def test_calls_limit_migration():
+    from bmmonitor.app import CALLS_LIMITS, nearest_calls_limit
+    assert CALLS_LIMITS == (10, 25, 50, 100, 150)
+    assert [nearest_calls_limit(x) for x in (15, 20, 25, None, 999)] == [10, 25, 25, 10, 150]

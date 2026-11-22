@@ -56,12 +56,21 @@ DEFAULT_CONFIG = {
     "min_duration": 0,          # sekuntia; lyhyemmät avaukset ohitetaan
     "port": 8765,
     "log_csv": True,
-    "calls_limit": 15,          # Viimeisimmät puhelut -listan pituus (10/15/20/25)
+    "calls_limit": 10,          # Viimeisimmät puhelut -listan pituus (10/25/50/100/150)
     "bm_api_key": "",           # BM SelfCare API-avain (vain laitteen hallintaan)
     "language": "",             # "fi" / "en"; tyhjä = valitaan selaimen kielen mukaan
     "update_check": True,       # tarkista uudet versiot GitHubista kerran päivässä
 }
-CALLS_LIMITS = (10, 15, 20, 25)
+CALLS_LIMITS = (10, 25, 50, 100, 150)
+
+
+def nearest_calls_limit(n) -> int:
+    """Vanhat arvot (15, 20) lähimpään sallittuun: 15 -> 10, 20 -> 25."""
+    try:
+        n = int(n)
+    except (TypeError, ValueError):
+        return CALLS_LIMITS[0]
+    return min(CALLS_LIMITS, key=lambda v: (abs(v - n), v))
 
 
 # --------------------------------------------------------------------------
@@ -163,6 +172,7 @@ class Monitor:
         self.cfg["devices"] = {**DEFAULT_DEVICES, **(self.cfg.get("devices") or {})}
         svc = self.cfg.get("services") or {}
         self.cfg["services"] = {k: {**v, **(svc.get(k) or {})} for k, v in DEFAULT_SERVICES.items()}
+        self.cfg["calls_limit"] = nearest_calls_limit(self.cfg.get("calls_limit"))
         self.matcher = Matcher(self.cfg["talkgroups"])
         set_lang(self.cfg.get("language") or "fi")
 

@@ -33,6 +33,9 @@
   section.folded > h2 { border-bottom: 0; }
   section.folded > :not(h2) { display: none !important; }
   section.folded { align-self: start; }
+  section:not(.folded) .foldonly { display: none !important; }
+  .cihead { display: inline-flex; gap: 12px; align-items: center; margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 13px; }
+  .cihead button { padding: 3px 10px; }
   .foldall { margin-left: auto; display: flex; gap: 6px; align-items: center; }
   nav.tabs .foldall button { background: none; border: 0; color: var(--muted); padding: 4px 6px; font-size: 12px; }
   nav.tabs .foldall button:hover { color: var(--accent); }
@@ -106,6 +109,11 @@
   .devcard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 10px 14px; background: var(--bg); }
   .devcard .top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   .devcard .top .call { font-size: 16px; }
+  .devcard .top .fold { background: none; border: 0; padding: 0 2px; margin: 0 -6px 0 -4px; color: var(--muted); font-size: 11px; line-height: 1; width: 16px; transition: transform .12s; align-self: center; }
+  .devcard .top .fold:hover { color: var(--accent); }
+  .devcard.folded .top .fold { transform: rotate(-90deg); }
+  .devcard.folded .devmore { display: none; }
+  .devcard.folded .devinfo { margin-bottom: 0 !important; }
   .tgchip { display: inline-flex; align-items: center; gap: 4px; background: #22303d; border: 1px solid var(--line); border-radius: 12px; padding: 2px 4px 2px 9px; margin: 2px 4px 2px 0; font-size: 12px; }
   .tgchip.dyn { border-style: dashed; }
   .tgchip button { border: 0; background: none; color: var(--muted); padding: 0 5px; font-size: 14px; line-height: 1; }
@@ -140,8 +148,20 @@
   .msgp label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
   .msgp input[type=text], .msgp input[type=number], .msgp input[type=password] { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
   .feedrow { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
-  .feedrow input.fname { width: 110px; }
-  .feedrow input.furl { flex: 1; min-width: 200px; }
+  .feedrow .fen-h, .feedrow > label:first-child { width: 64px; margin: 0; text-align: center; }
+  .feedrow .fname { width: 110px; flex: none; }
+  .feedrow .furl { flex: 1; min-width: 200px; }
+  .feedrow .fcmd { width: 90px; flex: none; }
+  .feedrow .fbtns { width: 170px; flex: none; }
+  .feedrow.feedhead { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  .msgform h3:first-of-type { margin-top: 14px; }
+  .msgp h2 label.switch { margin: 0 0 0 auto; display: inline-flex; color: var(--text); font-size: 13px; }
+  .frow { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: flex-start; }
+  .frow .fld > label:first-child { margin-top: 0; }
+  .frow .fld .hint { margin-top: 4px; }
+  .frow .fld.checks { display: flex; flex-direction: column; max-width: 380px; padding-top: 2px; }
+  .frow .fld.checks label { margin: 0; color: var(--text); font-size: 13px; }
+  .frow .fld.checks .hint { margin: 2px 0 8px 22px; }
   .ok { color: var(--live); } .warn { color: var(--warn); } .bad { color: var(--bad); }
   /* check-in */
   .cibar { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
@@ -300,43 +320,54 @@
   </section>
 
   <section id="msgPanel" class="msgp" data-tab="viestit" data-fold="msg-main">
-    <h2>Syötteet → DMR-tekstiviestit</h2>
-    <div class="inner form">
+    <h2>Syötteet → DMR-tekstiviestit
+      <label class="switch" title="Lähetys päällä"><input type="checkbox" id="mEnabled"><span class="sl"></span><span class="swtxt" id="mEnabledTxt">Pois</span></label></h2>
+    <div class="inner form msgform">
       <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. Brandmeister välittää ne DMR-tekstiviesteinä
         sille radiolle, jonka DMR-ID:hen kutsu ja SSID on liitetty <b>BM SelfCaren APRS-asetuksissa</b>. Vastaanottajaksi
         kirjoitetaan sama kutsu ja SSID (esim. <code>OH2ABC-7</code>). Viesti tulee perille, jos radio on kuultu verkossa äskettäin
         tai SelfCaressa on <i>Text Capture</i> päällä.</div>
-      <div class="row">
-        <div><label><input type="checkbox" id="mEnabled"> Lähetys päällä</label></div>
-        <div><label for="mLogin">Oma APRS-IS-tunnus</label><input type="text" id="mLogin" placeholder="OH2ABC-13" style="width:130px">
+      <h3>APRS-IS-yhteys</h3>
+      <div class="frow">
+        <div class="fld"><label for="mLogin">Oma APRS-IS-tunnus</label><input type="text" id="mLogin" placeholder="OH2ABC-13" style="width:150px">
           <div class="hint">Ei samaa SSID:tä kuin Graywolfilla/iGatella</div></div>
-        <div><label for="mPass">Passcode</label><input type="password" id="mPass" style="width:110px">
+        <div class="fld"><label for="mPass">Passcode</label><input type="password" id="mPass" style="width:120px">
           <div class="hint" id="mPassHint">tyhjä = lasketaan kutsusta</div></div>
-        <div><label for="mServer">APRS-IS-palvelin</label><input type="text" id="mServer" style="width:180px"></div>
+        <div class="fld"><label for="mServer">APRS-IS-palvelin</label><input type="text" id="mServer" style="width:200px"></div>
       </div>
-      <div class="row">
-        <div style="flex:1;min-width:240px"><label for="mRecip">Vastaanottajat (radion kutsu-SSID)</label><input type="text" id="mRecip" placeholder="OH2ABC-7" style="width:100%"></div>
-        <div style="min-width:200px"><label for="mAprsWatch">Näytä APRS-viestit kutsuille</label><input type="text" id="mAprsWatch" placeholder="oma kutsu (oletus)" style="width:180px">
+      <h3>Vastaanottajat</h3>
+      <div class="frow">
+        <div class="fld" style="flex:1;min-width:260px"><label for="mRecip">Vastaanottajat (radion kutsu-SSID)</label><input type="text" id="mRecip" placeholder="OH2ABC-7" style="width:100%">
+          <div class="hint">Erota välilyönnillä, esim. OH2ABC-6 OH2ABC-8</div></div>
+        <div class="fld" style="flex:1;min-width:260px"><label for="mAprsWatch">Näytä APRS-viestit kutsuille</label><input type="text" id="mAprsWatch" placeholder="oma kutsu (oletus)" style="width:100%">
           <div class="hint">Kaikki SSID:t, esim. OH2ABC = OH2ABC-1 … -15</div></div>
-        <div><label for="mParts">Viestejä / otsikko</label><input type="number" id="mParts" min="1" max="5" style="width:70px">
+      </div>
+      <h3>Viestit</h3>
+      <div class="frow">
+        <div class="fld"><label for="mParts">Viestejä / otsikko</label><input type="number" id="mParts" min="1" max="5" style="width:90px">
           <div class="hint">67 merkkiä / viesti</div></div>
-        <div><label for="mInterval">Tarkistusväli (min)</label><input type="number" id="mInterval" min="1" style="width:80px"></div>
-        <div><label><input type="checkbox" id="mAscii"> Muunna ääkköset (ä→a)</label></div>
-        <div><label><input type="checkbox" id="mNoAck"> Älä odota kuittausta</label>
+        <div class="fld"><label for="mInterval">Tarkistusväli (min)</label><input type="number" id="mInterval" min="1" style="width:90px">
+          <div class="hint">kuinka usein syötteet haetaan</div></div>
+        <div class="fld checks">
+          <label><input type="checkbox" id="mAscii"> Muunna ääkköset (ä→a)</label>
+          <div class="hint">Jos radio ei näytä ääkkösiä oikein.</div>
+          <label><input type="checkbox" id="mNoAck"> Älä odota kuittausta</label>
           <div class="hint">Viesti lähetetään kerran eikä tule koskaan kahdesti, mutta perillemenoa ei voi seurata.</div></div>
       </div>
       <h3>Syötteet (RSS, Atom tai JSON Feed)</h3>
+      <div class="feedrow feedhead"><span class="fen-h">Käytössä</span><span class="fname">Etuliite</span><span class="furl">Osoite</span><span class="fcmd">Komento</span><span class="fbtns"></span></div>
       <div id="feedRows"></div>
       <button id="btnAddFeed">+ Lisää syöte</button>
       <div class="hint">Komento-kenttä (esim. SAA) tekee syötteen uusimmasta otsikosta radiosta kysyttävän. Uutta syötettä seurattaessa nykyiset uutiset ohitetaan, ja viesti lähtee vasta seuraavasta uudesta uutisesta. Etuliite näkyy viestin alussa, esim. <code>BM: otsikko</code>.</div>
-      <div class="row" style="margin-top:14px">
-        <div><button class="primary" id="btnMsgSave">Tallenna</button>
-          <button id="btnFeedCheck">Tarkista syötteet nyt</button>
-          <span class="err" id="msgErr"></span></div>
+      <div class="frow" style="margin-top:14px; align-items:center">
+        <button class="primary" id="btnMsgSave">Tallenna</button>
+        <button id="btnFeedCheck">Tarkista syötteet nyt</button>
+        <span class="err" id="msgErr"></span>
       </div>
-      <div class="row">
-        <div style="flex:1;min-width:240px"><label for="mTest">Testiviesti</label><input type="text" id="mTest" maxlength="134" placeholder="Monitor for BrandMeister: testiviesti" style="width:100%"></div>
-        <div><button id="btnTest">Lähetä testiviesti</button></div>
+      <h3>Testiviesti</h3>
+      <div class="frow" style="align-items:center">
+        <input type="text" id="mTest" maxlength="134" placeholder="Monitor for BrandMeister: testiviesti" style="flex:1;min-width:240px" aria-label="Testiviesti">
+        <button id="btnTest">Lähetä testiviesti</button>
       </div>
       <div id="aprsStatus" style="margin-top:12px"></div>
     </div>
@@ -348,14 +379,16 @@
         <code>&lt;oma APRS-IS-tunnus&gt; &lt;komento&gt;</code>, esim. <code id="cmdExample">OH2ABC-13 TG244</code>. Ohjelma vastaa radioosi.<br>
         Komennot: <b>APUA</b> · <b>TG244</b> (kuka puhui viimeksi) · <b>KUKA OH2ABC</b> (milloin ja missä kuultu) ·
         <b>NYT</b> (lähetykset seuratuissa ryhmissä) · syötteiden komennot (esim. <b>SAA</b> = uusin otsikko).</div>
-      <div class="row">
-        <div><label><input type="checkbox" id="mCmd"> Vastaa komentoihin</label></div>
-        <div><label><input type="checkbox" id="mCmdAll"> Salli kaikille (ei suositella)</label></div>
-        <div style="flex:1;min-width:240px"><label for="mCmdAllow">Lisäksi sallitut kutsut</label>
+      <div class="frow" style="margin-top:14px">
+        <div class="fld checks">
+          <label><input type="checkbox" id="mCmd"> Vastaa komentoihin</label>
+          <div class="hint"></div>
+          <label><input type="checkbox" id="mCmdAll"> Salli kaikille (ei suositella)</label></div>
+        <div class="fld" style="flex:1;min-width:240px"><label for="mCmdAllow">Lisäksi sallitut kutsut</label>
           <input type="text" id="mCmdAllow" placeholder="OH1ABC OH3XYZ" style="width:100%">
           <div class="hint">Oletuksena komentoja saa lähettää oma kutsusi ja vastaanottajien kutsut (kaikki SSID:t).</div></div>
       </div>
-      <div class="row" style="margin-top:10px"><div><button class="primary" id="btnCmdSave">Tallenna</button></div></div>
+      <div class="frow" style="margin-top:14px"><button class="primary" id="btnCmdSave">Tallenna</button></div>
     </div>
   </section>
   <section class="msgp" data-tab="viestit" data-fold="msg-feeds">
@@ -390,11 +423,11 @@
     <h2>Viimeisimmät puhelut <span class="count" id="callCount"></span>
       <select class="filter" id="callFilter"><option value="">Kaikki seuratut</option></select>
       <select class="filter" id="callLimit" style="margin-left:6px" title="Näytettävien puheluiden määrä">
-        <option value="10">10 viimeisintä</option><option value="15">15 viimeisintä</option>
-        <option value="20">20 viimeisintä</option><option value="25">25 viimeisintä</option>
+        <option value="10">10 viimeisintä</option><option value="25">25 viimeisintä</option>
+        <option value="50">50 viimeisintä</option><option value="100">100 viimeisintä</option><option value="150">150 viimeisintä</option>
       </select>
     </h2>
-    <div class="scroll" style="max-height:none">
+    <div class="scroll" id="callScroll" style="max-height:none">
       <table>
         <thead><tr><th>Aika</th><th>TG</th><th>Kutsu</th><th>Nimi</th><th class="num">Kesto</th><th>Kautta</th></tr></thead>
         <tbody id="callBody"></tbody>
@@ -428,7 +461,7 @@
       <label for="wList">Seurattavat kutsut tai DMR-ID:t</label>
       <textarea id="wList" placeholder="OH2ABC OH3XYZ 2440123"></textarea>
       <div class="row">
-        <div><label for="wQuiet">Hälytä, kun asema ollut hiljaa (min)</label><input id="wQuiet" type="number" min="0" style="width:90px">
+        <div><label for="wQuiet">Hälytä uudestaan, kun asema ollut hiljaa (min)</label><input id="wQuiet" type="number" min="0" style="width:90px">
           <div class="hint">0 = hälytä jokaisesta avauksesta</div></div>
         <div><label for="wScope">Missä</label><select id="wScope"><option value="all">Koko verkko</option><option value="matched">Vain seuratut puheryhmät</option></select></div>
         <div><label><input type="checkbox" id="wDesktop"> Työpöytäilmoitus</label></div>
@@ -479,7 +512,9 @@
 
   <!-- ============ TILASTOT ============ -->
   <section data-tab="checkin" class="wide form">
-    <h2>Check-in-netti <span class="count" id="ciState"></span></h2>
+    <h2>Check-in-netti <span class="count" id="ciState"></span>
+      <span class="foldonly cihead" id="ciHead" style="display:none"><span class="ok" id="ciHeadRun"></span>
+        <button id="ciStopHead">Päätä kierros</button></span></h2>
     <div class="inner cibar">
       <div><label for="ciTg">Netti</label><select id="ciTg"></select>
         <input id="ciTgOther" type="text" placeholder="TG" style="width:80px; display:none"></div>
@@ -827,7 +862,8 @@ function render() {
   $("callSkipNote").style.display = minDur > 0 ? "" : "none";
   if (minDur > 0) $("callSkipNote").innerHTML = esc(T("Alle {n} s puhelut ohitetaan asetusten mukaan ({k} ohitettu).",
     {n: minDur, k: (S.status.skipped_short || 0).toLocaleString(LOC())})) + ` <button id="btnNoSkip">Näytä kaikki puhelut</button>`;
-  const limit = Number(S.config.calls_limit || 15);
+  const limit = Number(S.config.calls_limit || 10);
+  $("callScroll").style.maxHeight = limit >= 50 ? "60vh" : "none";   // pitkä lista vierii omassa ikkunassaan
   if (document.activeElement !== $("callLimit")) $("callLimit").value = String(limit);
   const calls = S.calls.filter(c => !sel.value || String(c.tg) === sel.value).slice(0, limit);
   $("callCount").textContent = calls.length ? `(${calls.length}${sel.value ? " · TG " + sel.value : ""})` : "";
@@ -871,8 +907,8 @@ function feedRow(f) {
   d.innerHTML = `<label style="margin:0"><input type="checkbox" class="fen" ${f.enabled !== false ? "checked" : ""}></label>
     <input type="text" class="fname" placeholder="Etuliite" value="${esc(f.name || "")}">
     <input type="text" class="furl" placeholder="https://…/feed/" value="${esc(f.url || "")}">
-    <input type="text" class="fcmd" placeholder="Komento" title="Radiokomento, esim. SAA" style="width:90px" value="${esc(f.cmd || "")}">
-    <button class="fprev">Esikatsele</button><button class="fdel">Poista</button>`;
+    <input type="text" class="fcmd" placeholder="Komento" title="Radiokomento, esim. SAA" value="${esc(f.cmd || "")}">
+    <span class="fbtns"><button class="fprev">Esikatsele</button> <button class="fdel">Poista</button></span>`;
   d.querySelector(".fdel").onclick = () => d.remove();
   d.querySelector(".fprev").onclick = async () => {
     const url = d.querySelector(".furl").value.trim();
@@ -884,7 +920,7 @@ function feedRow(f) {
 function alertBox(text) { $("msgErr").textContent = ""; const p = document.createElement("pre"); p.className = "note"; p.style.whiteSpace = "pre-wrap"; p.textContent = text; const old = $("previewBox"); if (old) old.remove(); p.id = "previewBox"; $("feedRows").after(p); }
 function fillMsg() {
   const m = S.config.messaging;
-  $("mEnabled").checked = !!m.enabled; $("mLogin").value = m.login || ""; $("mPass").value = m.passcode || "";
+  $("mEnabled").checked = !!m.enabled; $("mEnabledTxt").textContent = T(m.enabled ? "Päällä" : "Pois"); $("mLogin").value = m.login || ""; $("mPass").value = m.passcode || "";
   $("mServer").value = m.server || ""; $("mRecip").value = (m.recipients || []).join(" ");
   $("mParts").value = m.max_parts; $("mInterval").value = Math.round(m.feed_interval / 60); $("mAscii").checked = !!m.ascii; $("mNoAck").checked = !!m.no_ack; $("mAprsWatch").value = (m.aprs_watch || []).join(" ");
   $("feedRows").innerHTML = ""; (m.feeds || []).forEach(f => $("feedRows").append(feedRow(f)));
@@ -948,6 +984,7 @@ $("ciStart").onclick = async () => {
   $("ciErr").textContent = j.ok ? "" : j.error;
   if (j.ok) { S.checkin = j.checkin; renderCheckin(); $("ciQ").focus(); }
 };
+$("ciStopHead").onclick = () => $("ciStop").click();
 $("ciStop").onclick = async () => {
   if (!confirm(T("Päätetäänkö kierros? Loki tallennetaan CSV-tiedostona."))) return;
   const j = await api("/api/checkin", {action: "stop"}); if (j.ok) { S.checkin = j.checkin; fillCheckinForm(); renderCheckin(); }
@@ -1016,6 +1053,8 @@ function renderCheckin() {
   ["ciTg", "ciTgOther", "ciRound", "ciDate", "ciOp"].forEach(id => { $(id).disabled = c.active; });
   $("ciStart").style.display = c.active ? "none" : "";
   $("ciStop").style.display = c.active ? "" : "none";
+  $("ciHead").style.display = c.active ? "" : "none";   // näkyy vain, kun osio on pienennetty (.foldonly)
+  if (c.active) $("ciHeadRun").textContent = T("● Kierros {r} käynnissä · TG {tg} · {d}", {r: c.round, tg: c.tg, d: dur(tNow - c.started)});
   $("ciRun").style.display = c.active ? "" : "none";
   if (c.active) $("ciRun").textContent = T("● Kierros {r} käynnissä · TG {tg} · {d}", {r: c.round, tg: c.tg, d: dur(tNow - c.started)});
   $("ciState").textContent = !c.active && c.ended ? T("Kierros {r} päättyi {t}", {r: c.round, t: fmtShort(c.ended)}) : "";
@@ -1258,10 +1297,18 @@ function setFold(sec, on, save = true) {
   sec.classList.toggle("folded", on);
   const b = sec.querySelector(":scope > h2 > .fold");
   if (b) { b.setAttribute("aria-expanded", on ? "false" : "true"); b.title = on ? T("Avaa osio") : T("Pienennä osio otsikoksi"); }
-  if (!save) return;
-  const id = sec.dataset.foldId;
+  if (save) rememberFold(sec.dataset.foldId, on);
+}
+function rememberFold(id, on) {
   if (on) folded.add(id); else folded.delete(id);
   try { localStorage.setItem(FOLD_KEY, JSON.stringify([...folded])); } catch (e) { /* ei tallennusta */ }
+}
+function setDevFold(card, on) {   // laitekortti: näkyviin jää kaksi ylintä riviä
+  card.classList.toggle("folded", on);
+  const b = card.querySelector(".fold");
+  b.setAttribute("aria-expanded", on ? "false" : "true"); b.title = on ? T("Avaa osio") : T("Pienennä osio otsikoksi");
+  rememberFold(card.dataset.fk, on);
+  $("devCards").dataset.html = "";   // seuraava piirto tehdään uudella tilalla
 }
 document.querySelectorAll("main section").forEach(sec => {
   const h = sec.querySelector(":scope > h2");
@@ -1282,6 +1329,7 @@ function foldTab(on) {
     const host = sec.closest("[data-tab]");
     if (host && host.dataset.tab === TAB && sec.querySelector(":scope > h2 > .fold")) setFold(sec, on);
   });
+  if (TAB === "laitteet") document.querySelectorAll("#devCards .devcard").forEach(c => setDevFold(c, on));
 }
 $("btnCmdSave").onclick = () => $("btnMsgSave").click();
 $("foldOpen").onclick = () => foldTab(false);
@@ -1301,6 +1349,14 @@ $("btnMsgSave").onclick = async () => {
   const r = await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messaging: collectMsg()})});
   const j = await r.json();
   if (!j.ok) $("msgErr").textContent = j.error; else { $("msgErr").innerHTML = '<span class="ok">Tallennettu</span>'; setTimeout(fillMsg, 300); }
+};
+$("mEnabled").onchange = async () => {   // kytkin tallentaa heti, kuten Palvelut-välilehdellä
+  const on = $("mEnabled").checked;
+  $("mEnabledTxt").textContent = T(on ? "Päällä" : "Pois");
+  const r = await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messaging: collectMsg()})});
+  const j = await r.json();
+  if (!j.ok) { $("mEnabled").checked = !on; $("mEnabledTxt").textContent = T(!on ? "Päällä" : "Pois"); unfold("msg-main"); $("msgErr").textContent = j.error; }
+  else if (j.config) S.config = j.config;
 };
 $("btnFeedCheck").onclick = () => fetch("/api/feeds/check", {method: "POST"});
 $("btnTest").onclick = async () => {
@@ -1529,11 +1585,13 @@ function renderDevices() {
     const slots = [...new Set([...(d.static || []).map(s => s.slot), ...(d.dynamic || []).map(s => s.slot), d.default_slot ?? 0])].sort();
     const chips = (arr, cls) => (arr || []).map(s => `<span class="tgchip ${cls}" title="${esc(SLOTNAME(s.slot))}"><span class="tg">${esc(s.tg)}</span><span class="muted">${esc(SLOTNAME(s.slot))}</span>${cls === "" && key ? `<button data-act="delete" data-id="${esc(d.id)}" data-slot="${esc(s.slot)}" data-tg="${esc(s.tg)}" title="Poista pysyvä TG">×</button>` : ""}</span>`).join("") || '<span class="muted">ei</span>';
     const act = d.activity;
-    return `<div class="devcard">
-      <div class="top"><span class="call clk" data-q="${esc(d.callsign || d.id)}">${esc(d.callsign || "?")}</span><span class="muted">ID ${esc(d.id)}</span>${status}
+    const fk = "dev:" + d.id, isF = folded.has(fk);
+    return `<div class="devcard${isF ? " folded" : ""}" data-fk="${esc(fk)}">
+      <div class="top"><button type="button" class="fold" data-fold="${esc(fk)}" aria-expanded="${isF ? "false" : "true"}" title="${esc(isF ? T("Avaa osio") : T("Pienennä osio otsikoksi"))}">▼</button><span class="call clk" data-q="${esc(d.callsign || d.id)}">${esc(d.callsign || "?")}</span><span class="muted">ID ${esc(d.id)}</span>${status}
         <span class="muted">${d.last_seen ? esc(T("nähty {ago}", {ago: ago(d.last_seen)})) : ""}</span><span class="spacer"></span>
         <button data-rm="${esc(d.id)}" title="Poista seurannasta">Poista seurannasta</button></div>
-      <div class="muted" style="margin:4px 0 8px">${esc([d.hardware, d.firmware, d.city, d.tx ? d.tx + (d.rx && d.rx !== d.tx ? "/" + d.rx : "") + " MHz" : "", d.colorcode != null ? "CC" + d.colorcode : "", d.statusText].filter(Boolean).join(" · "))}</div>
+      <div class="muted devinfo" style="margin:4px 0 8px">${esc([d.hardware, d.firmware, d.city, d.tx ? d.tx + (d.rx && d.rx !== d.tx ? "/" + d.rx : "") + " MHz" : "", d.colorcode != null ? "CC" + d.colorcode : "", d.statusText].filter(Boolean).join(" · "))}</div>
+      <div class="devmore">
       ${act ? `<div style="margin-bottom:6px">Viimeisin liikenne: ${who({call: act.call, name: act.name})} → <span class="tg">TG ${esc(act.tg)}</span> <span class="muted">${act.stop ? ago(act.stop) : "nyt"}</span></div>` : ""}
       <div><b>Pysyvät:</b> ${chips(d.static, "")}</div>
       <div style="margin-top:4px"><b>Dynaamiset:</b> ${chips(d.dynamic, "dyn")} ${(d.timed || []).length ? "<b>Ajastetut:</b> " + chips(d.timed, "dyn") : ""}</div>
@@ -1545,11 +1603,14 @@ function renderDevices() {
           <button data-act="drop_call" data-id="${esc(d.id)}" data-slot="${s}">${esc(T("Katkaise puhelu ({s})", {s: SLOTNAME(s)}))}</button>`).join(" ")}
           <button data-act="reset" data-id="${esc(d.id)}">Nollaa yhteys</button></div>
         <span class="err devmsg"></span></div>` : ""}
+      </div>
     </div>`;
   }).join("");
   if ($("devCards").dataset.html !== html) { $("devCards").innerHTML = html; $("devCards").dataset.html = html; }
 }
 $("devCards").addEventListener("click", async e => {
+  const fb = e.target.closest("button[data-fold]");
+  if (fb) { setDevFold(fb.closest(".devcard"), !fb.closest(".devcard").classList.contains("folded")); return; }
   const rm = e.target.closest("[data-rm]");
   if (rm) { await saveDevices((S.config.devices.list || []).filter(d => String(d.id) !== rm.dataset.rm)); return; }
   const b = e.target.closest("[data-act]"); if (!b) return;

@@ -40,6 +40,11 @@
     "Avaa osio": "Expand section", "Pienennä osio otsikoksi": "Collapse section to its header",
     "Näytä kirjatut": "Show logged", "{n} kirjattua asemaa piilotettu.": "{n} logged stations hidden.",
     "Kaikki kuullut asemat on kirjattu. Uudet asemat tulevat tähän.": "All heard stations have been logged. New stations will appear here.",
+    "APRS-IS-yhteys": "APRS-IS connection", "Vastaanottajat": "Recipients", "Viestit": "Messages",
+    "Erota välilyönnillä, esim. OH2ABC-6 OH2ABC-8": "Separate with spaces, e.g. OH2ABC-6 OH2ABC-8",
+    "kuinka usein syötteet haetaan": "how often the feeds are fetched",
+    "Jos radio ei näytä ääkkösiä oikein.": "If your radio does not show Finnish letters correctly.",
+    "Käytössä": "Enabled", "Osoite": "Address", "Lähetys päällä": "Sending enabled",
     "Kieli": "Language", "Käyttöliittymän kieli": "User interface language",
     "Kieli koskee myös ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia. Ilmatieteen laitoksen varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).":
       "The language also applies to the program's own alerts and to replies sent to your radio. Finnish Meteorological Institute warnings and Digitraffic bulletins stay in their source language (Finnish).",
@@ -151,7 +156,7 @@
     "Ei liikennettä vielä seuratuissa puheryhmissä.": "No traffic in the monitored talkgroups yet.",
     "Viimeisimmät puhelut": "Latest calls", "Kaikki seuratut": "All monitored",
     "Näytettävien puheluiden määrä": "Number of calls to show",
-    "10 viimeisintä": "Last 10", "15 viimeisintä": "Last 15", "20 viimeisintä": "Last 20", "25 viimeisintä": "Last 25",
+    "10 viimeisintä": "Last 10", "25 viimeisintä": "Last 25", "50 viimeisintä": "Last 50", "100 viimeisintä": "Last 100", "150 viimeisintä": "Last 150",
     "Kutsu": "Callsign", "Ei puheluita.": "No calls.",
     "LÄHETYS": "ON AIR", "ei liikennettä": "no traffic",
     "Lopeta kuuntelu": "Stop listening", "Kuuntele TG {tg}": "Listen to TG {tg}", "Lopeta TG {tg}": "Stop TG {tg}",
@@ -241,7 +246,7 @@
 
     // ---- kaverit ----
     "Kaverilista": "Friends list", "Seurattavat kutsut tai DMR-ID:t": "Callsigns or DMR IDs to watch",
-    "Hälytä, kun asema ollut hiljaa (min)": "Alert when the station has been quiet for (min)",
+    "Hälytä uudestaan, kun asema ollut hiljaa (min)": "Alert again when the station has been quiet for (min)",
     "0 = hälytä jokaisesta avauksesta": "0 = alert on every keyup",
     "Vain seuratut puheryhmät": "Only monitored talkgroups",
     "Työpöytäilmoitus": "Desktop notification", "Äänimerkki": "Sound", "Tekstiviesti radioon": "Text message to radio",
