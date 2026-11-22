@@ -38,6 +38,8 @@
     "Avaa kaikki tämän välilehden osiot": "Expand all sections on this tab",
     "Pienennä kaikki tämän välilehden osiot otsikoiksi": "Collapse all sections on this tab to their headers",
     "Avaa osio": "Expand section", "Pienennä osio otsikoksi": "Collapse section to its header",
+    "Näytä kirjatut": "Show logged", "{n} kirjattua asemaa piilotettu.": "{n} logged stations hidden.",
+    "Kaikki kuullut asemat on kirjattu. Uudet asemat tulevat tähän.": "All heard stations have been logged. New stations will appear here.",
     "Kieli": "Language", "Käyttöliittymän kieli": "User interface language",
     "Kieli koskee myös ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia. Ilmatieteen laitoksen varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).":
       "The language also applies to the program's own alerts and to replies sent to your radio. Finnish Meteorological Institute warnings and Digitraffic bulletins stay in their source language (Finnish).",
