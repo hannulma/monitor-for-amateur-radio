@@ -53,7 +53,8 @@ muokkausoikeutta taulukkoon.
    *Toistimet-data*), skripti käyttää listan arvoa, kun sama toistin löytyy (sama teksti tai sama toistimen
    kutsu). Muuten se lisää BrandMeisterin tiedon (esim. `OH2RUP Jarvenpaa`) listan ensimmäiseen tyhjään
    soluun ja käyttää sitä – lista täydentyy vähitellen BrandMeisterin tiedoilla. Lisäykset näkyvät
-   tapahtumalokissa. Jos valintalistan alue on täynnä, laajenna aluetta (Tiedot → Tietojen vahvistus).
+   tapahtumalokissa. Jos valintalistan alue on täynnä, skripti jatkaa aluetta (200 riviä lisää) ja päivittää
+   alasvetovalikon säännön kierrosvälilehdelle ja LOGIPOHJA-pohjalle.
    Ohjelmasta käsin muokattaessa arvon pitää olla jo listalla, jotta kirjoitusvirheet eivät päädy listalle.
 4. Valitse **Ota käyttöön → Uusi käyttöönotto**. Valitse tyypiksi (ratas) **Verkkosovellus** ja aseta:
    - *Suorita käyttäjänä:* **Minä**

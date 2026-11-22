@@ -16,13 +16,10 @@ class Sheet {
   rule(r, c) {
     const v = r >= 3 && this.validations[c];
     if (!v) return null;
-    const ss = this.ss;
-    return {
-      getAllowInvalid: () => false,
-      getCriteriaType: () => 'VALUE_IN_RANGE',
-      getCriteriaValues: () => [ss.getSheetByName(v.sheet).getRange(v.from, v.col, v.to - v.from + 1, 1), true],
-    };
+    return makeRule(this.ss, v);
   }
+  getMaxRows() { return Math.max(this.maxRows || 1000, this.cells.length); }
+  insertRowsAfter(after, n) { this.maxRows = this.getMaxRows() + n; }
   getName() { return this.name; }
   setName(n) { if (this.ss.sheets.some(s => s !== this && s.name === n)) throw new Error('name exists'); this.name = n; return this; }
   getLastRow() { for (let i = this.cells.length - 1; i >= 0; i--) if ((this.cells[i] || []).some(v => v !== '' && v != null)) return i + 1; return 0; }
@@ -44,12 +41,28 @@ class Sheet {
       getDataValidation: () => sh.rule(r, c),
       getValues: () => Array.from({length: nr}, (_, i) => Array.from({length: nc}, (_, j) => sh.get(r + i, c + j))),
       getSheet: () => sh, getColumn: () => c, getRow: () => r, getLastRow: () => r + nr - 1,
+      setDataValidation: rule => { sh.validations[c] = {...rule._v}; },
     };
   }
   appendRow(vals) { const r = this.getLastRow() + 1; vals.forEach((v, i) => this.set(r, i + 1, v)); }
   deleteRow(r) { this.cells.splice(r - 1, 1); }
   copyTo(ss) { const s = new Sheet(ss, 'Kopio: ' + this.name, this.cells); s.validations = {...this.validations}; ss.sheets.push(s); return s; }
   hideSheet() { this.hidden = true; }
+}
+
+function makeRule(ss, v) {
+  return {
+    _v: v,
+    getAllowInvalid: () => false,
+    getCriteriaType: () => 'VALUE_IN_RANGE',
+    getCriteriaValues: () => [ss.getSheetByName(v.sheet).getRange(v.from, v.col, v.to - v.from + 1, 1), true],
+    copy() {
+      const b = { _v: {...v},
+        requireValueInRange(range, dd) { b._v = {sheet: range.getSheet().getName(), col: range.getColumn(), from: range.getRow(), to: range.getLastRow()}; return b; },
+        build() { return makeRule(ss, b._v); } };
+      return b;
+    },
+  };
 }
 
 class Spreadsheet {

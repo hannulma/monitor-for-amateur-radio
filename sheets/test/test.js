@@ -100,14 +100,16 @@ test('uusi toistin lisätään Toistimet-dataan BrandMeisterin muodossa', () => 
   assert.strictEqual(g.__ss.sheets[0].cells.find(x => x[1] === 'OH8XYZ')[2], 'Oulu Linnanmaa 70cm');
   const bad = post(signed('OH2ABC', key, 'edit', {round: '177', call: 'OH8XYZ', field: 'via', value: 'Kempelee'}));
   assert.strictEqual(bad.ok, false); assert.match(bad.error, /valintalistalla/); assert.ok(!list().includes('Kempelee'));
-  // täysi lista: selkeä virhe, ei puolivalmista riviä
-  const before = g.__ss.sheets[0].cells.filter(x => x[1]).length;
+  // täysi lista (alue rivit 1–12): alue laajenee itsestään ja sääntö päivittyy kierrokselle ja pohjalle
   for (let k = 0; k < 3; k++) post(signed('OH2ABC', key, 'log', {round: '177', call: 'OH9F' + 'ABC'[k], via: 'OH9R' + 'ABC'[k] + 'Z Kemi', dev: 'x'}));
   const full = post(signed('OH2ABC', key, 'log', {round: '177', call: 'OH9FZZ', via: 'OH9RZZ Tornio', dev: 'x'}));
-  assert.strictEqual(full.ok, false); assert.match(full.error, /täynnä/);
-  assert.ok(!g.__ss.sheets[0].cells.some(x => x[1] === 'OH9FZZ'));
+  assert.strictEqual(full.ok, true); assert.strictEqual(full.row.via, 'OH9RZZ Tornio');
+  assert.ok(list().includes('OH9RZZ Tornio') && list().includes('OH9RCZ Kemi'));
+  assert.ok(g.__ss.sheets[0].validations[3].to > 12);
+  assert.ok(g.__ss.getSheetByName('LOGIPOHJA v0.68').validations[3].to > 12);
+  assert.ok(g.__ss.getSheetByName('Check-in-tapahtumat').cells.some(x => x[2] === 'valintalista laajennettu'));
   assert.ok(g.__ss.getSheetByName('Check-in-tapahtumat').cells.some(x => x[2] === 'toistin lisätty listalle'));
-  for (const c of ['OH8XYZ', 'OH8XYY', 'OH2AMB', 'OH3HSP', 'OH9FA', 'OH9FB', 'OH9FC']) post(signed('OH2ABC', key, 'unlog', {round: '177', call: c}));
+  for (const c of ['OH8XYZ', 'OH8XYY', 'OH2AMB', 'OH3HSP', 'OH9FA', 'OH9FB', 'OH9FC', 'OH9FZZ']) post(signed('OH2ABC', key, 'unlog', {round: '177', call: c}));
 });
 test('saman kutsun kirjaus kahdesti ei tee uutta riviä', () => {
   const r = post(signed('OH2ABC', key, 'log', {round: '177', call: 'OH2KXA'}));

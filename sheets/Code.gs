@@ -255,7 +255,7 @@ function logStation_(op, d) {
     var m = matchAllowed_(row[f], list.values, [row.via, dev]);
     if (m !== null) { row[f] = m; return; }
     if (f === 'via' && list.source) {
-      appendToList_(list.source, safe_(row[f]));
+      appendToList_(list, safe_(row[f]), sh, CONFIG.COLS.via, op);
       added.push(row[f]);
       audit_(op, 'toistin lisätty listalle', list.source.getSheet().getName() + ': ' + row[f]);
     } else {
@@ -384,25 +384,41 @@ function allowedValues_(range) {
   var T = SpreadsheetApp.DataValidationCriteria;
   var type = rule.getCriteriaType();
   var args = rule.getCriteriaValues();
-  var vals = [], source = null;
+  var vals = [], source = null, dropdown = true;
   if (type === T.VALUE_IN_LIST) vals = args[0] || [];
   else if (type === T.VALUE_IN_RANGE) {
     source = args[0];
+    dropdown = args[1] !== false;
     source.getValues().forEach(function (r) { r.forEach(function (v) { vals.push(v); }); });
   } else return null;
   vals = vals.map(function (v) { return String(v).trim(); }).filter(function (v) { return v; });
-  return { values: vals, source: source };
+  return { values: vals, source: source, rule: rule, dropdown: dropdown };
 }
 
-// Lisää arvon valintalistan alueen ensimmäiseen tyhjään soluun (esim. Toistimet-data).
-function appendToList_(range, value) {
-  var sh = range.getSheet(), col = range.getColumn(), first = range.getRow();
+// Lisää arvon valintalistan alueen ensimmäiseen tyhjään soluun (esim. Toistimet-data). Jos alue on täynnä,
+// arvo lisätään alueen jatkoksi ja alasvetovalikon sääntö laajennetaan (kierrosvälilehti ja pohja).
+var LIST_HEADROOM = 200;
+function appendToList_(list, value, roundSheet, col, op) {
+  var range = list.source;
+  var sh = range.getSheet(), lc = range.getColumn(), first = range.getRow();
   var n = range.getLastRow() - first + 1;
-  var vals = sh.getRange(first, col, n, 1).getValues();
+  var vals = sh.getRange(first, lc, n, 1).getValues();
   for (var i = 0; i < vals.length; i++) {
-    if (!String(vals[i][0]).trim()) { sh.getRange(first + i, col).setValue(value); return; }
+    if (!String(vals[i][0]).trim()) { sh.getRange(first + i, lc).setValue(value); return; }
   }
-  throw new UserError_('Valintalistan alue (' + sh.getName() + ') on täynnä – laajenna alasvetovalikon aluetta taulukossa');
+  var newLast = range.getLastRow() + LIST_HEADROOM;
+  if (sh.getMaxRows() < newLast) sh.insertRowsAfter(sh.getMaxRows(), newLast - sh.getMaxRows());
+  sh.getRange(range.getLastRow() + 1, lc).setValue(value);
+  var bigger = sh.getRange(first, lc, newLast - first + 1, 1);
+  var rule = list.rule.copy().requireValueInRange(bigger, list.dropdown).build();
+  var targets = [roundSheet];
+  SpreadsheetApp.getActiveSpreadsheet().getSheets().forEach(function (s) {
+    if (s.getName().indexOf(CONFIG.TEMPLATE_PREFIX) === 0) targets.push(s);
+  });
+  targets.forEach(function (t) {
+    t.getRange(CONFIG.FIRST_ROW, col, t.getMaxRows() - CONFIG.FIRST_ROW + 1, 1).setDataValidation(rule);
+  });
+  audit_(op, 'valintalista laajennettu', sh.getName() + ' rivit ' + first + '–' + newLast);
 }
 
 // Etsii listalta arvon, joka vastaa annettua: täsmälleen (isoista/pienistä ja ääkkösistä välittämättä)
