@@ -969,7 +969,7 @@ function collectMsg() {
   return {enabled: $("mEnabled").checked, login: $("mLogin").value, passcode: $("mPass").value, server: $("mServer").value,
     recipients: $("mRecip").value, max_parts: $("mParts").value, feed_interval: Number($("mInterval").value || 10) * 60,
     ascii: $("mAscii").checked, no_ack: $("mNoAck").checked, aprs_watch: $("mAprsWatch").value,
-    feeds: [...document.querySelectorAll(".feedrow")].map(d => ({enabled: d.querySelector(".fen").checked,
+    feeds: [...document.querySelectorAll("#feedRows .feedrow")].map(d => ({enabled: d.querySelector(".fen").checked,
       name: d.querySelector(".fname").value, url: d.querySelector(".furl").value, cmd: d.querySelector(".fcmd").value})),
     commands_enabled: $("mCmd").checked, commands_all: $("mCmdAll").checked, commands_allow: $("mCmdAllow").value};
 }
@@ -1383,8 +1383,11 @@ $("btnSave").onclick = async () => {
 $("btnAddFeed").onclick = () => $("feedRows").append(feedRow({enabled: true}));
 $("btnMsgSave").onclick = async () => {
   $("msgErr").textContent = "";
-  const r = await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messaging: collectMsg()})});
-  const j = await r.json();
+  let j;
+  try {
+    const r = await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messaging: collectMsg()})});
+    j = await r.json();
+  } catch (e) { $("msgErr").textContent = String(e); return; }
   if (!j.ok) $("msgErr").textContent = j.error; else { $("msgErr").innerHTML = '<span class="ok">Tallennettu</span>'; setTimeout(fillMsg, 300); }
 };
 $("mEnabled").onchange = async () => {   // kytkin tallentaa heti, kuten Palvelut-välilehdellä
