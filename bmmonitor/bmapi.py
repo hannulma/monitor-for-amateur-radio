@@ -57,7 +57,7 @@ class BMApi:
         if auth:
             key = (self.get_key() or "").strip()
             if not key:
-                raise BMApiError(tr("Toiminto vaatii Brandmeister API-avaimen (Asetukset)"), 401)
+                raise BMApiError(tr("Toiminto vaatii Brandmeister API-avaimen (Asetukset)"), 0)
             headers["Authorization"] = f"Bearer {key}"
         async with http_session(20) as s:
             async with s.request(method, API + path, json=body, headers=headers) as r:

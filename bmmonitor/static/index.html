@@ -113,6 +113,7 @@
   .devcard .top .fold:hover { color: var(--accent); }
   .devcard.folded .top .fold { transform: rotate(-90deg); }
   .devcard.folded .devmore { display: none; }
+  .devcard .ownsw { display: inline-flex; gap: 6px; align-items: center; margin: 0; color: var(--muted); font-size: 13px; cursor: pointer; }
   .devcard.folded .devinfo { margin-bottom: 0 !important; }
   .tgchip { display: inline-flex; align-items: center; gap: 4px; background: #22303d; border: 1px solid var(--line); border-radius: 12px; padding: 2px 4px 2px 9px; margin: 2px 4px 2px 0; font-size: 12px; }
   .tgchip.dyn { border-style: dashed; }
@@ -164,6 +165,14 @@
   .frow .fld.checks { display: flex; flex-direction: column; max-width: 380px; padding-top: 2px; }
   .frow .fld.checks label { margin: 0; color: var(--text); font-size: 13px; }
   .frow .fld.checks .hint { margin: 2px 0 8px 22px; }
+  .frow .fld.checks { gap: 6px; }
+  .frow.svcsave { margin-top: 12px; align-items: center; }
+  .svc .hint { margin-top: 8px; }
+  .radtab { width: auto; min-width: 60%; margin-top: 8px; }
+  .radtab td { padding: 5px 10px; }
+  .radtab td.bar { width: 160px; }
+  .radtab tr.over td { color: var(--bad); font-weight: 600; }
+  .radtab tr.over .hbar div { background: var(--bad); }
   .ok { color: var(--live); } .warn { color: var(--warn); } .bad { color: var(--bad); }
   /* check-in */
   .cibar { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
@@ -251,43 +260,46 @@
         <div class="hint">Erota välilyönnillä tai pilkulla. <b>*</b> = mikä tahansa merkkijono (244* = kaikki 244-alkuiset), <b>?</b> = yksi numero.</div>
       </div>
     </div>
-    <div class="row">
-      <div>
+    <div class="frow" style="margin-top:12px">
+      <div class="fld">
         <label for="dataFilter">Tekstiviestit ja data</label>
         <select id="dataFilter">
           <option value="all">Koko verkko</option>
           <option value="matched">Vain seurattujen ryhmien / ID:iden</option>
         </select>
       </div>
-      <div>
+      <div class="fld" style="max-width:300px">
         <label for="minDur">Ohita lyhyet avaukset: alle (sekuntia)</label>
         <input id="minDur" type="number" min="0" step="0.5" style="width:90px">
         <div class="hint">0 = kaikki puhelut tallentuvat. Listan pituus valitaan Viimeisimmät puhelut -paneelista.</div>
       </div>
-      <div>
+      <div class="fld checks" style="padding-top:22px">
         <label><input id="logCsv" type="checkbox"> Tallenna CSV-lokiin</label>
       </div>
-      <div>
-        <button class="primary" id="btnSave">Tallenna</button>
-        <button id="btnClear">Tyhjennä historia</button>
-        <span class="err" id="saveErr"></span>
-      </div>
+    </div>
+    <div class="frow svcsave">
+      <button class="primary" id="btnSave">Tallenna</button>
+      <span class="err" id="saveErr"></span>
+      <span class="spacer"></span>
+      <button id="btnClear" title="Poistaa puhelu- ja tapahtumahistorian">Tyhjennä historia</button>
     </div>
     </div>
   </section>
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-apikey">
     <h2>Brandmeister API-avain (vapaaehtoinen)</h2>
     <div class="inner">
-    <div class="row">
-      <div style="flex:1;min-width:280px">
+    <div class="frow" style="margin-top:12px">
+      <div class="fld" style="flex:1;min-width:280px">
         <label for="apiKey">API-avain laitteen hallintaan</label>
         <input id="apiKey" type="password" autocomplete="off" placeholder="eyJ0eXAiOiJKV1Qi…" style="width:100%">
         <div class="hint">Luo avain: brandmeister.network → SelfCare → Security / API Keys. Avainta tarvitaan vain
           Laitteet-välilehden hallintapainikkeisiin, ja Brandmeister sallii ne vain omille laitteillesi.
-          Avain tallentuu vain tämän koneen asetustiedostoon.</div>
+          Avain tallentuu käyttöjärjestelmän salasanavarastoon.</div>
       </div>
-      <div><button id="btnKeySave">Tallenna avain</button> <button id="btnKeyDel">Poista avain</button> <span id="keyState" class="muted"></span></div>
+      <div class="fld"><label for="myCall">Oma kutsu</label><input id="myCall" type="text" placeholder="OH2ABC" style="width:120px; text-transform:uppercase" spellcheck="false">
+        <div class="hint" style="max-width:200px">Laitteet, joiden kutsu on tämä, tunnistetaan omiksi.</div></div>
     </div>
+    <div class="frow svcsave"><button class="primary" id="btnKeySave">Tallenna</button> <button id="btnKeyDel">Poista avain</button> <span id="keyState" class="muted"></span></div>
     </div>
   </section>
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-lang">
@@ -462,17 +474,18 @@
     <div class="inner">
       <label for="wList">Seurattavat kutsut tai DMR-ID:t</label>
       <textarea id="wList" placeholder="OH2ABC OH3XYZ 2440123"></textarea>
-      <div class="row">
-        <div><label for="wQuiet">Hälytä uudestaan, kun asema ollut hiljaa (min)</label><input id="wQuiet" type="number" min="0" style="width:90px">
+      <div class="frow" style="margin-top:12px">
+        <div class="fld" style="max-width:300px"><label for="wQuiet">Hälytä uudestaan, kun asema ollut hiljaa (min)</label><input id="wQuiet" type="number" min="0" style="width:90px">
           <div class="hint">0 = hälytä jokaisesta avauksesta</div></div>
-        <div><label for="wScope">Missä</label><select id="wScope"><option value="all">Koko verkko</option><option value="matched">Vain seuratut puheryhmät</option></select></div>
-        <div><label><input type="checkbox" id="wDesktop"> Työpöytäilmoitus</label></div>
-        <div><label><input type="checkbox" id="wSound"> Äänimerkki</label></div>
-        <div><label><input type="checkbox" id="wSms"> Tekstiviesti radioon</label></div>
+        <div class="fld"><label for="wScope">Missä</label><select id="wScope"><option value="all">Koko verkko</option><option value="matched">Vain seuratut puheryhmät</option></select></div>
+        <div class="fld checks">
+          <label><input type="checkbox" id="wDesktop"> Työpöytäilmoitus</label>
+          <label><input type="checkbox" id="wSound"> Äänimerkki</label>
+          <label><input type="checkbox" id="wSms"> Tekstiviesti radioon</label></div>
       </div>
-      <div class="row" style="margin-top:12px">
-        <div><button class="primary" id="btnWSave">Tallenna</button> <button id="btnWTest">Testaa hälytys</button>
-          <button id="btnNotif">Salli työpöytäilmoitukset</button> <span class="err" id="wErr"></span></div>
+      <div class="frow svcsave">
+        <button class="primary" id="btnWSave">Tallenna</button> <button id="btnWTest">Testaa hälytys</button>
+        <button id="btnNotif" style="display:none">Salli työpöytäilmoitukset</button> <span class="err" id="wErr"></span>
       </div>
       <div class="hint" id="notifState"></div>
     </div>
@@ -496,15 +509,17 @@
   <section data-tab="laitteet" class="wide form">
     <h2>Seurattavat toistimet ja hotspotit</h2>
     <div class="inner">
-      <div class="row">
-        <div><label for="dId">Lisää laitteen ID</label><input id="dId" type="text" placeholder="244207 tai 244203901" style="width:180px"></div>
-        <div><button id="btnDAdd">Lisää</button></div>
-        <div><label for="dCall">tai hae kutsulla</label><input id="dCall" type="text" placeholder="OH2RUP" style="width:140px"></div>
-        <div><button id="btnDFind">Hae laitteet</button></div>
-        <div><label for="dOff">Hälytä, kun ei nähty (min)</label><input id="dOff" type="number" min="2" style="width:80px"></div>
-        <div><label><input type="checkbox" id="dSms"> Tekstiviesti radioon</label></div>
-        <div><button class="primary" id="btnDSave">Tallenna</button> <button id="btnDRefresh">Päivitä nyt</button> <span class="err" id="dErr"></span></div>
+      <div class="frow" style="align-items:flex-end">
+        <div class="fld"><label for="dId">Lisää laitteen ID</label><input id="dId" type="text" placeholder="244207 tai 244203901" style="width:180px"></div>
+        <div class="fld"><button id="btnDAdd">Lisää</button></div>
+        <div class="fld" style="margin-left:14px"><label for="dCall">tai hae kutsulla</label><input id="dCall" type="text" placeholder="OH2RUP" style="width:140px"></div>
+        <div class="fld"><button id="btnDFind">Hae laitteet</button></div>
       </div>
+      <div class="frow" style="margin-top:12px">
+        <div class="fld"><label for="dOff">Hälytä, kun ei nähty (min)</label><input id="dOff" type="number" min="2" style="width:90px"></div>
+        <div class="fld checks" style="padding-top:22px"><label><input type="checkbox" id="dSms"> Tekstiviesti radioon</label></div>
+      </div>
+      <div class="frow svcsave"><button class="primary" id="btnDSave">Tallenna</button> <button id="btnDRefresh">Päivitä nyt</button> <span class="err" id="dErr"></span></div>
       <div id="dFound"></div>
       <div class="hint" id="dKeyHint"></div>
     </div>
@@ -629,14 +644,15 @@
     <section class="svc form" data-svc="lightning">
       <h2>⚡ Salamahälytys <label class="switch"><input type="checkbox" data-en="lightning"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
-        <div class="row">
-          <div><label>Säde (km)</label><input type="number" data-k="radius_km" min="1" max="300" style="width:80px"></div>
-          <div><label>Uusi hälytys aikaisintaan (min)</label><input type="number" data-k="cooldown_min" min="0" style="width:80px">
+        <div class="frow">
+          <div class="fld"><label>Säde (km)</label><input type="number" data-k="radius_km" min="1" max="300" style="width:90px"></div>
+          <div class="fld" style="max-width:220px"><label>Uusi hälytys aikaisintaan (min)</label><input type="number" data-k="cooldown_min" min="0" style="width:90px">
             <div class="hint">Hälyttää heti uudestaan, jos salamat lähestyvät yli 5 km.</div></div>
-          <div><label><input type="checkbox" data-k="ground_only"> Vain maasalamat</label></div>
-          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+          <div class="fld checks">
+            <label><input type="checkbox" data-k="ground_only"> Vain maasalamat</label>
+            <label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
         </div>
-        <div class="row" style="margin-top:8px"><button data-save="lightning">Tallenna</button><span class="err" data-err="lightning"></span></div>
+        <div class="frow svcsave"><button class="primary" data-save="lightning">Tallenna</button><span class="err" data-err="lightning"></span></div>
         <div class="svcview" data-view="lightning"></div>
       </div>
       <div class="svcstatus" data-st="lightning"></div>
@@ -644,23 +660,24 @@
     <section class="svc form" data-svc="warnings">
       <h2>⚠ Säävaroitukset <label class="switch"><input type="checkbox" data-en="warnings"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
-        <div class="row">
-          <div><label>Lähde</label><select data-k="source" data-src="warnings"><option value="fmi">Ilmatieteen laitos (Suomi)</option><option value="meteoalarm">MeteoAlarm (Eurooppa)</option></select></div>
-          <div class="ma-only"><label>Maa</label><select data-k="country" data-macountry><option value="">– valitse –</option></select></div>
-          <div class="ma-only" style="flex:1;min-width:240px"><label>Alueet (vapaaehtoinen)</label><input type="text" data-k="areas" list="maAreaList" placeholder="esim. Berlin; DE202" style="width:100%">
+        <div class="frow">
+          <div class="fld"><label>Lähde</label><select data-k="source" data-src="warnings"><option value="fmi">Ilmatieteen laitos (Suomi)</option><option value="meteoalarm">MeteoAlarm (Eurooppa)</option></select></div>
+          <div class="fld ma-only"><label>Maa</label><select data-k="country" data-macountry><option value="">– valitse –</option></select></div>
+          <div class="fld ma-only" style="flex:1;min-width:240px"><label>Alueet (vapaaehtoinen)</label><input type="text" data-k="areas" list="maAreaList" placeholder="esim. Berlin; DE202" style="width:100%">
             <datalist id="maAreaList"></datalist></div>
         </div>
         <div class="hint ma-only" data-maareahint style="margin-top:4px"></div>
-        <div class="row">
-          <div><label>Vähintään</label><select data-k="min_color"><option value="yellow">Keltainen</option><option value="orange">Oranssi</option><option value="red">Punainen</option></select></div>
-          <div class="fmi-only"><label><input type="checkbox" data-k="traffic_weather"> Myös liikennesää</label></div>
-          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        <div class="frow" style="margin-top:10px">
+          <div class="fld"><label>Vähintään</label><select data-k="min_color"><option value="yellow">Keltainen</option><option value="orange">Oranssi</option><option value="red">Punainen</option></select></div>
+          <div class="fld checks">
+            <label class="fmi-only"><input type="checkbox" data-k="traffic_weather"> Myös liikennesää</label>
+            <label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
         </div>
         <div class="hint fmi-only">Ilmatieteen laitoksen viralliset varoitukset, jotka koskevat omaa sijaintiasi (kuntarajojen mukaan).</div>
         <div class="hint ma-only">MeteoAlarmin kautta valitun maan virallisen sääpalvelun varoitukset (tekstit englanniksi).
           Jos maan varoituksissa on aluerajat, ohjelma käyttää omaa sijaintiasi. Muuten valitse alue nimellä tai EMMA-tunnuksella;
           useampi alue erotetaan puolipisteellä. Lähde: MeteoAlarm.org (CC BY 4.0).</div>
-        <div class="row" style="margin-top:8px"><button data-save="warnings">Tallenna</button><span class="err" data-err="warnings"></span></div>
+        <div class="frow svcsave"><button class="primary" data-save="warnings">Tallenna</button><span class="err" data-err="warnings"></span></div>
         <div class="svcview" data-view="warnings"></div>
       </div>
       <div class="svcstatus" data-st="warnings"></div>
@@ -668,14 +685,15 @@
     <section class="svc form" data-svc="space">
       <h2>☀ Avaruussää <label class="switch"><input type="checkbox" data-en="space"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
-        <div class="row">
-          <div><label>Hälytä, kun Kp ≥</label><input type="number" data-k="kp_threshold" min="1" max="9" step="1" style="width:70px"></div>
-          <div><label><input type="checkbox" data-k="flares"> Auringonpurkaukset (≥ M5)</label></div>
-          <div><label><input type="checkbox" data-k="forecasts"> NOAA:n K-ennusteet</label></div>
-          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        <div class="frow">
+          <div class="fld"><label>Hälytä, kun Kp ≥</label><input type="number" data-k="kp_threshold" min="1" max="9" step="1" style="width:90px"></div>
+          <div class="fld checks">
+            <label><input type="checkbox" data-k="flares"> Auringonpurkaukset (≥ M5)</label>
+            <label><input type="checkbox" data-k="forecasts"> NOAA:n K-ennusteet</label>
+            <label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
         </div>
         <div class="hint">Kp 5+ = geomagneettinen myrsky: revontulikelit VHF:llä mahdollisia, HF-kelit heikkenevät. Ei vaadi sijaintia.</div>
-        <div class="row" style="margin-top:8px"><button data-save="space">Tallenna</button><span class="err" data-err="space"></span></div>
+        <div class="frow svcsave"><button class="primary" data-save="space">Tallenna</button><span class="err" data-err="space"></span></div>
         <div class="svcview" data-view="space"></div>
       </div>
       <div class="svcstatus" data-st="space"></div>
@@ -683,20 +701,21 @@
     <section class="svc form" data-svc="aurora">
       <h2>🌌 Revontulihälytys <label class="switch"><input type="checkbox" data-en="aurora"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
-        <div class="row">
-          <div><label>Lähde</label><select data-k="source" data-src="aurora"><option value="fmi">Ilmatieteen laitoksen magnetometrit (Suomi)</option><option value="noaa">NOAA OVATION -ennuste (koko maailma)</option></select></div>
-          <div class="fmi-only"><label>Hälytysraja (nT/h)</label><input type="number" data-k="threshold_nt" min="20" step="10" style="width:90px"></div>
-          <div class="noaa-only"><label>Hälytysraja (%)</label><input type="number" data-k="min_prob" min="1" max="100" step="1" style="width:90px"></div>
-          <div><label><input type="checkbox" data-k="dark_only"> Vain kun on pimeää</label></div>
-          <div><label><input type="checkbox" data-k="skip_overcast"> Ei kun täysin pilvistä</label></div>
-          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        <div class="frow">
+          <div class="fld"><label>Lähde</label><select data-k="source" data-src="aurora"><option value="fmi">Ilmatieteen laitoksen magnetometrit (Suomi)</option><option value="noaa">NOAA OVATION -ennuste (koko maailma)</option></select></div>
+          <div class="fld fmi-only"><label>Hälytysraja (nT/h)</label><input type="number" data-k="threshold_nt" min="20" step="10" style="width:90px"></div>
+          <div class="fld noaa-only"><label>Hälytysraja (%)</label><input type="number" data-k="min_prob" min="1" max="100" step="1" style="width:90px"></div>
+          <div class="fld checks">
+            <label><input type="checkbox" data-k="dark_only"> Vain kun on pimeää</label>
+            <label><input type="checkbox" data-k="skip_overcast"> Ei kun täysin pilvistä</label>
+            <label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
         </div>
         <div class="hint fmi-only">Lähimmän Ilmatieteen laitoksen magnetometrin kentän vaihtelu viimeisen tunnin aikana. Raja = mahdollisia,
           2× = todennäköisiä, 4× = voimakkaita (uusi hälytys tason noustessa). Etelä-Suomessa 100 nT/h on hyvä lähtökohta, Lapissa noin 50.</div>
         <div class="hint noaa-only">NOAA:n OVATION-malli ennustaa 30–90 minuutin päähän, millä todennäköisyydellä revontulet näkyvät.
           Ohjelma käyttää suurinta arvoa 300 km säteellä, koska revontulet näkyvät taivaanrannassa kauempaakin. Raja = mahdollisia,
           2× = todennäköisiä, 4× = voimakkaita. 10 % on hyvä lähtökohta.</div>
-        <div class="row" style="margin-top:8px"><button data-save="aurora">Tallenna</button><span class="err" data-err="aurora"></span></div>
+        <div class="frow svcsave"><button class="primary" data-save="aurora">Tallenna</button><span class="err" data-err="aurora"></span></div>
         <div class="svcview" data-view="aurora"></div>
       </div>
       <div class="svcstatus" data-st="aurora"></div>
@@ -704,14 +723,14 @@
     <section class="svc form" data-svc="radiation">
       <h2>☢ Säteilyvalvonta <label class="switch"><input type="checkbox" data-en="radiation"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
-        <div class="row">
-          <div><label>Hälytysraja (µSv/h)</label><input type="number" data-k="threshold" min="0.1" step="0.05" style="width:90px"></div>
-          <div><label>Säde (km)</label><input type="number" data-k="radius_km" min="0" style="width:80px"><div class="hint">0 = koko Suomi</div></div>
-          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        <div class="frow">
+          <div class="fld"><label>Hälytysraja (µSv/h)</label><input type="number" data-k="threshold" min="0.1" step="0.05" style="width:90px"></div>
+          <div class="fld"><label>Säde (km)</label><input type="number" data-k="radius_km" min="0" style="width:90px"><div class="hint">0 = koko Suomi</div></div>
+          <div class="fld checks"><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
         </div>
         <div class="hint">STUK:n noin 250 mittausasemaa, päivitys 10 min välein. Normaali taso Suomessa n. 0,05–0,3 µSv/h; sade voi nostaa
           lukemaa hetkellisesti. Oletusraja 0,4 µSv/h on STUK:n oma hälytysraja.</div>
-        <div class="row" style="margin-top:8px"><button data-save="radiation">Tallenna</button><span class="err" data-err="radiation"></span></div>
+        <div class="frow svcsave"><button class="primary" data-save="radiation">Tallenna</button><span class="err" data-err="radiation"></span></div>
         <div class="svcview" data-view="radiation"></div>
       </div>
       <div class="svcstatus" data-st="radiation"></div>
@@ -720,20 +739,21 @@
       <h2>🚧 Tieliikennetiedotteet <label class="switch"><input type="checkbox" data-en="traffic"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
         <div class="hint" style="margin-top:0">Ilmoittaa tiedotteet, jotka osuvat <b>säteelle</b>, valittuihin <b>maakuntiin</b> tai valituille <b>teille</b> (riittää, että yksi ehto täyttyy).</div>
-        <div class="row">
-          <div><label><input type="checkbox" data-k="use_location"> Säde oman sijainnin ympärillä</label></div>
-          <div class="tcenter"><label>tai muu keskipiste</label><input type="text" data-k="center" placeholder="61.50, 23.76 tai KP11RL" style="width:170px"></div>
-          <div><label>Säde (km)</label><input type="number" data-k="radius_km" min="0" style="width:80px"><div class="hint">0 = ei sädettä</div></div>
-          <div><label>Tienumerot</label><input type="text" data-k="roads" placeholder="4 9 25" style="width:120px"></div>
+        <div class="frow" style="margin-top:10px">
+          <div class="fld"><label>Säde (km)</label><input type="number" data-k="radius_km" min="0" style="width:90px"><div class="hint">0 = ei sädettä</div></div>
+          <div class="fld checks" style="padding-top:22px"><label><input type="checkbox" data-k="use_location"> Säde oman sijainnin ympärillä</label></div>
+          <div class="fld tcenter"><label>tai muu keskipiste</label><input type="text" data-k="center" placeholder="61.50, 23.76 tai KP11RL" style="width:190px"></div>
+          <div class="fld"><label>Tienumerot</label><input type="text" data-k="roads" placeholder="4 9 25" style="width:120px"></div>
         </div>
         <label>Maakunnat</label><div class="provgrid" data-provs></div>
         <label>Tiedotetyypit</label><div class="provgrid" data-types></div>
-        <div class="row">
-          <div><label><input type="checkbox" data-k="updates"> Ilmoita myös päivitykset</label></div>
-          <div><label><input type="checkbox" data-k="details"> Tarkka paikka hälytykseen</label></div>
-          <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        <div class="frow" style="margin-top:10px">
+          <div class="fld checks">
+            <label><input type="checkbox" data-k="updates"> Ilmoita myös päivitykset</label>
+            <label><input type="checkbox" data-k="details"> Tarkka paikka hälytykseen</label>
+            <label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
         </div>
-        <div class="row" style="margin-top:8px"><button data-save="traffic">Tallenna</button><span class="err" data-err="traffic"></span></div>
+        <div class="frow svcsave"><button class="primary" data-save="traffic">Tallenna</button><span class="err" data-err="traffic"></span></div>
         <div class="svcview" data-view="traffic"></div>
       </div>
       <div class="svcstatus" data-st="traffic"></div>
@@ -962,7 +982,7 @@ function fillSettings() {
   $("verInfo").textContent = "";
   $("langSel").value = LANG; $("updAuto").checked = S.config.update_check !== false;
   $("keyState").textContent = S.config.bm_api_key ? "Avain tallennettu" : "Ei avainta";
-  $("apiKey").value = "";
+  $("apiKey").value = ""; $("myCall").value = S.config.devices.my_call || "";
   const p = S.paths;
   $("paths").innerHTML = [["Asetukset", p.config], ["Puheluloki", p.calls_csv], ["SMS/data-loki", p.data_csv], ["Datan raakatapahtumat", p.raw]]
     .map(([k, v]) => `${esc(T(k))}: ${esc(v)}`).join("<br>");
@@ -1425,7 +1445,13 @@ const saveCfg = obj => api("/api/config", obj);
 function fmtShort(ts) { if (!ts) return ""; const d = new Date(ts * 1000), t = new Date();
   return d.toDateString() === t.toDateString() ? d.toLocaleTimeString(LOC(), {hour: "2-digit", minute: "2-digit"}) : d.toLocaleDateString(LOC(), {day: "numeric", month: "numeric"}) + " " + d.toLocaleTimeString(LOC(), {hour: "2-digit", minute: "2-digit"}); }
 function where(x) { return x.tg ? `TG ${esc(x.tg)}${x.tg_name ? " " + esc(x.tg_name) : ""}` : (x.to ? "→ " + esc(x.to) : ""); }
-$("btnKeySave").onclick = async () => { const k = $("apiKey").value.trim(); if (!k) return; const j = await saveCfg({bm_api_key: k}); $("keyState").textContent = j.ok ? "Avain tallennettu" : j.error; $("apiKey").value = ""; };
+$("btnKeySave").onclick = async () => {
+  const k = $("apiKey").value.trim(), body = {devices: {my_call: $("myCall").value}};
+  if (k) body.bm_api_key = k;
+  const j = await saveCfg(body);
+  if (j.ok) S.config = j.config;
+  $("keyState").textContent = j.ok ? T(S.config.bm_api_key ? "Avain tallennettu" : "Tallennettu") : j.error; $("apiKey").value = "";
+};
 $("btnKeyDel").onclick = async () => { const j = await saveCfg({bm_api_key: ""}); $("keyState").textContent = j.ok ? "Ei avainta" : j.error; };
 
 // ---------------- kutsukortti ----------------
@@ -1529,11 +1555,15 @@ function notifState() {
   if (!("Notification" in window)) return "Selain ei tue työpöytäilmoituksia.";
   return {granted: "Työpöytäilmoitukset sallittu.", denied: "Työpöytäilmoitukset estetty selaimen asetuksissa.", default: "Työpöytäilmoituksia ei ole vielä sallittu."}[Notification.permission];
 }
+function showNotifState() {   // lupapainike näkyy vain, kun lupaa ei ole annettu
+  $("notifState").textContent = T(notifState());
+  $("btnNotif").style.display = "Notification" in window && Notification.permission !== "granted" ? "" : "none";
+}
 function fillWatch() {
   const w = S.config.watch;
   $("wList").value = w.list.join(" "); $("wQuiet").value = w.quiet_min; $("wScope").value = w.scope;
   $("wDesktop").checked = !!w.desktop; $("wSound").checked = !!w.sound; $("wSms").checked = !!w.sms;
-  $("notifState").textContent = notifState();
+  showNotifState();
 }
 function renderWatch() {
   const ws = S.watch_status || [];
@@ -1559,7 +1589,7 @@ $("btnWSave").onclick = async () => {
   if (j.ok) { S.config = j.config; fillWatch(); }
 };
 $("btnWTest").onclick = () => { beep(false); api("/api/alerts/test", {}); };
-$("btnNotif").onclick = async () => { if ("Notification" in window) { await Notification.requestPermission(); } $("notifState").textContent = notifState(); };
+$("btnNotif").onclick = async () => { if ("Notification" in window) { await Notification.requestPermission(); } showNotifState(); };
 
 // ---------------- laitteet ----------------
 let devDraft = null;
@@ -1592,9 +1622,15 @@ $("btnDFind").onclick = async () => {
     if (await saveDevices()) { b.textContent = "Lisätty ✓"; b.disabled = true; } });
 };
 const SLOTNAME = s => s === 0 ? "simplex" : "TS" + s;
+function devOwn(d) {   // käsin valittu, muuten automaattisesti: laitteen kutsu = oma kutsu
+  const e = (S.config.devices.list || []).find(x => String(x.id) === String(d.id));
+  if (e && e.own != null) return !!e.own;
+  const mc = (S.config.devices.my_call || "").toUpperCase();
+  return !!mc && (d.callsign || "").toUpperCase().split(/[-\s]/)[0] === mc;
+}
 function renderDevices() {
   if (TAB !== "laitteet" || document.activeElement && document.activeElement.closest && document.activeElement.closest("#devCards")) return;
-  const devs = S.devices || [], key = !!S.config.bm_api_key;
+  const devs = S.devices || [], hasKey = !!S.config.bm_api_key;
   $("devEmpty").style.display = devs.length ? "none" : "";
   const html = devs.map(d => {
     const status = d.error ? `<span class="bad">${esc(d.error)}</span>` : d.online == null ? '<span class="muted">tarkistetaan…</span>'
@@ -1602,10 +1638,11 @@ function renderDevices() {
     const slots = [...new Set([...(d.static || []).map(s => s.slot), ...(d.dynamic || []).map(s => s.slot), d.default_slot ?? 0])].sort();
     const chips = (arr, cls) => (arr || []).map(s => `<span class="tgchip ${cls}" title="${esc(SLOTNAME(s.slot))}"><span class="tg">${esc(s.tg)}</span><span class="muted">${esc(SLOTNAME(s.slot))}</span>${cls === "" && key ? `<button data-act="delete" data-id="${esc(d.id)}" data-slot="${esc(s.slot)}" data-tg="${esc(s.tg)}" title="Poista pysyvä TG">×</button>` : ""}</span>`).join("") || '<span class="muted">ei</span>';
     const act = d.activity;
-    const fk = "dev:" + d.id, isF = folded.has(fk);
+    const fk = "dev:" + d.id, isF = folded.has(fk), own = devOwn(d), key = hasKey && own;
     return `<div class="devcard${isF ? " folded" : ""}" data-fk="${esc(fk)}">
       <div class="top"><button type="button" class="fold" data-fold="${esc(fk)}" aria-expanded="${isF ? "false" : "true"}" title="${esc(isF ? T("Avaa osio") : T("Pienennä osio otsikoksi"))}">▼</button><span class="call clk" data-q="${esc(d.callsign || d.id)}">${esc(d.callsign || "?")}</span><span class="muted">ID ${esc(d.id)}</span>${status}
         <span class="muted">${d.last_seen ? esc(T("nähty {ago}", {ago: ago(d.last_seen)})) : ""}</span><span class="spacer"></span>
+        ${hasKey ? `<label class="ownsw" title="${esc(T("Näytä hallintatyökalut tälle laitteelle"))}"><input type="checkbox" data-own="${esc(d.id)}" ${own ? "checked" : ""}> ${esc(T("Oma laite"))}</label>` : ""}
         <button data-rm="${esc(d.id)}" title="Poista seurannasta">Poista seurannasta</button></div>
       <div class="muted devinfo" style="margin:4px 0 8px">${esc([d.hardware, d.firmware, d.city, d.tx ? d.tx + (d.rx && d.rx !== d.tx ? "/" + d.rx : "") + " MHz" : "", d.colorcode != null ? "CC" + d.colorcode : "", d.statusText].filter(Boolean).join(" · "))}</div>
       <div class="devmore">
@@ -1625,6 +1662,12 @@ function renderDevices() {
   }).join("");
   if ($("devCards").dataset.html !== html) { $("devCards").innerHTML = html; $("devCards").dataset.html = html; }
 }
+$("devCards").addEventListener("change", async e => {
+  const cb = e.target.closest("input[data-own]"); if (!cb) return;
+  const list = (S.config.devices.list || []).map(x => String(x.id) === cb.dataset.own ? {...x, own: cb.checked} : {...x});
+  $("devCards").dataset.html = "";
+  await saveDevices(list); renderDevices();
+});
 $("devCards").addEventListener("click", async e => {
   const fb = e.target.closest("button[data-fold]");
   if (fb) { setDevFold(fb.closest(".devcard"), !fb.closest(".devcard").classList.contains("folded")); return; }
@@ -1641,6 +1684,9 @@ $("devCards").addEventListener("click", async e => {
   const j = await api("/api/device/action", body);
   b.disabled = false;
   if (msg) msg.innerHTML = j.ok ? '<span class="ok">Tehty</span>' : esc(j.error);
+  if (j.not_own) {   // Brandmeister ei sallinut: palvelin merkitsi laitteen ei-omaksi
+    (S.config.devices.list || []).forEach(x => { if (String(x.id) === String(body.id)) x.own = false; });
+    $("devCards").dataset.html = ""; renderDevices(); alert(j.error); }
 });
 
 // ---------------- tilastot ----------------
@@ -1929,7 +1975,9 @@ function renderServices() {
         ${s.nearest ? `<div class="tile"><div class="lbl">${esc(T("Lähin: {name} ({km} km)", {name: s.nearest.name, km: s.nearest.km}))}</div><div class="val ${s.nearest.dr >= thr ? "bad" : ""}">${f(s.nearest.dr)}</div><div class="muted">µSv/h</div></div>` : ""}
         ${s.area_max ? `<div class="tile"><div class="lbl">${esc(c.radiation.radius_km ? T("Korkein {r} km säteellä ({n} asemaa)", {r: c.radiation.radius_km, n: s.count}) : T("Korkein Suomessa ({n} asemaa)", {n: s.count}))}</div><div class="val ${s.area_max.dr >= thr ? "bad" : ""}">${f(s.area_max.dr)}</div><div class="muted">${esc(s.area_max.name)}</div></div>` : ""}
         <div class="tile"><div class="lbl">Korkein koko Suomessa</div><div class="val">${f(s.fin_max.dr)}</div><div class="muted">${esc(s.fin_max.name)}</div></div></div>
-        <table style="margin-top:8px"><tbody>${(s.stations || []).map(x => `<tr><td>${esc(x.name)}</td><td class="num">${x.km != null ? esc(x.km) + " km" : ""}</td><td class="num ${x.dr >= thr ? "bad" : ""}">${esc(f(x.dr))} µSv/h</td></tr>`).join("")}</tbody></table>`;
+        <table class="radtab"><tbody>${(s.stations || []).map(x => `<tr${x.dr >= thr ? ' class="over"' : ""}><td>${esc(x.name)}</td><td class="num muted">${x.km != null ? esc(x.km) + " km" : ""}</td>
+          <td class="num">${esc(f(x.dr))}</td><td class="bar"><div class="hbar"><div style="width:${Math.min(100, x.dr / thr * 100).toFixed(1)}%"></div></div></td></tr>`).join("")}</tbody></table>
+        <div class="muted" style="margin-top:4px">${esc(T("µSv/h. Pylvään täysi pituus = hälytysraja {thr} µSv/h.", {thr: f(thr)}))}</div>`;
     }
     if (n === "traffic" && on) {
       const it = s.items || [];

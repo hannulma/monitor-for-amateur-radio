@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import random
+import re
 import socket
 import sys
 import time
@@ -218,6 +219,11 @@ class Monitor:
         self.dirty = True
 
     # ---------------- asetukset ----------------
+    def public_config(self) -> dict:
+        """Asetukset sivulle: salaisuudet vain peitettyinä."""
+        return {**self.cfg, "bm_api_key": "********" if self.bm_key else "",
+                "messaging": {**self.cfg["messaging"], "passcode": "********" if self.hub.passcode_secret else ""}}
+
     def save_config(self):
         self.cfg_path.write_text(json.dumps(self.cfg, indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -278,12 +284,19 @@ class Monitor:
                     if int(did) in seen:
                         continue
                     seen.add(int(did))
-                    lst.append({"id": int(did), "note": str(d.get("note", "") if isinstance(d, dict) else "")[:40]})
+                    own = d.get("own") if isinstance(d, dict) else None
+                    lst.append({"id": int(did), "note": str(d.get("note", "") if isinstance(d, dict) else "")[:40],
+                                "own": own if own in (True, False) else None})
                 out["list"] = lst
             if "offline_min" in dv:
                 out["offline_min"] = max(2, min(1440, float(dv["offline_min"] or 15)))
             if "sms" in dv:
                 out["sms"] = bool(dv["sms"])
+            if "my_call" in dv:
+                mc = str(dv["my_call"] or "").strip().upper().split("-")[0]
+                if mc and not re.fullmatch(r"[A-Z0-9]{3,8}", mc):
+                    raise ValueError(tr("Virheellinen kutsu: {x}", x=mc))
+                out["my_call"] = mc
             self.cfg["devices"] = out
             self.devmon._ids_cache = self.devmon.ids()
             self.devmon.wake.set()
@@ -578,9 +591,7 @@ class Monitor:
             "type": "snapshot",
             "now": time.time(),
             "version": __version__,
-            "config": {**self.cfg, "bm_api_key": "********" if self.bm_key else "",
-                       "messaging": {**self.cfg["messaging"],
-                                     "passcode": "********" if self.hub.passcode_secret else ""}},
+            "config": self.public_config(),
             "status": self.status,
             "started": self.started,
             "talkgroups": rows,
@@ -834,13 +845,13 @@ def make_app(mon: Monitor) -> web.Application:
         return ws
 
     async def get_config(_):
-        return web.json_response(mon.cfg)
+        return web.json_response(mon.public_config())
 
     async def post_config(request):
         try:
             body = await request.json()
             mon.update_config(body)
-            return web.json_response({"ok": True, "config": mon.cfg})
+            return web.json_response({"ok": True, "config": mon.public_config()})
         except Exception as e:  # noqa: BLE001
             return web.json_response({"ok": False, "error": str(e)}, status=400)
 
@@ -983,6 +994,15 @@ def make_app(mon: Monitor) -> web.Application:
             mon.devmon.wake.set()
             return web.json_response({"ok": True, "result": r}, dumps=lambda o: json.dumps(o, default=str))
         except BMApiError as e:
+            if e.status == 403:   # 401 = avain hylätty kokonaan, 403 = laite ei kuulu tilille
+                # Brandmeister ei salli: ei oma laite -> hallintatyökalut piiloon tästä laitteesta
+                for d in mon.cfg["devices"]["list"]:
+                    if d["id"] == dev:
+                        d["own"] = False
+                mon.save_config()
+                return web.json_response({"ok": False, "not_own": True, "error": tr(
+                    "Brandmeister ei salli tätä toimintoa tälle laitteelle, joten se ei ole tämän API-avaimen tilin laite. "
+                    "Hallintatyökalut piilotettiin; ne saa takaisin valinnalla Oma laite.")}, status=403)
             return web.json_response({"ok": False, "error": str(e)}, status=400)
         except Exception as e:  # noqa: BLE001
             return web.json_response({"ok": False, "error": friendly_error(e)}, status=400)

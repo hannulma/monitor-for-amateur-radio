@@ -200,4 +200,6 @@ EN: dict[str, str] = {
     "Tuntematon maa: {c}": "Unknown country: {c}",
     "Revontulet {word}: NOAA-ennuste {p} %{cl}": "Aurora {word}: NOAA forecast {p} %{cl}",
     "NOAA:n OVATION-ennuste: näkyvien revontulien todennäköisyys {r} km säteellä. VHF-revontulikelit mahdollisia.": "NOAA OVATION forecast: probability of visible aurora within {r} km. VHF aurora propagation possible.",
+    "Virheellinen kutsu: {x}": "Invalid callsign: {x}",
+    "Brandmeister ei salli tätä toimintoa tälle laitteelle, joten se ei ole tämän API-avaimen tilin laite. Hallintatyökalut piilotettiin; ne saa takaisin valinnalla Oma laite.": "BrandMeister does not allow this action for this device, so it does not belong to the account of this API key. The management tools were hidden; turn on Own device to show them again.",
 }

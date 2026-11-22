@@ -23,7 +23,8 @@ DEFAULT_WATCH = {
     "sms": False,
 }
 DEFAULT_DEVICES = {
-    "list": [],            # [{"id": 244207, "note": ""}]
+    "list": [],            # [{"id": 244207, "note": "", "own": None}]  own: None = automaattinen
+    "my_call": "",         # oma kutsu: laite, jonka BM-kutsu on sama, on oma (hallintatyökalut näkyvät)
     "offline_min": 15,
     "poll_sec": 120,
     "sms": False,

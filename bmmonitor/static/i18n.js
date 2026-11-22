@@ -65,6 +65,13 @@
     "ennuste klo {t}": "forecast {t}",
     "NOAA SWPC OVATION. Raja {thr} %.": "NOAA SWPC OVATION. Threshold {thr} %.",
     "vain Suomessa": "Finland only",
+    "µSv/h. Pylvään täysi pituus = hälytysraja {thr} µSv/h.": "µSv/h. A full bar = alert threshold {thr} µSv/h.",
+    "Oma laite": "Own device",
+    "Näytä hallintatyökalut tälle laitteelle": "Show the management tools for this device",
+    "Oma kutsu": "Your callsign",
+    "Laitteet, joiden kutsu on tämä, tunnistetaan omiksi.": "Devices with this callsign are recognised as yours.",
+    "Avain tallentuu käyttöjärjestelmän salasanavarastoon.": "The key is stored in the operating system's credential store.",
+    "Poistaa puhelu- ja tapahtumahistorian": "Clears the call and event history",
     "Kieli": "Language", "Käyttöliittymän kieli": "User interface language",
     "Kieli koskee myös ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia. Ilmatieteen laitoksen varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).":
       "The language also applies to the program's own alerts and to replies sent to your radio. Finnish Meteorological Institute warnings and Digitraffic bulletins stay in their source language (Finnish).",
