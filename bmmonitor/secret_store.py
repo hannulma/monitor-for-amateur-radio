@@ -76,3 +76,28 @@ def delete(name: str) -> None:
         kr.delete_password(SERVICE, name)
     except Exception:  # noqa: BLE001  (ei ollut tallessa)
         pass
+
+
+def load_field(cfg: dict, field: str, name: str) -> tuple[str, bool]:
+    """Lukee salaisen asetuksen. Asetustiedostossa oleva arvo siirretään varastoon, jos se on käytettävissä.
+    Palauttaa (arvo, muuttuiko cfg)."""
+    if cfg.get(field + "_store") == "keyring":
+        return get(name) or "", False
+    value = str(cfg.get(field) or "")
+    if value and put(name, value):
+        cfg[field] = ""
+        cfg[field + "_store"] = "keyring"
+        return value, True
+    return value, False
+
+
+def save_field(cfg: dict, field: str, name: str, value: str) -> None:
+    """Tallentaa salaisen asetuksen varastoon; jos varastoa ei ole, asetustiedostoon."""
+    cfg.pop(field + "_store", None)
+    cfg[field] = ""
+    if not value:
+        delete(name)
+    elif put(name, value):
+        cfg[field + "_store"] = "keyring"
+    else:
+        cfg[field] = value

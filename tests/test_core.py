@@ -261,3 +261,32 @@ def test_sheet_signature_matches_apps_script():
     assert valid_url("https://script.google.com/macros/s/AKfycbx_abc-123/exec")
     assert not valid_url("https://evil.example.com/macros/s/x/exec") and not valid_url("http://127.0.0.1:8840/exec")
     assert valid_url("http://127.0.0.1:8840/exec", allow_test=True)
+
+
+def test_secrets_not_in_config_when_keyring(tmp_path, monkeypatch):
+    """API-avain ja passcode siirtyvät salasanavarastoon; asetustiedostoon ja käyttöliittymään ei päädy arvoa."""
+    from bmmonitor import secret_store
+    store = {}
+    monkeypatch.setattr(secret_store, "put", lambda n, v: store.__setitem__(n, v) or True)
+    monkeypatch.setattr(secret_store, "get", lambda n: store.get(n))
+    monkeypatch.setattr(secret_store, "delete", lambda n: store.pop(n, None))
+    cfg = {"bm_api_key": "SECRETKEY", "messaging": {"passcode": "12345"}}
+    v, moved = secret_store.load_field(cfg, "bm_api_key", "bm-api-key")
+    assert v == "SECRETKEY" and moved and cfg["bm_api_key"] == "" and cfg["bm_api_key_store"] == "keyring"
+    assert secret_store.load_field(cfg, "bm_api_key", "bm-api-key") == ("SECRETKEY", False)
+    secret_store.save_field(cfg["messaging"], "passcode", "aprs-passcode", "23456")
+    assert cfg["messaging"] == {"passcode": "", "passcode_store": "keyring"} and store["aprs-passcode"] == "23456"
+    secret_store.save_field(cfg["messaging"], "passcode", "aprs-passcode", "")
+    assert "aprs-passcode" not in store and cfg["messaging"] == {"passcode": ""}
+    # ilman varastoa arvo jää asetustiedostoon kuten ennenkin
+    monkeypatch.setattr(secret_store, "put", lambda n, v: False)
+    c2 = {}
+    secret_store.save_field(c2, "bm_api_key", "bm-api-key", "K2")
+    assert c2 == {"bm_api_key": "K2"}
+
+
+def test_clean_text_linear_on_many_brackets():
+    from bmmonitor.messaging import clean_text
+    t0 = time.time()
+    assert clean_text("<b>Hei</b> " + "<" * 50000, False).startswith("Hei")
+    assert time.time() - t0 < 1

@@ -29,8 +29,9 @@ from .i18n import set_lang, tr
 from .updater import Updater
 from .checkin import CheckIn
 from .sheetsync import SheetError
-from . import APP_ID, APP_NAME, __version__
-from .messaging import DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message, ws_options
+from . import APP_ID, APP_NAME, __version__, secret_store
+from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
+                        validate_passcode, ws_options)
 from .bmapi import BMApi, BMApiError
 from .services import DEFAULT_SERVICES, ServiceHub, normalize_services
 from .features import (CALL_OR_ID, DEFAULT_DEVICES, DEFAULT_WATCH, Commands, DeviceMonitor, Heard, Stats,
@@ -188,7 +189,12 @@ class Monitor:
         self.hub = MessagingHub(self.cfg["messaging"], d, self.touch)
         self.heard = Heard()
         self.watcher = Watcher(self)
-        self.api = BMApi(lambda: self.cfg.get("bm_api_key", ""))
+        # Salaisuudet käyttöjärjestelmän salasanavarastoon (vanhat asetustiedoston arvot siirretään sinne)
+        self.bm_key, moved_key = secret_store.load_field(self.cfg, "bm_api_key", "bm-api-key")
+        self.hub.passcode_secret, moved_pass = secret_store.load_field(self.cfg["messaging"], "passcode", "aprs-passcode")
+        if moved_key or moved_pass:
+            self.save_config()
+        self.api = BMApi(lambda: self.bm_key)
         self.devmon = DeviceMonitor(self, self.api)
         self.stats = Stats(self)
         self.stats.load_csv(self.calls_csv)
@@ -287,9 +293,16 @@ class Monitor:
         if "bm_api_key" in new:
             key = str(new["bm_api_key"] or "").strip()
             if key != "********":
-                self.cfg["bm_api_key"] = key
+                secret_store.save_field(self.cfg, "bm_api_key", "bm-api-key", key)
+                self.bm_key = key
         if "messaging" in new:
-            self.cfg["messaging"] = normalize_messaging(new["messaging"], self.cfg["messaging"])
+            msg = dict(new["messaging"])
+            pc = msg.pop("passcode", "********")
+            self.cfg["messaging"] = normalize_messaging(msg, self.cfg["messaging"])
+            if pc != "********":
+                pc = validate_passcode(pc)
+                secret_store.save_field(self.cfg["messaging"], "passcode", "aprs-passcode", pc)
+                self.hub.passcode_secret = pc
             self.hub.reconfigure(self.cfg["messaging"])
         self.save_config()
         self.dirty = True
@@ -555,7 +568,9 @@ class Monitor:
             "type": "snapshot",
             "now": time.time(),
             "version": __version__,
-            "config": {**self.cfg, "bm_api_key": "********" if self.cfg.get("bm_api_key") else ""},
+            "config": {**self.cfg, "bm_api_key": "********" if self.bm_key else "",
+                       "messaging": {**self.cfg["messaging"],
+                                     "passcode": "********" if self.hub.passcode_secret else ""}},
             "status": self.status,
             "started": self.started,
             "talkgroups": rows,

@@ -143,7 +143,7 @@ Everything runs on your own computer. Settings, logs and statistics are stored l
 - macOS: `~/Library/Application Support/BMMonitor/`
 - Linux: `~/.config/BMMonitor/`
 
-Your APRS-IS passcode and optional BrandMeister API key are stored only in `config.json` in that folder.
+Your optional BrandMeister API key and own APRS-IS passcode are kept in the operating system's keychain (Windows Credential Manager, macOS Keychain); where none is available, in `config.json` in that folder.
 
 ## Data sources and APIs
 

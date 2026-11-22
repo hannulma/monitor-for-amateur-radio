@@ -106,7 +106,7 @@ def aprs_passcode(call: str) -> int:
 
 
 def clean_text(text: str, ascii_only: bool) -> str:
-    text = html.unescape(re.sub(r"<[^>]+>", " ", text or ""))
+    text = html.unescape(re.sub(r"<[^<>]*>", " ", text or ""))   # lineaarinen myös monilla <-merkeillä
     text = re.sub(r"\s+", " ", text).strip()
     # APRS-viestissä ei saa olla merkkejä | ~ {
     text = text.replace("|", "/").replace("~", "-").replace("{", "(")
@@ -202,7 +202,7 @@ class AprsClient:
 
     async def _session(self, ver: int):
         login = self.cfg["login"].upper()
-        passcode = str(self.cfg.get("passcode") or aprs_passcode(login))
+        passcode = str(self.hub.passcode_secret or self.cfg.get("passcode") or aprs_passcode(login))
         self.reader, self.writer = await asyncio.wait_for(
             asyncio.open_connection(self.cfg.get("server") or "rotate.aprs2.net",
                                     int(self.cfg.get("port") or 14580)), 20)
@@ -486,6 +486,8 @@ class MessagingHub:
                 e["acked"] = ok
                 break
 
+    passcode_secret: str = ""          # oma passcode salasanavarastosta (ei asetustiedostossa)
+
     def reconfigure(self, cfg: dict):
         self.cfg = cfg
         self.config_version += 1
@@ -523,17 +525,20 @@ class MessagingHub:
         await asyncio.gather(self.aprs.run(), self.feeds.run())
 
 
+def validate_passcode(value) -> str:
+    p = str(value or "").strip()
+    if p and not p.lstrip("-").isdigit():
+        raise ValueError(tr("Passcoden pitää olla numero"))
+    return p
+
+
 def normalize_messaging(new: dict, old: dict) -> dict:
+    """Muut viestiasetukset; passcode käsitellään erikseen (salasanavarasto, ks. app.Monitor)."""
     out = dict(old)
     if "enabled" in new:
         out["enabled"] = bool(new["enabled"])
     if "login" in new:
         out["login"] = validate_call(new["login"]) if str(new["login"]).strip() else ""
-    if "passcode" in new:
-        p = str(new["passcode"]).strip()
-        if p and not p.lstrip("-").isdigit():
-            raise ValueError(tr("Passcoden pitää olla numero"))
-        out["passcode"] = p
     if "server" in new:
         out["server"] = str(new["server"]).strip() or "rotate.aprs2.net"
     if "port" in new:

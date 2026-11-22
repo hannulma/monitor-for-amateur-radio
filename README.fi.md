@@ -186,7 +186,7 @@ Asetukset, lokit ja tilastot tallentuvat vain omalle koneelle:
 
 | Tiedosto | Sisältö |
 |---|---|
-| `config.json` | asetukset (myös APRS-passcode ja API-avain) |
+| `config.json` | asetukset (BrandMeister API-avain ja oma APRS-passcode ovat Windowsissa ja macOS:ssä käyttöjärjestelmän salasanavarastossa, muuten tässä tiedostossa) |
 | `calls.csv` | seuratut puhelut (aukeaa Excelissä) |
 | `monitor.log` | loki, kun ohjelma toimii ilman komentoikkunaa |
 | `checkin.json`, `checkin/*.csv` | käynnissä oleva check-in-kierros ja päättyneiden kierrosten lokit |
