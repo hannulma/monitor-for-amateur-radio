@@ -19,6 +19,7 @@ import json
 import logging
 import re
 import time
+import unicodedata
 import uuid
 
 from . import secret_store
@@ -39,6 +40,32 @@ _LOCATOR = re.compile(r",?\s*\b[A-R]{2}\d{2}([A-X]{2})?\b", re.I)
 def clean_city(city: str) -> str:
     """'Jarvenpaa, KP20NK' -> 'Jarvenpaa'."""
     return _LOCATOR.sub("", city or "").strip(" ,")
+
+
+# Brandmeisterin yhteystyyppi (LinkName / LinkCall) -> RPT/HOTSPOT-sarakkeen arvo.
+# Muut tyypit käsitellään laitteen ID:n mukaan (toistin tai Hotspot).
+LINK_KINDS = (("detroit bridge", "TetraPack"), ("tetrapack", "TetraPack"), ("hytera hytalk", "POC"),
+              ("ysf client", "Fusion"), ("wires-x", "Fusion"), ("open dmr terminal", "Open DMR"))
+
+
+def link_kind(p: dict) -> str:
+    """'Detroit Bridge' / 'TetraPack Core …' -> 'TetraPack', 'Hytera HyTalk/RoIP' -> 'POC' jne."""
+    text = f"{p.get('LinkName') or ''} {p.get('LinkCall') or ''}".lower()
+    return next((v for k, v in LINK_KINDS if k in text), "")
+
+
+def _fold(t: str) -> str:
+    t = unicodedata.normalize("NFKD", t or "")
+    return "".join(c for c in t if not unicodedata.combining(c)).lower()
+
+
+def device_label(dcall: str, city: str) -> str:
+    """Toistimen tunnus ja paikkakunta, mutta paikkakunta vain kerran:
+    'OH8DMRO Oulu N' + 'Oulu' -> 'OH8DMRO Oulu N', 'OH2RUP' + 'Jarvenpaa' -> 'OH2RUP Jarvenpaa'."""
+    dcall, city = (dcall or "").strip(), (city or "").strip()
+    if city and re.search(r"(?<!\w)" + re.escape(_fold(city)) + r"(?!\w)", _fold(dcall)):
+        return dcall
+    return f"{dcall} {city}".strip()
 
 
 def is_repeater_id(dev_id) -> bool:
@@ -204,8 +231,14 @@ class CheckIn:
             s["next_idx"] = st["idx"] + 1
         st["name"] = (p.get("SourceName") or st["name"] or "").strip()
         st["last"] = max(st["last"], stop or start)
-        dev_id = p.get("ContextID")
-        if dev_id and dev_id != st["dev_id"]:
+        dev_id = p.get("ContextID") or None
+        kind = link_kind(p)
+        if kind and (kind != st.get("kind") or dev_id != st["dev_id"]):
+            # TetraPack, POC, Fusion, Open DMR: tyyppi riittää, laiterekisteristä ei haeta paikkakuntaa
+            st.update(kind=kind, dev_id=dev_id, link=(p.get("LinkCall") or p.get("LinkName") or "").strip(), repeater=False)
+            self._fill_device(st)
+        elif not kind and dev_id and (dev_id != st["dev_id"] or st.get("kind")):
+            st["kind"] = ""
             st["dev_id"] = dev_id
             st["link"] = p.get("LinkCall") or p.get("LinkName") or ""
             st["repeater"] = is_repeater_id(dev_id)
@@ -224,13 +257,14 @@ class CheckIn:
 
     def _fill_device(self, st: dict):
         """RPT/HOTSPOT, KUNTA ja BM-laite laitetiedoista (vain jos ylläpitäjä ei ole muuttanut niitä)."""
-        dev = self.devices.get(st["dev_id"]) or {}
-        dcall = (dev.get("call") or st.get("link") or "").strip()
+        kind = st.get("kind") or ""
+        dev = {} if kind else (self.devices.get(st["dev_id"]) or {})
+        dcall = (dev.get("call") or ("" if kind else st.get("link")) or "").strip()
         city = clean_city(dev.get("city", ""))
         cp = country_prefix(self.s["tg"] or 0)
         foreign = bool(cp and st.get("id") and not str(st["id"]).startswith(cp))
-        via = "Ulkomaat" if foreign else (f"{dcall} {city}".strip() if st["repeater"] else "Hotspot")
-        st["dev"] = ", ".join(x for x in (dcall, city) if x)
+        via = "Ulkomaat" if foreign else (kind or (device_label(dcall, city) if st["repeater"] else "Hotspot"))
+        st["dev"] = kind or ", ".join(x for x in (dcall, city) if x)
         if not st.get("edited_via"):
             st["via"] = via
         if not st.get("edited_kunta"):
@@ -254,7 +288,7 @@ class CheckIn:
         self.queue = asyncio.Queue()
         asyncio.get_running_loop().create_task(self.sync_loop())
         for st in self.s["stations"]:
-            if st.get("dev_id"):
+            if st.get("dev_id") and not st.get("kind"):
                 self._want_device(st["dev_id"])
         while True:
             dev_id = await self.queue.get()
@@ -264,7 +298,7 @@ class CheckIn:
             except Exception as e:  # noqa: BLE001  (hotspotit puuttuvat usein rekisteristä)
                 log.debug("Laite %s: %s", dev_id, e)
             for st in self.s["stations"]:
-                if st.get("dev_id") == dev_id:
+                if st.get("dev_id") == dev_id and not st.get("kind"):
                     self._fill_device(st)
             self._changed()
             await asyncio.sleep(0.3)

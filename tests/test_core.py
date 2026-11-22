@@ -290,3 +290,38 @@ def test_clean_text_linear_on_many_brackets():
     t0 = time.time()
     assert clean_text("<b>Hei</b> " + "<" * 50000, False).startswith("Hei")
     assert time.time() - t0 < 1
+
+
+def test_checkin_link_kinds(tmp_path):
+    """RPT/HOTSPOT: yhteystyyppi (TetraPack, POC, Fusion, Open DMR) ja paikkakunta vain kerran."""
+    from bmmonitor.checkin import CheckIn, device_label, link_kind
+
+    class Mon:
+        cfg_path = tmp_path / "config.json"
+        cfg = {}
+        def touch(self): pass
+        def save_config(self): pass
+        def tg_name(self, tg): return "Finland"
+
+    assert device_label("OH8DMRO Oulu N", "Oulu") == "OH8DMRO Oulu N"
+    assert device_label("OH2RUP", "Jarvenpaa") == "OH2RUP Jarvenpaa"
+    assert device_label("OH1X Ylöjärvi", "Ylojarvi") == "OH1X Ylöjärvi"
+    assert device_label("OH3ROU", "Oulu") == "OH3ROU Oulu"
+    assert link_kind({"LinkName": "MMDVM Host", "LinkCall": "OH2RUP"}) == ""
+    ci = CheckIn(Mon(), api=None)
+    ci.start(244, "1", "22.11.2026", "oh2abc")
+    t = time.time()
+    rows = [("OH1TET", 2440101, "Detroit Bridge", "TetraPack Core 20261011", 2005, "TetraPack"),
+            ("OH1POC", 2440102, "Hytera HyTalk/RoIP", "", 2440102, "POC"),
+            ("OH1YSF", 2440103, "YSF Client", "", "", "Fusion"),
+            ("OH1ODT", 2440104, "Open DMR Terminal", "", 2440104, "Open DMR"),
+            ("OH1HOT", 2440105, "MMDVM Host", "OH1HOT", 244010501, "Hotspot"),
+            ("DL1TET", 2620001, "Detroit Bridge", "TetraPack Core", 2005, "Ulkomaat")]
+    for i, (call, src, name, lc, ctx, _) in enumerate(rows):
+        ci.on_event({"SourceCall": call, "SourceID": src, "DestinationID": 244, "SessionID": f"s{i}",
+                     "Start": t + i, "Stop": 0, "ContextID": ctx, "LinkName": name, "LinkCall": lc,
+                     "Event": "Session-Start"})
+    got = {st["call"]: (st["via"], st["kunta"]) for st in ci.s["stations"]}
+    for call, *_, want in rows:
+        assert got[call][0] == want, (call, got[call])
+    assert got["OH1TET"][1] == ""

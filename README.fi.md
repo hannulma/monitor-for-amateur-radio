@@ -87,8 +87,9 @@ vierittyy aseman riville.
 Kun kuulet aseman, paina **Kuultu – kirjaa** tai kirjoita hakuun pari kutsun merkkiä ja paina Enter.
 Lokinumero (NRO) annetaan kirjausjärjestyksessä. Kierroksen loki on samoissa sarakkeissa kuin FinDMR:n
 kierrostaulukko: NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja ja Oper. RPT/HOTSPOT ja KUNTA täytetään
-BrandMeisterin laitetiedoista (toistin → kutsu ja paikkakunta, muuten "Hotspot"; maakohtaisessa netissä
-toisen maan asema → "Ulkomaat"), ja ne sekä Lisätietoja ovat muokattavissa. Taulukon alasvetovalikkoon
+BrandMeisterin laitetiedoista (toistin → tunnus ja paikkakunta, paikkakunta vain kerran; Tetra →
+"TetraPack", Hyteran PoC → "POC", Yaesu Fusion → "Fusion", Open DMR Terminal → "Open DMR", muuten
+"Hotspot"; maakohtaisessa netissä toisen maan asema → "Ulkomaat"), ja ne sekä Lisätietoja ovat muokattavissa. Taulukon alasvetovalikkoon
 (Toistimet-data) puuttuva toistin lisätään listalle automaattisesti.
 
 **Google-taulukko:** kun taulukon omistaja on lisännyt taulukkoon skriptin ([ohje](sheets/README.md)),
