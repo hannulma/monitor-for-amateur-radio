@@ -48,6 +48,13 @@ muokkausoikeutta taulukkoon.
 
    Jos pohjavälilehdellä on kaavoja sarakkeissa A–H riviltä 3 alkaen, skripti korvaa ne kirjoittamillaan
    arvoilla.
+
+   **Alasvetovalikot:** jos RPT/HOTSPOT-sarakkeessa on valintalista toiselta välilehdeltä (esim.
+   *Toistimet-data*), skripti käyttää listan arvoa, kun sama toistin löytyy (sama teksti tai sama toistimen
+   kutsu). Muuten se lisää BrandMeisterin tiedon (esim. `OH2RUP Jarvenpaa`) listan ensimmäiseen tyhjään
+   soluun ja käyttää sitä – lista täydentyy vähitellen BrandMeisterin tiedoilla. Lisäykset näkyvät
+   tapahtumalokissa. Jos valintalistan alue on täynnä, laajenna aluetta (Tiedot → Tietojen vahvistus).
+   Ohjelmasta käsin muokattaessa arvon pitää olla jo listalla, jotta kirjoitusvirheet eivät päädy listalle.
 4. Valitse **Ota käyttöön → Uusi käyttöönotto**. Valitse tyypiksi (ratas) **Verkkosovellus** ja aseta:
    - *Suorita käyttäjänä:* **Minä**
    - *Kenellä on käyttöoikeus:* **Kuka tahansa**

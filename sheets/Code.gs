@@ -243,12 +243,37 @@ function logStation_(op, d) {
   }
   var nro = rows.reduce(function (m, r) { return Math.max(m, Number(r.nro) || 0); }, 0) + 1;
   var rowIdx = firstEmptyRow_(sh);
-  var C = CONFIG.COLS;
-  setRow_(sh, rowIdx, { nro: nro, call: call, via: clean_(d.via, FIELD_MAX.via), kunta: clean_(d.kunta, FIELD_MAX.kunta),
-                        info: clean_(d.info, FIELD_MAX.info), oper: op, dev: clean_(d.dev, FIELD_MAX.dev) });
-  audit_(op, 'kirjaus', sh.getName() + ' NRO ' + nro + ' ' + call);
+  var dev = clean_(d.dev, FIELD_MAX.dev);
+  var row = { nro: nro, call: call, via: clean_(d.via, FIELD_MAX.via), kunta: clean_(d.kunta, FIELD_MAX.kunta),
+              info: clean_(d.info, FIELD_MAX.info), oper: op, dev: dev };
+  // Alasvetovalikot (esim. RPT/HOTSPOT -> Toistimet-data): käytä listan arvoa, jos sama toistin löytyy.
+  // Muuten lisää BrandMeisterin tieto listalle (vain RPT/HOTSPOT); muut kentät jätetään tyhjiksi.
+  var unmatched = {}, added = [];
+  ['via', 'kunta', 'info'].forEach(function (f) {
+    var list = allowedValues_(sh.getRange(rowIdx, CONFIG.COLS[f]));
+    if (!list || !row[f]) return;
+    var m = matchAllowed_(row[f], list.values, [row.via, dev]);
+    if (m !== null) { row[f] = m; return; }
+    if (f === 'via' && list.source) {
+      appendToList_(list.source, safe_(row[f]));
+      added.push(row[f]);
+      audit_(op, 'toistin lisätty listalle', list.source.getSheet().getName() + ': ' + row[f]);
+    } else {
+      unmatched[f] = row[f];
+      row[f] = '';
+    }
+  });
+  try {
+    setRow_(sh, rowIdx, row);
+  } catch (err) {
+    clearRow_(sh, rowIdx);                       // ei puolivalmiita rivejä
+    throw new UserError_('Riviä ei voitu tallentaa: ' + (err && err.message || err));
+  }
+  audit_(op, 'kirjaus', sh.getName() + ' NRO ' + nro + ' ' + call +
+         (Object.keys(unmatched).length ? ' (ei listalla: ' + JSON.stringify(unmatched) + ')' : ''));
   var fresh = readRows_(sh);
-  return { duplicate: false, row: fresh.filter(function (r) { return r.call === call; })[0], rows: fresh };
+  return { duplicate: false, row: fresh.filter(function (r) { return r.call === call; })[0], rows: fresh,
+           unmatched: unmatched, added: added };
 }
 
 function unlog_(op, d) {
@@ -274,7 +299,18 @@ function edit_(op, d) {
   var hit = readRows_(sh).filter(function (r) { return r.call === call; })[0];
   if (!hit) throw new UserError_('Asemaa ' + call + ' ei ole kirjattu');
   var value = clean_(d.value, FIELD_MAX[field]);
-  sh.getRange(hit.row, CONFIG.COLS[field]).setValue(safe_(value));
+  var cell = sh.getRange(hit.row, CONFIG.COLS[field]);
+  var allowed = allowedValues_(cell);
+  if (allowed && value) {
+    var m = matchAllowed_(value, allowed.values, [value]);
+    if (m === null) throw new UserError_('Arvoa "' + value + '" ei ole sarakkeen valintalistalla – valitse arvo taulukon alasvetovalikosta tai lisää se listalle');
+    value = m;
+  }
+  try {
+    cell.setValue(safe_(value));
+  } catch (err) {
+    throw new UserError_('Arvoa ei voitu tallentaa: ' + (err && err.message || err));
+  }
   audit_(op, 'muokkaus', sh.getName() + ' ' + call + ' ' + field + '=' + value);
   return { rows: readRows_(sh) };
 }
@@ -332,6 +368,61 @@ function setRow_(sh, row, r) {
     if (r[k] === undefined || r[k] === null) return;
     sh.getRange(row, C[k]).setValue(k === 'nro' ? r[k] : safe_(r[k]));
   });
+}
+
+function clearRow_(sh, row) {
+  var C = CONFIG.COLS;
+  Object.keys(C).forEach(function (k) {
+    try { sh.getRange(row, C[k]).setValue(''); } catch (e) { /* tyhjä kelpaa aina */ }
+  });
+}
+
+// Solun valintalistan sallitut arvot (alasvetovalikko), tai null jos rajoitusta ei ole.
+function allowedValues_(range) {
+  var rule = range.getDataValidation && range.getDataValidation();
+  if (!rule || (rule.getAllowInvalid && rule.getAllowInvalid())) return null;
+  var T = SpreadsheetApp.DataValidationCriteria;
+  var type = rule.getCriteriaType();
+  var args = rule.getCriteriaValues();
+  var vals = [], source = null;
+  if (type === T.VALUE_IN_LIST) vals = args[0] || [];
+  else if (type === T.VALUE_IN_RANGE) {
+    source = args[0];
+    source.getValues().forEach(function (r) { r.forEach(function (v) { vals.push(v); }); });
+  } else return null;
+  vals = vals.map(function (v) { return String(v).trim(); }).filter(function (v) { return v; });
+  return { values: vals, source: source };
+}
+
+// Lisää arvon valintalistan alueen ensimmäiseen tyhjään soluun (esim. Toistimet-data).
+function appendToList_(range, value) {
+  var sh = range.getSheet(), col = range.getColumn(), first = range.getRow();
+  var n = range.getLastRow() - first + 1;
+  var vals = sh.getRange(first, col, n, 1).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (!String(vals[i][0]).trim()) { sh.getRange(first + i, col).setValue(value); return; }
+  }
+  throw new UserError_('Valintalistan alue (' + sh.getName() + ') on täynnä – laajenna alasvetovalikon aluetta taulukossa');
+}
+
+// Etsii listalta arvon, joka vastaa annettua: täsmälleen (isoista/pienistä ja ääkkösistä välittämättä)
+// tai saman toistimen kutsun perusteella. Paikkakunnan perusteella ei arvata. Palauttaa listan arvon tai null.
+function matchAllowed_(value, allowed, hints) {
+  var norm = function (x) {
+    return String(x || '').toUpperCase().replace(/[ÄÅ]/g, 'A').replace(/Ö/g, 'O').replace(/[^A-Z0-9]+/g, ' ').trim();
+  };
+  var v = norm(value);
+  if (!v) return '';
+  for (var i = 0; i < allowed.length; i++) if (norm(allowed[i]) === v) return allowed[i];
+  var words = [];
+  (hints || []).concat([value]).forEach(function (h) { norm(h).split(' ').forEach(function (w) { if (w) words.push(w); }); });
+  var isCall = function (w) { return /^[A-Z]{1,2}[0-9][A-Z]{1,4}$/.test(w); };
+  var calls = words.filter(isCall);
+  var hits = allowed.filter(function (a) {
+    var toks = ' ' + norm(a) + ' ';
+    return calls.some(function (w) { return toks.indexOf(' ' + w + ' ') >= 0; });
+  });
+  return hits.length === 1 ? hits[0] : null;          // sama toistimen kutsu yhdellä rivillä
 }
 
 // ------------------------------------------------------------ apufunktiot

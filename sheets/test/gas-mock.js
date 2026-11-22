@@ -11,7 +11,18 @@ const http = require('http');
 function colToNum(s) { let n = 0; for (const c of s) n = n * 26 + (c.charCodeAt(0) - 64); return n; }
 
 class Sheet {
-  constructor(ss, name, rows) { this.ss = ss; this.name = name; this.cells = rows ? rows.map(r => r.slice()) : []; this.hidden = false; }
+  constructor(ss, name, rows) { this.ss = ss; this.name = name; this.cells = rows ? rows.map(r => r.slice()) : []; this.hidden = false; this.validations = {}; }
+  // valintalista sarakkeelle riviltä 3 alkaen: {col: () => sallitut arvot}
+  rule(r, c) {
+    const v = r >= 3 && this.validations[c];
+    if (!v) return null;
+    const ss = this.ss;
+    return {
+      getAllowInvalid: () => false,
+      getCriteriaType: () => 'VALUE_IN_RANGE',
+      getCriteriaValues: () => [ss.getSheetByName(v.sheet).getRange(v.from, v.col, v.to - v.from + 1, 1), true],
+    };
+  }
   getName() { return this.name; }
   setName(n) { if (this.ss.sheets.some(s => s !== this && s.name === n)) throw new Error('name exists'); this.name = n; return this; }
   getLastRow() { for (let i = this.cells.length - 1; i >= 0; i--) if ((this.cells[i] || []).some(v => v !== '' && v != null)) return i + 1; return 0; }
@@ -24,13 +35,20 @@ class Sheet {
     const sh = this;
     return {
       getValue: () => sh.get(r, c),
-      setValue: v => { sh.set(r, c, v); },
+      setValue: v => {
+        const rule = sh.rule(r, c);
+        if (rule && v !== '' && !rule.getCriteriaValues()[0].getValues().some(x => String(x[0]) === String(v)))
+          throw new Error(`Syöttämäsi tiedot solussa ${String.fromCharCode(64 + c)}${r} rikkovat tietojen vahvistussääntöjä`);
+        sh.set(r, c, v);
+      },
+      getDataValidation: () => sh.rule(r, c),
       getValues: () => Array.from({length: nr}, (_, i) => Array.from({length: nc}, (_, j) => sh.get(r + i, c + j))),
+      getSheet: () => sh, getColumn: () => c, getRow: () => r, getLastRow: () => r + nr - 1,
     };
   }
   appendRow(vals) { const r = this.getLastRow() + 1; vals.forEach((v, i) => this.set(r, i + 1, v)); }
   deleteRow(r) { this.cells.splice(r - 1, 1); }
-  copyTo(ss) { const s = new Sheet(ss, 'Kopio: ' + this.name, this.cells); ss.sheets.push(s); return s; }
+  copyTo(ss) { const s = new Sheet(ss, 'Kopio: ' + this.name, this.cells); s.validations = {...this.validations}; ss.sheets.push(s); return s; }
   hideSheet() { this.hidden = true; }
 }
 
@@ -54,7 +72,9 @@ function defaultSpreadsheet() {
     ['FinDMR kierros loki v0.68', '', 'PVM:', '', 'KIERROSNUMERO', ''],
     ['NRO', '', 'RPT/HOTSPOT', 'KUNTA', 'Lisätietoja', 'Oper:', ''],
   ]));
-  ss.sheets.push(new Sheet(ss, 'Toistimet-data', [['OH2RUP', 'Järvenpää']]));
+  ss.sheets.push(new Sheet(ss, 'Toistimet-data', [['Järvenpää OH2RUP'], ['Mikkeli OH4RUC'], ['Oulu Linnanmaa 70cm'],
+    ['Helsinki Pasila 70cm'], ['Helsinki Malmi 2m'], ['Hotspot'], ['Ulkomaat'], ['POC']]));
+  for (const sh of ss.sheets.slice(0, 2)) sh.validations[3] = { sheet: 'Toistimet-data', col: 1, from: 1, to: 12 };
   return ss;
 }
 
@@ -63,7 +83,8 @@ function load(ss) {
   const props = new Map(), cache = new Map();
   const ctx = {
     console,
-    SpreadsheetApp: { getActiveSpreadsheet: () => ss, getUi: () => { throw new Error('no ui in tests'); } },
+    SpreadsheetApp: { getActiveSpreadsheet: () => ss, getUi: () => { throw new Error('no ui in tests'); },
+                      DataValidationCriteria: { VALUE_IN_LIST: 'VALUE_IN_LIST', VALUE_IN_RANGE: 'VALUE_IN_RANGE' } },
     PropertiesService: { getScriptProperties: () => ({
       getProperty: k => (props.has(k) ? props.get(k) : null),
       setProperty: (k, v) => { props.set(k, String(v)); },

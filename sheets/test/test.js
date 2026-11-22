@@ -74,11 +74,40 @@ test('kirjaus antaa juoksevan numeron ja Oper tulee avaimesta', () => {
   const b = post(signed('OH2ABC', key, 'log', {round: '177', call: 'ES1BBB', via: 'Ulkomaat'}));
   assert.strictEqual(b.row.nro, 2);
   const sh = g.__ss.sheets[0];
-  assert.deepStrictEqual([sh.get(3, 1), sh.get(3, 2), sh.get(3, 3), sh.get(3, 6), sh.get(3, 8)], [1, 'OH2KXA', 'OH2RUP Jarvenpaa', 'OH2ABC', 'OH2RUP, Jarvenpaa']);
+  // RPT/HOTSPOT sovitetaan Toistimet-data-listaan toistimen kutsun perusteella
+  assert.deepStrictEqual([sh.get(3, 1), sh.get(3, 2), sh.get(3, 3), sh.get(3, 6), sh.get(3, 8)], [1, 'OH2KXA', 'Järvenpää OH2RUP', 'OH2ABC', 'OH2RUP, Jarvenpaa']);
+  assert.strictEqual(sh.get(4, 3), 'Ulkomaat');
 });
 test('ääkköset allekirjoituksessa ja taulukossa', () => {
   const r = post(signed('OH2ABC', key, 'edit', {round: '177', call: 'OH2KXA', field: 'kunta', value: 'Järvenpää'}));
   assert.strictEqual(r.ok, true); assert.strictEqual(g.__ss.sheets[0].get(3, 4), 'Järvenpää');
+});
+test('uusi toistin lisätään Toistimet-dataan BrandMeisterin muodossa', () => {
+  const list = () => g.__ss.getSheetByName('Toistimet-data').cells.map(r => r[0]).filter(Boolean);
+  const r = post(signed('OH2ABC', key, 'log', {round: '177', call: 'OH8XYZ', via: 'OH8RMD Kempele', kunta: 'Kempele', dev: 'OH8RMD, Kempele'}));
+  assert.strictEqual(r.ok, true); assert.strictEqual(r.row.via, 'OH8RMD Kempele'); assert.deepStrictEqual(r.added, ['OH8RMD Kempele']);
+  assert.ok(list().includes('OH8RMD Kempele'));
+  // sama toistin uudelleen: ei toista riviä listalle
+  const r2 = post(signed('OH2ABC', key, 'log', {round: '177', call: 'OH8XYY', via: 'OH8RMD Kempele', dev: 'OH8RMD, Kempele'}));
+  assert.deepStrictEqual(r2.added, []); assert.strictEqual(list().filter(x => x === 'OH8RMD Kempele').length, 1);
+  // pelkkä sama kaupunki ei riitä: uusi Helsingin toistin lisätään omana rivinään
+  const r3 = post(signed('OH2ABC', key, 'log', {round: '177', call: 'OH2AMB', via: 'OH2RZZ Helsinki', dev: 'OH2RZZ, Helsinki'}));
+  assert.strictEqual(r3.row.via, 'OH2RZZ Helsinki');
+  // hotspot löytyy listalta isoista/pienistä kirjaimista välittämättä
+  assert.strictEqual(post(signed('OH2ABC', key, 'log', {round: '177', call: 'OH3HSP', via: 'hotspot', dev: 'OH3HSP'})).row.via, 'Hotspot');
+  // käsin muokkaus: listalla oleva arvo kelpaa, listalta puuttuva antaa selvän virheen eikä lisää listalle
+  assert.strictEqual(post(signed('OH2ABC', key, 'edit', {round: '177', call: 'OH8XYZ', field: 'via', value: 'oulu linnanmaa 70cm'})).ok, true);
+  assert.strictEqual(g.__ss.sheets[0].cells.find(x => x[1] === 'OH8XYZ')[2], 'Oulu Linnanmaa 70cm');
+  const bad = post(signed('OH2ABC', key, 'edit', {round: '177', call: 'OH8XYZ', field: 'via', value: 'Kempelee'}));
+  assert.strictEqual(bad.ok, false); assert.match(bad.error, /valintalistalla/); assert.ok(!list().includes('Kempelee'));
+  // täysi lista: selkeä virhe, ei puolivalmista riviä
+  const before = g.__ss.sheets[0].cells.filter(x => x[1]).length;
+  for (let k = 0; k < 3; k++) post(signed('OH2ABC', key, 'log', {round: '177', call: 'OH9F' + 'ABC'[k], via: 'OH9R' + 'ABC'[k] + 'Z Kemi', dev: 'x'}));
+  const full = post(signed('OH2ABC', key, 'log', {round: '177', call: 'OH9FZZ', via: 'OH9RZZ Tornio', dev: 'x'}));
+  assert.strictEqual(full.ok, false); assert.match(full.error, /täynnä/);
+  assert.ok(!g.__ss.sheets[0].cells.some(x => x[1] === 'OH9FZZ'));
+  assert.ok(g.__ss.getSheetByName('Check-in-tapahtumat').cells.some(x => x[2] === 'toistin lisätty listalle'));
+  for (const c of ['OH8XYZ', 'OH8XYY', 'OH2AMB', 'OH3HSP', 'OH9FA', 'OH9FB', 'OH9FC']) post(signed('OH2ABC', key, 'unlog', {round: '177', call: c}));
 });
 test('saman kutsun kirjaus kahdesti ei tee uutta riviä', () => {
   const r = post(signed('OH2ABC', key, 'log', {round: '177', call: 'OH2KXA'}));
