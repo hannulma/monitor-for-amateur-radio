@@ -33,7 +33,7 @@ from . import APP_ID, APP_NAME, __version__, secret_store
 from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
                         validate_passcode, ws_options)
 from .bmapi import BMApi, BMApiError
-from .services import DEFAULT_SERVICES, ServiceHub, normalize_services
+from .services import DEFAULT_SERVICES, MA_COUNTRIES, MA_FEED, ServiceHub, fetch_text, ma_areas, normalize_services, parse_meteoalarm
 from .features import (CALL_OR_ID, DEFAULT_DEVICES, DEFAULT_WATCH, Commands, DeviceMonitor, Heard, Stats,
                        Watcher, bm_user_history)
 
@@ -879,6 +879,19 @@ def make_app(mon: Monitor) -> web.Application:
         except Exception as e:  # noqa: BLE001
             return web.json_response({"ok": False, "error": friendly_error(e)}, status=400)
 
+    async def ma_area_list(request):
+        """MeteoAlarm-maan alueet (nimi ja EMMA_ID) syötteestä alueen valintaa varten."""
+        country = request.query.get("country", "")
+        if country not in MA_COUNTRIES:
+            return web.json_response({"ok": False, "error": tr("Tuntematon maa: {c}", c=country)}, status=400)
+        try:
+            items = parse_meteoalarm(await fetch_text(MA_FEED.format(country), 60))
+        except Exception as e:  # noqa: BLE001
+            return web.json_response({"ok": False, "error": friendly_error(e)}, status=502)
+        areas = ma_areas(items)
+        return web.json_response({"ok": True, "areas": areas, "polygons": any(a["poly"] for a in areas),
+                                  "warnings": len(items)})
+
     async def station(request):
         q = (request.query.get("q") or "").strip().upper().split("-")[0]
         if not q:
@@ -1095,6 +1108,7 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_post("/api/test_message", test_message)
     app.router.add_post("/api/feeds/check", check_feeds)
     app.router.add_get("/api/feeds/preview", preview_feed)
+    app.router.add_get("/api/services/meteoalarm_areas", ma_area_list)
     app.router.add_get("/", index)
     app.router.add_get("/ws", ws_handler)
     app.router.add_get("/api/config", get_config)

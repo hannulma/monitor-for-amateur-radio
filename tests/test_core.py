@@ -331,3 +331,41 @@ def test_calls_limit_migration():
     from bmmonitor.app import CALLS_LIMITS, nearest_calls_limit
     assert CALLS_LIMITS == (10, 25, 50, 100, 150)
     assert [nearest_calls_limit(x) for x in (15, 20, 25, None, 999)] == [10, 25, 25, 10, 150]
+
+
+MA_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:cap="urn:oasis:names:tc:emergency:cap:1.2">
+ <entry><cap:polygon>59.0,24.0 59.0,26.0 60.0,26.0 60.0,24.0 59.0,24.0</cap:polygon>
+  <cap:areaDesc>Harju county</cap:areaDesc><cap:event>Wind Level 1</cap:event><cap:severity>Moderate</cap:severity>
+  <cap:onset>2030-01-01T04:00:00+00:00</cap:onset><cap:expires>2030-01-01T22:00:00+00:00</cap:expires>
+  <cap:message_type>Alert</cap:message_type><cap:identifier>X1</cap:identifier>
+  <title>Orange Wind Warning issued for Estonia - Harju county</title></entry>
+ <entry><cap:geocode><valueName>EMMA_ID</valueName><value>DE202</value></cap:geocode>
+  <cap:areaDesc>Berlin</cap:areaDesc><cap:event>fog</cap:event><cap:severity>Minor</cap:severity>
+  <cap:message_type>Alert</cap:message_type><cap:identifier>X2</cap:identifier>
+  <title>Yellow Fog Warning issued for Germany - Berlin</title></entry>
+</feed>"""
+
+
+def test_meteoalarm_and_ovation():
+    from bmmonitor.services import (Warnings, ma_areas, normalize_services, ovation_prob, parse_meteoalarm,
+                                    DEFAULT_SERVICES)
+    items = parse_meteoalarm(MA_XML)
+    assert [(w["id"], w["color"]) for w in items] == [("X1", "orange"), ("X2", "yellow")]
+    assert ma_areas(items)[0] == {"id": "DE202", "name": "Berlin", "poly": False}
+
+    class Hub:
+        cfg = {"warnings": {"areas": ["de202"]}, "location": {"lat": 59.4, "lon": 24.7}}
+    w = Warnings(Hub())
+    assert w._match_areas(items[0], 59.4, 24.7) == ["Harju county"]       # sijainti alueen sisällä
+    assert w._match_areas(items[1], 59.4, 24.7) == ["Berlin"]             # valittu EMMA_ID:llä
+    assert w._match_areas(items[1], None, None) == ["Berlin"]
+    grid = {"coordinates": [[25, 60, 3], [25, 62, 20], [205, 61, 50]]}
+    assert ovation_prob(grid, 60.2, 24.9, 300) == (3, 20)
+    assert ovation_prob(grid, 61.2, -155.0, 300)[1] == 50                 # pituuspiiri 0–359
+    old = json.loads(json.dumps(DEFAULT_SERVICES))
+    out, ch = normalize_services({"warnings": {"enabled": True, "source": "meteoalarm", "country": "germany",
+                                               "areas": "Berlin; DE074"}}, old)
+    assert out["warnings"]["areas"] == ["Berlin", "DE074"] and "warnings" in ch
+    out, _ = normalize_services({"aurora": {"source": "noaa", "min_prob": 250}}, old)
+    assert out["aurora"]["source"] == "noaa" and out["aurora"]["min_prob"] == 100

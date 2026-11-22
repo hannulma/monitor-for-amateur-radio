@@ -130,6 +130,8 @@
   .switch input:checked + .sl::after { left: 19px; }
   .switch input:focus-visible + .sl { outline: 2px solid var(--accent); outline-offset: 2px; }
   .svc.off .svcbody { opacity: .55; }
+  .svc[data-source="fmi"] .ma-only, .svc[data-source="fmi"] .noaa-only, .svc[data-source="meteoalarm"] .fmi-only,
+  .svc[data-source="noaa"] .fmi-only, .svc:not([data-source]) .ma-only, .svc:not([data-source]) .noaa-only { display: none; }
   .provgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 10px; margin-top: 4px; }
   .provgrid label { display: flex !important; align-items: center; gap: 6px; margin: 0 !important; color: var(--text) !important; font-size: 13px !important; }
   .wcol { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 9px; color: #111; }
@@ -643,11 +645,21 @@
       <h2>⚠ Säävaroitukset <label class="switch"><input type="checkbox" data-en="warnings"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
         <div class="row">
+          <div><label>Lähde</label><select data-k="source" data-src="warnings"><option value="fmi">Ilmatieteen laitos (Suomi)</option><option value="meteoalarm">MeteoAlarm (Eurooppa)</option></select></div>
+          <div class="ma-only"><label>Maa</label><select data-k="country" data-macountry><option value="">– valitse –</option></select></div>
+          <div class="ma-only" style="flex:1;min-width:240px"><label>Alueet (vapaaehtoinen)</label><input type="text" data-k="areas" list="maAreaList" placeholder="esim. Berlin; DE202" style="width:100%">
+            <datalist id="maAreaList"></datalist></div>
+        </div>
+        <div class="hint ma-only" data-maareahint style="margin-top:4px"></div>
+        <div class="row">
           <div><label>Vähintään</label><select data-k="min_color"><option value="yellow">Keltainen</option><option value="orange">Oranssi</option><option value="red">Punainen</option></select></div>
-          <div><label><input type="checkbox" data-k="traffic_weather"> Myös liikennesää</label></div>
+          <div class="fmi-only"><label><input type="checkbox" data-k="traffic_weather"> Myös liikennesää</label></div>
           <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
         </div>
-        <div class="hint">Ilmatieteen laitoksen viralliset varoitukset, jotka koskevat omaa sijaintiasi (kuntarajojen mukaan).</div>
+        <div class="hint fmi-only">Ilmatieteen laitoksen viralliset varoitukset, jotka koskevat omaa sijaintiasi (kuntarajojen mukaan).</div>
+        <div class="hint ma-only">MeteoAlarmin kautta valitun maan virallisen sääpalvelun varoitukset (tekstit englanniksi).
+          Jos maan varoituksissa on aluerajat, ohjelma käyttää omaa sijaintiasi. Muuten valitse alue nimellä tai EMMA-tunnuksella;
+          useampi alue erotetaan puolipisteellä. Lähde: MeteoAlarm.org (CC BY 4.0).</div>
         <div class="row" style="margin-top:8px"><button data-save="warnings">Tallenna</button><span class="err" data-err="warnings"></span></div>
         <div class="svcview" data-view="warnings"></div>
       </div>
@@ -672,13 +684,18 @@
       <h2>🌌 Revontulihälytys <label class="switch"><input type="checkbox" data-en="aurora"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
         <div class="row">
-          <div><label>Hälytysraja (nT/h)</label><input type="number" data-k="threshold_nt" min="20" step="10" style="width:90px"></div>
+          <div><label>Lähde</label><select data-k="source" data-src="aurora"><option value="fmi">Ilmatieteen laitoksen magnetometrit (Suomi)</option><option value="noaa">NOAA OVATION -ennuste (koko maailma)</option></select></div>
+          <div class="fmi-only"><label>Hälytysraja (nT/h)</label><input type="number" data-k="threshold_nt" min="20" step="10" style="width:90px"></div>
+          <div class="noaa-only"><label>Hälytysraja (%)</label><input type="number" data-k="min_prob" min="1" max="100" step="1" style="width:90px"></div>
           <div><label><input type="checkbox" data-k="dark_only"> Vain kun on pimeää</label></div>
           <div><label><input type="checkbox" data-k="skip_overcast"> Ei kun täysin pilvistä</label></div>
           <div><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
         </div>
-        <div class="hint">Lähimmän Ilmatieteen laitoksen magnetometrin kentän vaihtelu viimeisen tunnin aikana. Raja = mahdollisia,
+        <div class="hint fmi-only">Lähimmän Ilmatieteen laitoksen magnetometrin kentän vaihtelu viimeisen tunnin aikana. Raja = mahdollisia,
           2× = todennäköisiä, 4× = voimakkaita (uusi hälytys tason noustessa). Etelä-Suomessa 100 nT/h on hyvä lähtökohta, Lapissa noin 50.</div>
+        <div class="hint noaa-only">NOAA:n OVATION-malli ennustaa 30–90 minuutin päähän, millä todennäköisyydellä revontulet näkyvät.
+          Ohjelma käyttää suurinta arvoa 300 km säteellä, koska revontulet näkyvät taivaanrannassa kauempaakin. Raja = mahdollisia,
+          2× = todennäköisiä, 4× = voimakkaita. 10 % on hyvä lähtökohta.</div>
         <div class="row" style="margin-top:8px"><button data-save="aurora">Tallenna</button><span class="err" data-err="aurora"></span></div>
         <div class="svcview" data-view="aurora"></div>
       </div>
@@ -1770,13 +1787,17 @@ function fillServices() {
   const tSec = svcSec("traffic");
   tSec.querySelector("[data-provs]").innerHTML = st.provinces.map(p => `<label><input type="checkbox" value="${esc(p)}">${esc(p)}</label>`).join("");
   tSec.querySelector("[data-types]").innerHTML = Object.entries(st.traffic_types).map(([k, v]) => `<label><input type="checkbox" value="${k}">${esc(v)}</label>`).join("");
+  const mc = svcSec("warnings").querySelector("[data-macountry]");
+  mc.innerHTML = `<option value="">${esc(T("– valitse –"))}</option>` + Object.entries(st.ma_countries || {}).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join("");
   SVC.forEach(n => {
     const sec = svcSec(n), cfg = c[n];
+    if (cfg.source) sec.dataset.source = cfg.source;
     const en = sec.querySelector(`[data-en]`); en.checked = !!cfg.enabled;
     sec.querySelectorAll("[data-k]").forEach(el => {
       const k = el.dataset.k; let v = cfg[k];
       if (k === "center") v = cfg.center ? cfg.center.label : "";
       if (k === "roads") v = (v || []).join(" ");
+      if (k === "areas") v = (v || []).join("; ");
       if (el.type === "checkbox") el.checked = !!v; else el.value = v ?? "";
     });
     if (n === "traffic") {
@@ -1785,7 +1806,28 @@ function fillServices() {
     }
     sec.querySelector("[data-err]").textContent = "";
   });
+  loadMaAreas();
   renderServices();
+}
+// lähteen vaihto näyttää lähteen omat kentät; MeteoAlarmissa haetaan maan alueet valintalistaan
+document.querySelectorAll("[data-src]").forEach(sel => sel.addEventListener("change", () => {
+  svcSec(sel.dataset.src).dataset.source = sel.value;
+  if (sel.dataset.src === "warnings") loadMaAreas();
+}));
+svcSec("warnings").querySelector("[data-macountry]").addEventListener("change", loadMaAreas);
+let maAreasFor = null;
+async function loadMaAreas() {
+  const sec = svcSec("warnings"), country = sec.querySelector("[data-macountry]").value, hint = sec.querySelector("[data-maareahint]");
+  if (sec.dataset.source !== "meteoalarm" || !country) { hint.textContent = ""; return; }
+  if (maAreasFor === country) return;
+  maAreasFor = country; hint.textContent = T("Haetaan alueita…");
+  try {
+    const j = await (await fetch("/api/services/meteoalarm_areas?country=" + encodeURIComponent(country))).json();
+    if (!j.ok) { hint.textContent = j.error; maAreasFor = null; return; }
+    $("maAreaList").innerHTML = j.areas.map(a => `<option value="${esc(a.name)}">${esc(a.id)}</option>`).join("");
+    hint.textContent = j.polygons ? T("Tämän maan varoituksissa on aluerajat: oma sijainti riittää, alueet ovat lisävalinta.")
+      : T("Tämän maan varoituksissa ei ole aluerajoja: valitse alue. Listalla ovat ne {n} aluetta, joilla on nyt varoituksia; muut voi kirjoittaa nimellä tai EMMA-tunnuksella.", {n: j.areas.length});
+  } catch (e) { hint.textContent = String(e); maAreasFor = null; }
 }
 function collectSvc(n) {
   const sec = svcSec(n), o = {};
@@ -1861,7 +1903,16 @@ function renderServices() {
         <div class="tile"><div class="lbl">Suurin 6 h</div><div class="val">${s.kp_max6h != null ? dec(s.kp_max6h.toFixed(1)) : "–"}</div></div></div>` +
         ((s.recent || []).length ? `<div class="muted" style="margin-top:10px">${esc(T("NOAA:n viimeisimmät ilmoitukset (Kp-raja {thr} tai purkaukset)", {thr}))}</div><table><tbody>${s.recent.slice(0, 5).map(x => `<tr><td>${fmtShort(x.time)}</td><td class="wrap">${esc(x.title)}</td></tr>`).join("")}</tbody></table>` : "");
     }
-    if (n === "aurora" && on && s.nearest) {
+    if (n === "aurora" && on && s.source === "noaa" && s.prob != null) {
+      const thr = c.aurora.min_prob, lvlTxt = ["rauhallista", "mahdollisia", "todennäköisiä", "voimakkaita"][s.level || 0];
+      v = `<div class="tiles" style="padding:10px 0 0">
+        <div class="tile"><div class="lbl">${esc(T("Todennäköisyys {r} km säteellä", {r: s.radius}))}</div><div class="val ${s.level ? "warn" : ""}">${esc(s.prob)} %</div><div class="muted">${esc(T(lvlTxt))}</div></div>
+        <div class="tile"><div class="lbl">Suoraan yläpuolella</div><div class="val">${esc(s.prob_here)} %</div><div class="muted">${s.forecast_time ? esc(T("ennuste klo {t}", {t: fmtTime(s.forecast_time)})) : ""}</div></div>
+        <div class="tile"><div class="lbl">Pimeys</div><div class="val">${s.dark ? "pimeää" : "valoisaa"}</div><div class="muted">${esc(T("aurinko {s}°", {s: dec(String(s.sun))}))}</div></div>
+        <div class="tile"><div class="lbl">Pilvisyys</div><div class="val">${s.clouds != null ? Math.round(s.clouds) + "/8" : "–"}</div><div class="muted">${esc(s.clouds != null ? (s.cloud_station || "") : T("vain Suomessa"))}</div></div></div>
+        <div class="muted" style="margin-top:4px">${esc(T("NOAA SWPC OVATION. Raja {thr} %.", {thr}))}</div>`;
+    }
+    if (n === "aurora" && on && s.source !== "noaa" && s.nearest) {
       const thr = c.aurora.threshold_nt, lvlTxt = ["rauhallista", "mahdollisia", "todennäköisiä", "voimakkaita"][s.level || 0];
       const mx = Math.max(thr * 2, ...(s.stations || []).map(x => x.range));
       v = `<div class="tiles" style="padding:10px 0 0">

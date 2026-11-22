@@ -118,7 +118,7 @@ BrandMeister), `-v` (verbose).
 5. **Alerts on your radio (optional):** *Syötteet ja viestit* → set an APRS-IS login (your callsign with an
    unused SSID, e.g. `OH2ABC-13`) and the recipient = your radio's APRS SSID configured in
    BrandMeister SelfCare (e.g. `OH2ABC-7`), then *Send test message*.
-6. **Services:** *Palvelut* → set your location (coordinates or Maidenhead locator) and switch on the services you want.
+6. **Services:** *Palvelut* → set your location (coordinates or Maidenhead locator) and switch on the services you want. Weather warnings can come from the Finnish Meteorological Institute or MeteoAlarm (38 European countries), and the aurora alert from FMI magnetometers or the NOAA OVATION forecast (worldwide).
 
 ### Commands from your radio
 

@@ -6,6 +6,8 @@ Hälytykset-listassa ja ilmoituksina, ja ne voi lähettää tekstiviestinä radi
 Lähteet:
 - Salamat:      FMI avoin data, WFS fmi::observations::lightning::simple
 - Varoitukset:  FMI CAP-syöte https://alerts.fmi.fi/cap/feed/atom_fi-FI.xml
+                tai MeteoAlarm https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-<maa>
+- Revontulet:   FMI magnetometrit tai NOAA SWPC ovation_aurora_latest.json
 - Avaruussää:   NOAA SWPC planetary_k_index_1m.json ja alerts.json
 - Tieliikenne:  Digitraffic tie.digitraffic.fi/api/traffic-message/v1/messages
 """
@@ -34,13 +36,27 @@ TRAFFIC_TYPES = {"TRAFFIC_ANNOUNCEMENT": "Liikennetiedotteet (onnettomuudet, hä
                  "WEIGHT_RESTRICTION": "Painorajoitukset",
                  "EXEMPTED_TRANSPORT": "Erikoiskuljetukset"}
 COLORS = {"yellow": 1, "orange": 2, "red": 3}
+# MeteoAlarmin maat (syötteen nimi -> näyttönimi). Syöte: meteoalarm-legacy-atom-<nimi>
+MA_COUNTRIES = {"austria": "Itävalta", "belgium": "Belgia", "bosnia-herzegovina": "Bosnia ja Hertsegovina",
+                "bulgaria": "Bulgaria", "croatia": "Kroatia", "cyprus": "Kypros", "czechia": "Tšekki",
+                "denmark": "Tanska", "estonia": "Viro", "finland": "Suomi", "france": "Ranska", "germany": "Saksa",
+                "greece": "Kreikka", "hungary": "Unkari", "iceland": "Islanti", "ireland": "Irlanti",
+                "israel": "Israel", "italy": "Italia", "latvia": "Latvia", "lithuania": "Liettua",
+                "luxembourg": "Luxemburg", "malta": "Malta", "moldova": "Moldova", "montenegro": "Montenegro",
+                "netherlands": "Alankomaat", "republic-of-north-macedonia": "Pohjois-Makedonia", "norway": "Norja",
+                "poland": "Puola", "portugal": "Portugali", "romania": "Romania", "serbia": "Serbia",
+                "slovakia": "Slovakia", "slovenia": "Slovenia", "spain": "Espanja", "sweden": "Ruotsi",
+                "switzerland": "Sveitsi", "ukraine": "Ukraina", "united-kingdom": "Iso-Britannia"}
+MA_FEED = "https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-{}"
 
 DEFAULT_SERVICES = {
     "location": {"lat": None, "lon": None, "label": ""},
     "lightning": {"enabled": False, "radius_km": 30, "cooldown_min": 30, "ground_only": False, "sms": False},
-    "warnings": {"enabled": False, "min_color": "yellow", "traffic_weather": True, "sms": False},
+    "warnings": {"enabled": False, "source": "fmi", "country": "", "areas": [], "min_color": "yellow",
+                 "traffic_weather": True, "sms": False},
     "space": {"enabled": False, "kp_threshold": 5, "forecasts": True, "flares": True, "sms": False},
-    "aurora": {"enabled": False, "threshold_nt": 100, "dark_only": True, "skip_overcast": False, "sms": False},
+    "aurora": {"enabled": False, "source": "fmi", "threshold_nt": 100, "min_prob": 10, "dark_only": True,
+               "skip_overcast": False, "sms": False},
     "radiation": {"enabled": False, "threshold": 0.4, "radius_km": 100, "sms": False},
     "traffic": {"enabled": False, "use_location": True, "radius_km": 30, "provinces": [], "roads": [],
                 "types": ["TRAFFIC_ANNOUNCEMENT"], "updates": False, "details": False, "sms": False},
@@ -391,6 +407,61 @@ def short_warning(w: dict) -> str:
     return text
 
 
+def parse_meteoalarm(xml: str) -> list[dict]:
+    """MeteoAlarmin Atom-syöte: yksi entry per varoitus ja alue. Palauttaa varoitukset ryhmiteltyinä
+    tunnisteen mukaan, alueina nimi, EMMA_ID ja mahdolliset monikulmiot."""
+    ns = {"a": "http://www.w3.org/2005/Atom", "c": "urn:oasis:names:tc:emergency:cap:1.2"}
+    root = ET.fromstring(xml)
+    out: dict[str, dict] = {}
+    for e in root.findall("a:entry", ns):
+        g = lambda tag: (e.findtext(f"c:{tag}", default="", namespaces=ns) or "").strip()  # noqa: E731
+        ident = g("identifier") or (e.findtext("a:id", "", ns) or "")
+        title = (e.findtext("a:title", "", ns) or "").strip()
+        m = re.match(r"(yellow|orange|red)\b", title, re.I)
+        color = m.group(1).lower() if m else {"Severe": "orange", "Extreme": "red"}.get(g("severity"), "yellow")
+        polys = []
+        for p in e.findall("c:polygon", ns):
+            pts = []
+            for pair in (p.text or "").split():
+                try:
+                    la, lo = pair.split(",")
+                    pts.append((float(la), float(lo)))
+                except ValueError:
+                    continue
+            if len(pts) >= 3:
+                polys.append(pts)
+        emma = ""
+        for gc in e.findall("c:geocode", ns):
+            vn = next((x.text for x in gc if x.tag.endswith("valueName")), "")
+            if vn == "EMMA_ID":
+                emma = (next((x.text for x in gc if x.tag.split("}")[-1] == "value"), "") or "").strip()
+        w = out.setdefault(ident, {
+            "id": ident, "msgType": g("message_type") or g("msgType") or "Alert", "references": "",
+            "sent": _iso_to_ts(g("sent")), "event": g("event"), "code": "", "severity": g("severity"),
+            "headline": re.sub(r"\s+-\s+[^-]*$", "", title) or g("event"), "description": "",
+            "onset": _iso_to_ts(g("onset")) or _iso_to_ts(g("effective")), "expires": _iso_to_ts(g("expires")),
+            "color": color, "areas": [], "params": {}})
+        w["areas"].append({"name": g("areaDesc"), "emma": emma, "polygons": polys})
+    return list(out.values())
+
+
+def ma_areas(items: list[dict]) -> list[dict]:
+    """Syötteen alueet valintalistaksi (nimi ja EMMA_ID)."""
+    seen = {}
+    for w in items:
+        for a in w["areas"]:
+            if a["name"]:
+                seen[(a["emma"], a["name"])] = bool(a["polygons"])
+    return [{"id": k[0], "name": k[1], "poly": v} for k, v in sorted(seen.items(), key=lambda x: x[0][1].lower())]
+
+
+def short_ma(w: dict) -> str:
+    """Esim. 'Keltainen tuulivaroitus: Wind Level 1, nyt–24'."""
+    color = tr(COLORFI.get(w.get("color"), ""))
+    span = _span_fi(w.get("onset"), w.get("expires"))
+    return f"{color}: {w.get('event') or w.get('headline')}" + (f", {span}" if span else "")
+
+
 class Warnings(Service):
     name = "warnings"
     title = "Säävaroitukset"
@@ -403,17 +474,42 @@ class Warnings(Service):
         self.alerted_headlines: dict[str, str] = {}   # id -> headline
         self.active: list[dict] = []
 
+    def _match_areas(self, w: dict, lat, lon) -> list[str]:
+        """Osuvat alueet: oma sijainti alueen rajojen sisällä tai alue valittu nimellä / EMMA_ID:llä."""
+        wanted = {x.strip().lower() for x in self.cfg.get("areas") or [] if x.strip()}
+        hit = []
+        for a in w["areas"]:
+            if lat is not None and any(point_in_polygon(lat, lon, p) for p in a["polygons"]):
+                hit.append(a["name"])
+            elif wanted and (a["name"].lower() in wanted or (a.get("emma") or "").lower() in wanted):
+                hit.append(a["name"])
+        return hit
+
     async def check(self):
-        if not self.loc:
-            raise ValueError(tr("Aseta oma sijainti"))
-        lat, lon = self.loc
-        items = parse_cap_feed(await fetch_text(self.FEED, 60))
+        ma = self.cfg.get("source") == "meteoalarm"
+        lat, lon = self.loc or (None, None)
+        if ma:
+            country = self.cfg.get("country") or ""
+            if country not in MA_COUNTRIES:
+                raise ValueError(tr("Valitse maa"))
+            items = parse_meteoalarm(await fetch_text(MA_FEED.format(country), 60))
+            has_poly = any(a["polygons"] for w in items for a in w["areas"])
+            if not self.cfg.get("areas") and (lat is None or (items and not has_poly)):
+                raise ValueError(tr("Valitse alue: tämän maan varoituksissa ei ole aluerajoja, joten sijaintia ei voi käyttää"
+                                    if items and not has_poly else "Aseta oma sijainti tai valitse alue"))
+        else:
+            if lat is None:
+                raise ValueError(tr("Aseta oma sijainti"))
+            items = parse_cap_feed(await fetch_text(self.FEED, 60))
         min_level = COLORS.get(self.cfg.get("min_color", "yellow"), 1)
         now = time.time()
         mine = []
         for w in items:
-            hit = [a["name"] for a in w["areas"] if any(point_in_polygon(lat, lon, p) for p in a["polygons"])]
+            hit = self._match_areas(w, lat, lon) if ma else \
+                [a["name"] for a in w["areas"] if any(point_in_polygon(lat, lon, p) for p in a["polygons"])]
             if not hit:
+                continue
+            if ma and w["msgType"] == "Cancel":
                 continue
             if not self.cfg.get("traffic_weather", True) and w["code"] == "trafficWeather":
                 continue
@@ -421,7 +517,7 @@ class Warnings(Service):
                 continue
             w = {k: v for k, v in w.items() if k != "areas"}
             w["here"] = hit[0]
-            w["short"] = short_warning(w)
+            w["short"] = short_ma(w) if ma else short_warning(w)
             mine.append(w)
         cancelled_refs = {r for w in mine if w["msgType"] == "Cancel" for r in re.findall(r"urn:oid:[\d.]+", w["references"])}
         self.active = sorted([w for w in mine if w["msgType"] != "Cancel" and w["id"] not in cancelled_refs
@@ -439,14 +535,16 @@ class Warnings(Service):
                 if not refs & set(self.alerted_headlines):
                     continue
             elif w["msgType"] == "Update":
-                prev = {self.alerted_headlines.get(r) for r in refs}
-                if w["headline"] in prev:
+                prev = {self.alerted_headlines.get(r) for r in refs} if refs else set(self.alerted_headlines.values())
+                if (w["short"] if not refs else w["headline"]) in prev:
                     self.alerted_headlines[w["id"]] = w["headline"]
                     continue
-            self.alerted_headlines[w["id"]] = w["headline"]
+            self.alerted_headlines[w["id"]] = w["short"] if ma else w["headline"]
             color = {"yellow": "Keltainen", "orange": "Oranssi", "red": "Punainen"}.get(w["color"], "")
             level = "bad" if w["color"] in ("orange", "red") else "warn"
-            self.alert(f"⚠ {w['short']}", f"{w['description']} ({w['here']})", w["short"], level if w["msgType"] != "Cancel" else "info")
+            body = f"{w['description'] or w['headline']} ({w['here']})"
+            self.alert(f"⚠ {w['short']}", body, w["short"] + (f" ({w['here']})" if ma else ""),
+                       level if w["msgType"] != "Cancel" else "info")
             log.info("Varoitus: %s %s", color, w["headline"])
 
 
@@ -581,21 +679,59 @@ async def fetch_clouds(lat: float, lon: float) -> tuple[float | None, str]:
     return latest[c], names[idx] if 0 <= idx < len(names) else ""
 
 
+def ovation_prob(data: dict, lat: float, lon: float, radius_km: float = 300) -> tuple[int, int]:
+    """NOAA OVATION -ruudukosta (1° x 1°, pituuspiiri 0–359) todennäköisyys omalla kohdalla ja suurin
+    arvo radius_km säteellä. Revontulet näkyvät taivaanrannassa kauempaakin kuin suoraan yläpuolella."""
+    lon360 = lon % 360
+    here, best = 0, 0
+    for c in data.get("coordinates") or []:
+        try:
+            clon, clat, v = float(c[0]), float(c[1]), float(c[2])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if abs(clat - lat) > radius_km / 111 + 1:
+            continue
+        dlon = min(abs(clon - lon360), 360 - abs(clon - lon360))
+        if round(clat) == round(lat) and dlon < 0.5:
+            here = max(here, int(v))
+        if distance_km(lat, lon, clat, clon if clon <= 180 else clon - 360) <= radius_km:
+            best = max(best, int(v))
+    return here, max(best, here)
+
+
 class Aurora(Service):
     name = "aurora"
     title = "Revontulihälytys"
     interval = 300
     WFS = "https://opendata.fmi.fi/wfs"
+    OVATION = "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json"
+    RADIUS = 300
 
     def __init__(self, hub):
         super().__init__(hub)
         self.level = 0          # 0 = ei, 1 = mahdollisia, 2 = todennäköisiä, 3 = voimakkaita
         self.stations: list[dict] = []
 
+    async def _check_noaa(self, lat, lon):
+        data = await fetch_json(self.OVATION, 60)
+        here, prob = ovation_prob(data, lat, lon, self.RADIUS)
+        thr = float(self.cfg.get("min_prob") or 10)
+        lvl = 3 if prob >= min(100, 4 * thr) else 2 if prob >= min(100, 2 * thr) else 1 if prob >= thr else 0
+        self.stations = []
+        return {"source": "noaa", "prob": prob, "prob_here": here, "radius": self.RADIUS,
+                "forecast_time": _iso_to_ts(data.get("Forecast Time")), "nearest": None}, lvl, prob, thr
+
     async def check(self):
         if not self.loc:
             raise ValueError(tr("Aseta oma sijainti"))
         lat, lon = self.loc
+        if self.cfg.get("source") == "noaa":
+            info, lvl, val, thr = await self._check_noaa(lat, lon)
+            await self._decide(lat, lon, info, lvl, val, thr,
+                               lambda word, cl: tr("Revontulet {word}: NOAA-ennuste {p} %{cl}", word=word, p=val, cl=cl),
+                               tr("NOAA:n OVATION-ennuste: näkyvien revontulien todennäköisyys {r} km säteellä. "
+                                  "VHF-revontulikelit mahdollisia.", r=self.RADIUS))
+            return
         start = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 3900))
         xml = await fetch_text(f"{self.WFS}?service=WFS&version=2.0.0&request=getFeature"
                                f"&storedquery_id=fmi::observations::magnetometer::simple"
@@ -625,6 +761,14 @@ class Aurora(Service):
         thr = float(self.cfg.get("threshold_nt") or 100)
         rng = near["range"]
         lvl = 3 if rng >= 4 * thr else 2 if rng >= 2 * thr else 1 if rng >= thr else 0
+        await self._decide(lat, lon, {"source": "fmi", "nearest": near}, lvl, rng, thr,
+                           lambda word, cl: tr("Revontulet {word}: {name} {rng} nT/h{cl}", word=word, name=near["name"],
+                                               rng=rng, cl=cl),
+                           tr("Magneettinen aktiivisuus lähimmällä magnetometrillä ({name}, {km} km). "
+                              "VHF-revontulikelit mahdollisia.", name=near["name"], km=near["km"]))
+
+    async def _decide(self, lat, lon, info: dict, lvl: int, val: float, thr: float, text, body: str):
+        """Yhteinen hälytyslogiikka: uusi hälytys, kun taso nousee ja revontulet voivat näkyä."""
         elev = sun_elevation(lat, lon)
         dark = elev < -6
         clouds, cloud_st = (None, "")
@@ -632,8 +776,9 @@ class Aurora(Service):
             clouds, cloud_st = await fetch_clouds(lat, lon)
         except Exception:  # noqa: BLE001
             pass
-        self.status.update(nearest=near, sun=round(elev, 1), dark=dark, clouds=clouds, cloud_station=cloud_st,
-                           level=lvl)
+        for k in ("prob", "prob_here", "radius", "forecast_time"):
+            self.status.pop(k, None)
+        self.status.update(**info, sun=round(elev, 1), dark=dark, clouds=clouds, cloud_station=cloud_st, level=lvl)
         if not self.primed:
             self.primed = True
             self.level = lvl if (dark or not self.cfg.get("dark_only", True)) else 0
@@ -641,17 +786,15 @@ class Aurora(Service):
         visible_ok = dark or not self.cfg.get("dark_only", True)
         if self.cfg.get("skip_overcast") and clouds is not None and clouds >= 7:
             visible_ok = False
-        if lvl == 0 and rng < thr * 0.6:
+        if lvl == 0 and val < thr * 0.6:
             self.level = 0
             return
         if lvl > self.level and visible_ok:
             self.level = lvl
             word = tr({1: "mahdollisia", 2: "todennäköisiä", 3: "voimakkaita"}[lvl])
             cl = tr(", pilvisyys {c}/8", c=int(clouds)) if clouds is not None else ""
-            txt = tr("Revontulet {word}: {name} {rng} nT/h{cl}", word=word, name=near["name"], rng=rng, cl=cl)
-            self.alert(f"🌌 {txt}", tr("Magneettinen aktiivisuus lähimmällä magnetometrillä ({name}, {km} km). "
-                                      "VHF-revontulikelit mahdollisia.", name=near["name"], km=near["km"]),
-                       txt, "warn" if lvl < 3 else "bad")
+            txt = text(word, cl)
+            self.alert(f"🌌 {txt}", body, txt, "warn" if lvl < 3 else "bad")
 
 
 # --------------------------------------------------------------------------
@@ -1017,6 +1160,7 @@ class ServiceHub:
         out["aurora"] = {**A.status, "stations": A.stations}
         out["radiation"] = {**R.status, "stations": R.stations}
         out["provinces"] = PROVINCES
+        out["ma_countries"] = {k: tr(v) for k, v in sorted(MA_COUNTRIES.items(), key=lambda x: tr(x[1]))}
         out["traffic_types"] = {k: tr(v) for k, v in TRAFFIC_TYPES.items()}
         return out
 
@@ -1055,6 +1199,23 @@ def normalize_services(new: dict, old: dict) -> tuple[dict, set[str]]:
     setn("lightning", "radius_km", 1, 300)
     setn("lightning", "cooldown_min", 0, 1440)
     setb("lightning", "ground_only")
+    nw = new.get("warnings", {})
+    if "source" in nw:
+        out["warnings"]["source"] = "meteoalarm" if nw["source"] == "meteoalarm" else "fmi"
+    if "country" in nw:
+        c = str(nw["country"] or "")
+        if c and c not in MA_COUNTRIES:
+            raise ValueError(tr("Tuntematon maa: {c}", c=c))
+        out["warnings"]["country"] = c
+    if "areas" in nw:
+        a = nw["areas"]
+        a = re.split(r"[;\n]" if ";" in a or "\n" in a else ",", a) if isinstance(a, str) else a
+        out["warnings"]["areas"] = [str(x).strip()[:80] for x in a if str(x).strip()][:30]
+    if out["warnings"].get("source") == "meteoalarm" and out["warnings"].get("enabled") and not out["warnings"].get("country"):
+        raise ValueError(tr("Valitse maa"))
+    if new.get("aurora", {}).get("source") in ("fmi", "noaa"):
+        out["aurora"]["source"] = new["aurora"]["source"]
+    setn("aurora", "min_prob", 1, 100)
     if new.get("warnings", {}).get("min_color") in COLORS:
         out["warnings"]["min_color"] = new["warnings"]["min_color"]
     setb("warnings", "traffic_weather")
@@ -1070,11 +1231,11 @@ def normalize_services(new: dict, old: dict) -> tuple[dict, set[str]]:
     setb("traffic", "updates")
     setb("traffic", "details")
     setn("traffic", "radius_km", 0, 500)
-    tr = new.get("traffic", {})
-    if "provinces" in tr:
-        out["traffic"]["provinces"] = [p for p in tr["provinces"] if p in PROVINCES]
-    if "roads" in tr:
-        r = tr["roads"]
+    trf = new.get("traffic", {})
+    if "provinces" in trf:
+        out["traffic"]["provinces"] = [p for p in trf["provinces"] if p in PROVINCES]
+    if "roads" in trf:
+        r = trf["roads"]
         r = r.replace(",", " ").split() if isinstance(r, str) else r
         roads = []
         for x in r:
@@ -1085,10 +1246,10 @@ def normalize_services(new: dict, old: dict) -> tuple[dict, set[str]]:
                 raise ValueError(tr("Tienumeron pitää olla numero: {x}", x=x))
             roads.append(int(x))
         out["traffic"]["roads"] = roads
-    if "types" in tr:
-        out["traffic"]["types"] = [t for t in tr["types"] if t in TRAFFIC_TYPES] or ["TRAFFIC_ANNOUNCEMENT"]
-    if "center" in tr:
-        c = str(tr["center"] or "").strip()
+    if "types" in trf:
+        out["traffic"]["types"] = [t for t in trf["types"] if t in TRAFFIC_TYPES] or ["TRAFFIC_ANNOUNCEMENT"]
+    if "center" in trf:
+        c = str(trf["center"] or "").strip()
         if c:
             lat, lon = parse_location(c)
             out["traffic"]["center"] = {"lat": lat, "lon": lon, "label": c}
@@ -1099,6 +1260,8 @@ def normalize_services(new: dict, old: dict) -> tuple[dict, set[str]]:
             changed.add(k)
     for sec in ("lightning", "warnings", "traffic", "aurora", "radiation"):
         if sec == "radiation" and not out[sec].get("radius_km"):
+            continue
+        if sec == "warnings" and out[sec].get("source") == "meteoalarm" and out[sec].get("areas"):
             continue
         if out[sec].get("enabled") and out["location"].get("lat") is None and not (
                 sec == "traffic" and (not out["traffic"].get("use_location") and out["traffic"].get("center")

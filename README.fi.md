@@ -111,9 +111,9 @@ Jokaisella palvelulla on oma **päälle/pois-kytkin**; kaikki ovat oletuksena po
 | Palvelu | Lähde | Asetukset |
 |---|---|---|
 | ⚡ Salamahälytys | Ilmatieteen laitos | säde, uuden hälytyksen väli (heti uudestaan, jos salamat lähestyvät yli 5 km), vain maasalamat |
-| ⚠ Säävaroitukset | Ilmatieteen laitoksen CAP-varoitukset | vähimmäistaso (keltainen/oranssi/punainen), liikennesää; varoitus tulee kun sijaintisi on varoitusalueella |
+| ⚠ Säävaroitukset | Ilmatieteen laitoksen CAP-varoitukset tai MeteoAlarm (38 Euroopan maata) | vähimmäistaso (keltainen/oranssi/punainen), liikennesää (IL); varoitus tulee kun sijaintisi on varoitusalueella. MeteoAlarmissa valitaan maa, ja jos maan varoituksissa ei ole aluerajoja, alue nimellä tai EMMA-tunnuksella |
 | ☀ Avaruussää | NOAA SWPC | Kp-raja (oletus 5), auringonpurkaukset ≥ M5, NOAA:n K-ennusteet |
-| 🌌 Revontulihälytys | Ilmatieteen laitoksen magnetometrit | raja nT/h (raja = mahdollisia, 2× = todennäköisiä, 4× = voimakkaita), vain pimeällä, ei täysin pilvisellä; viestissä pilvisyys |
+| 🌌 Revontulihälytys | Ilmatieteen laitoksen magnetometrit tai NOAA:n OVATION-ennuste (koko maailma, raja %, suurin arvo 300 km säteellä) | raja nT/h (raja = mahdollisia, 2× = todennäköisiä, 4× = voimakkaita), vain pimeällä, ei täysin pilvisellä; viestissä pilvisyys |
 | ☢ Säteilyvalvonta | STUK (~250 asemaa) | raja (oletus 0,4 µSv/h = STUK:n hälytysraja), säde tai koko Suomi |
 | 🚧 Tieliikenne | Fintraffic Digitraffic | säde oman sijainnin tai muun pisteen ympärillä, maakunnat, tienumerot, tiedotetyypit |
 
