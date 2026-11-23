@@ -168,6 +168,15 @@
   .frow .fld.checks { gap: 6px; }
   .frow.svcsave { margin-top: 12px; align-items: center; }
   .svc .hint { margin-top: 8px; }
+  .sattab td { padding: 5px 8px; white-space: nowrap; }
+  .sattab td.wrap { white-space: normal; font-size: 12px; }
+  .sattab tr.now td { background: rgba(34, 197, 94, .08); }
+  .sattab .bell { background: none; border: 0; padding: 0 2px; font-size: 14px; opacity: .25; filter: grayscale(1); cursor: pointer; }
+  .sattab .bell.on { opacity: 1; filter: none; }
+  .sattab .vis { color: var(--warn); font-size: 12px; margin-left: 4px; }
+  .satsel summary { cursor: pointer; color: var(--muted); }
+  .satgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; margin-top: 8px; }
+  .satgrid label { margin: 0; color: var(--text); font-size: 13px; display: flex; gap: 6px; align-items: center; }
   .radtab { width: auto; min-width: 60%; margin-top: 8px; }
   .radtab td { padding: 5px 10px; }
   .radtab td.bar { width: 160px; }
@@ -757,6 +766,26 @@
         <div class="svcview" data-view="traffic"></div>
       </div>
       <div class="svcstatus" data-st="traffic"></div>
+    </section>
+    <section class="svc form wide" data-svc="satellites">
+      <h2>🛰 Satelliittien ylilennot <label class="switch"><input type="checkbox" data-en="satellites"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
+      <div class="svcbody inner">
+        <div class="frow">
+          <div class="fld"><label>Hälytys ennen nousua (min)</label><input type="number" data-k="lead_min" min="1" max="240" style="width:90px"></div>
+          <div class="fld"><label>Korkeuskulma vähintään (°)</label><input type="number" data-k="min_el" min="0" max="90" style="width:90px">
+            <div class="hint">matalammat ylilennot jätetään pois</div></div>
+          <div class="fld checks">
+            <label><input type="checkbox" data-k="iss_visible"> ISS:n näkyvät ylilennot (paljaalla silmällä)</label>
+            <label><input type="checkbox" data-k="only_alerted"> Näytä vain hälytettävät satelliitit</label>
+            <label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
+        </div>
+        <div class="hint">ISS ja aktiiviset radioamatöörisatelliitit, joilla on toimiva toistin, transponderi tai digipiitteri.
+          Hälytys tulee valituista satelliiteista (🔔, oletuksena ISS). Ratatiedot: CelesTrak, taajuudet: SatNOGS DB (CC BY-SA),
+          päivitys kerran vuorokaudessa.</div>
+        <div class="frow svcsave"><button class="primary" data-save="satellites">Tallenna</button><span class="err" data-err="satellites"></span></div>
+        <div class="svcview" data-view="satellites"></div>
+      </div>
+      <div class="svcstatus" data-st="satellites"></div>
     </section>
   </div>
 </main>
@@ -1832,7 +1861,7 @@ $("rSend").onclick = async () => {
 };
 
 // ---------------- palvelut ----------------
-const SVC = ["lightning", "warnings", "space", "aurora", "radiation", "traffic"];
+const SVC = ["lightning", "warnings", "space", "aurora", "radiation", "traffic", "satellites"];
 function svcSec(n) { return document.querySelector(`.svc[data-svc="${n}"]`); }
 function fillServices() {
   const c = S.config.services, st = S.services;
@@ -1899,6 +1928,20 @@ async function saveSvc(n, extra) {
   return j;
 }
 document.querySelectorAll("[data-save]").forEach(b => b.onclick = () => saveSvc(b.dataset.save));
+// satelliittien hälytysvalinnat: kello taulukossa ja valintaruudut listassa
+function toggleSatAlert(norad, on) {
+  const set = new Set(S.config.services.satellites.alert_sats || []);
+  if (on) set.add(norad); else set.delete(norad);
+  return saveSvc("satellites", {alert_sats: [...set]});
+}
+svcSec("satellites").addEventListener("click", e => {
+  const b = e.target.closest("[data-bell]"); if (!b) return;
+  const n = Number(b.dataset.bell); toggleSatAlert(n, !(S.config.services.satellites.alert_sats || []).includes(n)).then(renderServices);
+});
+svcSec("satellites").addEventListener("change", e => {
+  const cb = e.target.closest("[data-bellcb]"); if (!cb) return;
+  toggleSatAlert(Number(cb.dataset.bellcb), cb.checked).then(renderServices);
+});
 document.querySelectorAll("[data-en]").forEach(cb => cb.onchange = async () => {
   const n = cb.dataset.en, j = await saveSvc(n, {enabled: cb.checked});
   if (!j.ok) cb.checked = !cb.checked;
@@ -1985,6 +2028,25 @@ function renderServices() {
         <table class="radtab"><tbody>${(s.stations || []).map(x => `<tr${x.dr >= thr ? ' class="over"' : ""}><td>${esc(x.name)}</td><td class="num muted">${x.km != null ? esc(x.km) + " km" : ""}</td>
           <td class="num">${esc(f(x.dr))}</td><td class="bar"><div class="hbar"><div style="width:${Math.min(100, x.dr / thr * 100).toFixed(1)}%"></div></div></td></tr>`).join("")}</tbody></table>
         <div class="muted" style="margin-top:4px">${esc(T("µSv/h. Pylvään täysi pituus = hälytysraja {thr} µSv/h.", {thr: f(thr)}))}</div>`;
+    }
+    if (n === "satellites" && on && s.passes) {
+      const al = new Set(c.satellites.alert_sats || []), ps = s.passes;
+      const DIR = LANG === "fi" ? ["P", "KO", "I", "KA", "E", "LO", "L", "LU"] : ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+      const dir = az => DIR[Math.floor(((az + 22.5) % 360) / 45)];
+      const mins = p => Math.max(1, Math.round((p.los - p.aos) / 60)), tNow = Date.now() / 1000;
+      const hm = ts => new Date(ts * 1000).toLocaleTimeString(LOC(), {hour: "2-digit", minute: "2-digit"});
+      const day = ts => { const d = new Date(ts * 1000), t = new Date(); return d.toDateString() === t.toDateString() ? "" : d.toLocaleDateString(LOC(), {weekday: "short"}) + " "; };
+      v = (ps.length ? `<div class="scroll" style="max-height:420px;margin-top:8px"><table class="sattab"><thead><tr><th></th><th>Satelliitti</th><th>Nousu</th><th>Korkein</th><th>Lasku</th><th class="num">Kesto</th><th>Taajuudet</th></tr></thead><tbody>
+        ${ps.map(p => `<tr class="${p.aos <= tNow ? "now" : ""}"><td><button class="bell${al.has(p.norad) ? " on" : ""}" data-bell="${esc(p.norad)}" title="${esc(T(al.has(p.norad) ? "Hälytys päällä – klikkaa pois" : "Hälytä tämän satelliitin ylilennoista"))}">🔔</button></td>
+          <td><b>${esc(p.name)}</b>${p.visible ? ` <span class="vis" title="${esc(T("Näkyy taivaalla klo {a}–{b}", {a: hm(p.visible.start), b: hm(p.visible.end)}))}">👁 ${esc(hm(p.visible.start))}–${esc(hm(p.visible.end))}</span>` : ""}</td>
+          <td>${p.aos <= tNow ? `<span class="ok">${esc(T("nyt"))}</span>` : esc(day(p.aos) + hm(p.aos))} <span class="muted">${esc(dir(p.aos_az))}</span></td>
+          <td><b>${esc(p.max_el)}°</b> <span class="muted">${esc(dir(p.tca_az))} ${esc(hm(p.tca))}</span></td>
+          <td>${esc(hm(p.los))} <span class="muted">${esc(dir(p.los_az))}</span></td>
+          <td class="num">${esc(mins(p))} min</td><td class="muted wrap">${esc((p.freqs || []).join(" · "))}</td></tr>`).join("")}</tbody></table></div>`
+        : (s.checked ? `<div class="muted" style="margin-top:8px">${esc(T("Ei ylilentoja seuraavan vuorokauden aikana valituilla rajoilla."))}</div>` : ""))
+        + (s.sat_list && s.sat_list.length ? `<details class="satsel" style="margin-top:10px"><summary>${esc(T("Satelliitit ({n}) – valitse hälytettävät", {n: s.sat_list.length}))}</summary><div class="satgrid">
+        ${s.sat_list.map(x => `<label title="${esc((x.freqs || []).join(" · "))}"><input type="checkbox" data-bellcb="${esc(x.norad)}" ${al.has(x.norad) ? "checked" : ""}> ${esc(x.name)}</label>`).join("")}</div></details>` : "")
+        + (s.data_time ? `<div class="muted" style="margin-top:6px">${esc(T("Ratatiedot päivitetty {t}. Ajat ovat ennusteita (tarkkuus noin 10 s).", {t: fmtShort(s.data_time)}))}</div>` : "");
     }
     if (n === "traffic" && on) {
       const it = s.items || [];

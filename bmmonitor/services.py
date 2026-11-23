@@ -22,8 +22,9 @@ import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
-from .i18n import bearing, num, tr
+from .i18n import bearing, get_lang, num, tr
 from .messaging import friendly_error, http_session
+from . import satellites as sat
 
 log = logging.getLogger("bmmonitor.services")
 
@@ -60,6 +61,8 @@ DEFAULT_SERVICES = {
     "radiation": {"enabled": False, "threshold": 0.4, "radius_km": 100, "sms": False},
     "traffic": {"enabled": False, "use_location": True, "radius_km": 30, "provinces": [], "roads": [],
                 "types": ["TRAFFIC_ANNOUNCEMENT"], "updates": False, "details": False, "sms": False},
+    "satellites": {"enabled": False, "lead_min": 30, "min_el": 20, "alert_sats": [25544], "iss_visible": True,
+                   "only_alerted": False, "sms": False},
 }
 
 
@@ -1116,11 +1119,132 @@ def _min_dist(center, geom) -> float | None:
 
 
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# Satelliittien ylilennot
+# --------------------------------------------------------------------------
+def _hm(ts: float) -> str:
+    return time.strftime("%H.%M" if get_lang() == "fi" else "%H:%M", time.localtime(ts))
+
+
+def _compass(az: float) -> str:
+    return bearing(int((az + 22.5) // 45))
+
+
+class Satellites(Service):
+    name = "satellites"
+    title = "Satelliittien ylilennot"
+    interval = 60
+    RECOMPUTE = 1800
+
+    def __init__(self, hub):
+        super().__init__(hub)
+        cache = None
+        try:
+            cache = hub.mon.cfg_path.parent / "satellites.json"
+        except AttributeError:
+            pass
+        self.data = sat.SatData(cache)
+        self.passes: list[dict] = []
+        self.computed = (0.0, None)
+        self.alerted: dict[tuple, float] = {}
+
+    def _compute(self, lat, lon) -> list[dict]:
+        out = []
+        start = time.time() - 1200          # myös käynnissä oleva ylilento
+        for n in self.data.active():
+            try:
+                orb = sat.Orbit(n, self.data.tle[n])
+                out += sat.find_passes(orb, lat, lon, start, 25, 30, visible=(n == sat.ISS))
+            except Exception as e:  # noqa: BLE001 – yksi rikkinäinen ratatieto ei kaada muita
+                log.warning("Satelliitti %s: %s", n, e)
+        return sorted(out, key=lambda p: p["aos"])
+
+    async def _refresh(self):
+        tle = await fetch_text(sat.TLE_URL, 60)
+        tx = await fetch_json(sat.TX_URL, 120)
+        self.data.update(tle, tx)
+
+    def freqs(self, norad: int) -> list[str]:
+        return [sat.freq_text(t) for t in self.data.tx.get(norad, [])[:3]]
+
+    def _alert_text(self, p) -> tuple[str, str, str]:
+        vis = p.get("visible") if self.cfg.get("iss_visible", True) else None
+        mins = max(0, round((p["aos"] - time.time()) / 60))
+        title = tr("🛰 {name} ylittää klo {t} ({m} min)", name=p["name"], t=_hm(p["aos"]), m=mins)
+        body = tr("Nousu {a} {az1}, korkein {el}° {az2} klo {tca}, lasku {l} {az3}.", a=_hm(p["aos"]),
+                  az1=_compass(p["aos_az"]), el=p["max_el"], az2=_compass(p["tca_az"]), tca=_hm(p["tca"]),
+                  l=_hm(p["los"]), az3=_compass(p["los_az"]))
+        if vis:
+            body += " " + tr("Näkyy taivaalla klo {a}–{b} (korkeimmillaan {el}°).", a=_hm(vis["start"]),
+                             b=_hm(vis["end"]), el=vis["max_el"])
+        fr = self.freqs(p["norad"])
+        if fr:
+            body += " " + tr("Taajuudet: {f}.", f=", ".join(fr))
+        sms = tr("{name} klo {t} max {el}° {az}", name=p["name"], t=_hm(p["aos"]), el=p["max_el"], az=_compass(p["tca_az"]))
+        if vis:
+            sms += " " + tr("näkyy {a}–{b}", a=_hm(vis["start"]), b=_hm(vis["end"]))
+        elif fr:
+            sms += " " + fr[0]
+        return title, body, sms
+
+    def wanted(self, p) -> bool:
+        """Täyttääkö ylilento rajat: korkeuskulma tai (ISS) näkyvä ylilento."""
+        if p["max_el"] >= float(self.cfg.get("min_el") or 0):
+            return True
+        return bool(p.get("visible") and self.cfg.get("iss_visible", True))
+
+    async def check(self):
+        if not self.loc:
+            raise ValueError(tr("Aseta oma sijainti"))
+        lat, lon = self.loc
+        if self.data.stale():
+            try:
+                await self._refresh()
+            except Exception as e:  # noqa: BLE001
+                if not self.data.tle:
+                    raise
+                log.warning("Satelliittitietojen päivitys: %s (käytetään vanhoja)", friendly_error(e))
+        now = time.time()
+        key = (lat, lon, self.data.fetched)
+        if now - self.computed[0] > self.RECOMPUTE or self.computed[1] != key:
+            self.passes = await asyncio.get_running_loop().run_in_executor(None, self._compute, lat, lon)
+            self.computed = (now, key)
+        lead = float(self.cfg.get("lead_min") or 30) * 60
+        alert_sats = set(self.cfg.get("alert_sats") or [])
+        for p in self.passes:
+            k = (p["norad"], p["aos"] // 60)
+            if p["norad"] in alert_sats and self.wanted(p) and 0 < p["aos"] - now <= lead and k not in self.alerted:
+                self.alerted[k] = now
+                title, body, sms = self._alert_text(p)
+                self.alert(title, body, sms, "info")
+        self.alerted = {k: v for k, v in self.alerted.items() if now - v < 86400}
+        self.status.update(sats=len(self.data.active()), data_time=self.data.fetched or None)
+
+    def upcoming(self) -> list[dict]:
+        now = time.time()
+        alert_sats = set(self.cfg.get("alert_sats") or [])
+        out = []
+        for p in self.passes:
+            if p["los"] < now or not self.wanted(p):
+                continue
+            if self.cfg.get("only_alerted") and p["norad"] not in alert_sats:
+                continue
+            out.append({**p, "freqs": self.freqs(p["norad"]), "alert": p["norad"] in alert_sats,
+                        "visible": p.get("visible") if self.cfg.get("iss_visible", True) else None})
+            if len(out) >= 25:
+                break
+        return out
+
+    def sat_list(self) -> list[dict]:
+        return [{"norad": n, "name": sat.short_name(self.data.tle[n]["name"]), "freqs": self.freqs(n)}
+                for n in self.data.active()]
+
+
 class ServiceHub:
     def __init__(self, mon):
         self.mon = mon
         self.services = {s.name: s for s in (Lightning(self), Warnings(self), SpaceWeather(self), Aurora(self),
-                                             Radiation(self), Traffic(self))}
+                                             Radiation(self), Traffic(self), Satellites(self))}
 
     @property
     def cfg(self):
@@ -1144,7 +1268,7 @@ class ServiceHub:
             if name in self.services:
                 self.services[name].reset()
         if "location" in changed:
-            for n in ("lightning", "warnings", "traffic", "aurora", "radiation"):
+            for n in ("lightning", "warnings", "traffic", "aurora", "radiation", "satellites"):
                 self.services[n].reset()
 
     def snapshot(self) -> dict:
@@ -1159,6 +1283,8 @@ class ServiceHub:
         A, R = self.services["aurora"], self.services["radiation"]
         out["aurora"] = {**A.status, "stations": A.stations}
         out["radiation"] = {**R.status, "stations": R.stations}
+        SA = self.services["satellites"]
+        out["satellites"] = {**SA.status, "passes": SA.upcoming(), "sat_list": SA.sat_list()}
         out["provinces"] = PROVINCES
         out["ma_countries"] = {k: tr(v) for k, v in sorted(MA_COUNTRIES.items(), key=lambda x: tr(x[1]))}
         out["traffic_types"] = {k: tr(v) for k, v in TRAFFIC_TYPES.items()}
@@ -1192,7 +1318,7 @@ def normalize_services(new: dict, old: dict) -> tuple[dict, set[str]]:
         elif loc.get("lat") is not None:
             lat, lon = float(loc["lat"]), float(loc["lon"])
             out["location"] = {"lat": round(lat, 5), "lon": round(lon, 5), "label": loc.get("label") or "selaimen sijainti"}
-    for sec in ("lightning", "warnings", "space", "traffic", "aurora", "radiation"):
+    for sec in ("lightning", "warnings", "space", "traffic", "aurora", "radiation", "satellites"):
         if sec in new:
             setb(sec, "enabled")
             setb(sec, "sms")
@@ -1227,6 +1353,18 @@ def normalize_services(new: dict, old: dict) -> tuple[dict, set[str]]:
     setb("aurora", "skip_overcast")
     setn("radiation", "threshold", 0.1, 100)
     setn("radiation", "radius_km", 0, 1500)
+    setn("satellites", "lead_min", 1, 240)
+    setn("satellites", "min_el", 0, 90)
+    setb("satellites", "iss_visible")
+    setb("satellites", "only_alerted")
+    if "alert_sats" in new.get("satellites", {}):
+        ids = []
+        for x in new["satellites"]["alert_sats"] or []:
+            try:
+                ids.append(int(x))
+            except (TypeError, ValueError):
+                continue
+        out["satellites"]["alert_sats"] = sorted(set(ids))[:100]
     setb("traffic", "use_location")
     setb("traffic", "updates")
     setb("traffic", "details")
@@ -1258,7 +1396,7 @@ def normalize_services(new: dict, old: dict) -> tuple[dict, set[str]]:
     for k in out:
         if out[k] != old.get(k):
             changed.add(k)
-    for sec in ("lightning", "warnings", "traffic", "aurora", "radiation"):
+    for sec in ("lightning", "warnings", "traffic", "aurora", "radiation", "satellites"):
         if sec == "radiation" and not out[sec].get("radius_km"):
             continue
         if sec == "warnings" and out[sec].get("source") == "meteoalarm" and out[sec].get("areas"):

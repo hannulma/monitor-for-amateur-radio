@@ -369,3 +369,28 @@ def test_meteoalarm_and_ovation():
     assert out["warnings"]["areas"] == ["Berlin", "DE074"] and "warnings" in ch
     out, _ = normalize_services({"aurora": {"source": "noaa", "min_prob": 250}}, old)
     assert out["aurora"]["source"] == "noaa" and out["aurora"]["min_prob"] == 100
+
+
+ISS_TLE = """ISS (ZARYA)
+1 25544U 98067A   26326.55861648  .00009004  00000+0  16808-3 0  9990
+2 25544  51.6321 236.3579 0007404  53.9088 306.2585 15.49552037596306
+"""
+
+
+def test_satellite_passes_match_reference():
+    """Ylilennot Helsingissä verrattuna Skyfieldin laskemiin arvoihin (sama TLE): ±3 s ja ±0,5°."""
+    from bmmonitor.satellites import ISS, Orbit, find_passes, freq_text, parse_tle, pick_transmitters
+    tle = parse_tle(ISS_TLE)
+    assert set(tle) == {ISS}
+    start = int(tle[ISS]["epoch"])
+    ps = find_passes(Orbit(ISS, tle[ISS]), 60.17, 24.94, start, 24, 30, visible=True)
+    ref = [(1795354743.7, 1795355001.4, 10.3, 1795355259.9), (1795360459.5, 1795360752.5, 18.4, 1795361046.2)]
+    for p, (aos, tca, el, los) in zip(ps, ref):
+        assert abs(p["aos"] - aos) < 3 and abs(p["los"] - los) < 3 and abs(p["tca"] - tca) < 15
+        assert abs(p["max_el"] - el) <= 1
+    tx = pick_transmitters([
+        {"norad_cat_id": ISS, "alive": True, "status": "active", "type": "Transceiver", "description": "FM rpt",
+         "mode": "FM", "uplink_low": 145990000, "downlink_low": 437800000},
+        {"norad_cat_id": ISS, "alive": True, "status": "active", "type": "Transmitter", "description": "TLM",
+         "mode": "FSK", "uplink_low": None, "downlink_low": 437800000}], {ISS})
+    assert [freq_text(t) for t in tx[ISS]] == ["FM 145,990↑ 437,800↓"]

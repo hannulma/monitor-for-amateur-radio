@@ -116,6 +116,7 @@ Jokaisella palvelulla on oma **päälle/pois-kytkin**; kaikki ovat oletuksena po
 | 🌌 Revontulihälytys | Ilmatieteen laitoksen magnetometrit tai NOAA:n OVATION-ennuste (koko maailma, raja %, suurin arvo 300 km säteellä) | raja nT/h (raja = mahdollisia, 2× = todennäköisiä, 4× = voimakkaita), vain pimeällä, ei täysin pilvisellä; viestissä pilvisyys |
 | ☢ Säteilyvalvonta | STUK (~250 asemaa) | raja (oletus 0,4 µSv/h = STUK:n hälytysraja), säde tai koko Suomi |
 | 🚧 Tieliikenne | Fintraffic Digitraffic | säde oman sijainnin tai muun pisteen ympärillä, maakunnat, tienumerot, tiedotetyypit |
+| 🛰 Satelliittien ylilennot | CelesTrak (ratatiedot), SatNOGS DB (taajuudet), SGP4-laskenta | ISS ja aktiiviset radioamatöörisatelliitit: seuraavat ylilennot suuntineen ja taajuuksineen, ISS:n näkyvät ylilennot, hälytys valituista satelliiteista (oletuksena ISS, 30 min ennen nousua, korkeuskulma ≥ 20°) |
 
 Ensimmäisen tarkistuksen jälkeen hälytetään vain **uusista** tapahtumista; voimassa olevat näkyvät kortissa.
 Viestit lyhennetään mahtumaan yhteen 67 merkin radioviestiin, esim.

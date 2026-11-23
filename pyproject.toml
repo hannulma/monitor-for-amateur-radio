@@ -28,6 +28,7 @@ dependencies = [
     "certifi",
     "truststore>=0.9; python_version >= '3.10'",
     "keyring>=24",
+    "sgp4>=2.20",
 ]
 
 [project.optional-dependencies]

@@ -202,4 +202,11 @@ EN: dict[str, str] = {
     "NOAA:n OVATION-ennuste: näkyvien revontulien todennäköisyys {r} km säteellä. VHF-revontulikelit mahdollisia.": "NOAA OVATION forecast: probability of visible aurora within {r} km. VHF aurora propagation possible.",
     "Virheellinen kutsu: {x}": "Invalid callsign: {x}",
     "Brandmeister ei salli tätä toimintoa tälle laitteelle, joten se ei ole tämän API-avaimen tilin laite. Hallintatyökalut piilotettiin; ne saa takaisin valinnalla Oma laite.": "BrandMeister does not allow this action for this device, so it does not belong to the account of this API key. The management tools were hidden; turn on Own device to show them again.",
+    "Satelliittien ylilennot": "Satellite passes",
+    "🛰 {name} ylittää klo {t} ({m} min)": "🛰 {name} pass at {t} (in {m} min)",
+    "Nousu {a} {az1}, korkein {el}° {az2} klo {tca}, lasku {l} {az3}.": "Rise {a} {az1}, max {el}° {az2} at {tca}, set {l} {az3}.",
+    "Näkyy taivaalla klo {a}–{b} (korkeimmillaan {el}°).": "Visible in the sky {a}–{b} (up to {el}°).",
+    "Taajuudet: {f}.": "Frequencies: {f}.",
+    "{name} klo {t} max {el}° {az}": "{name} at {t} max {el}° {az}",
+    "näkyy {a}–{b}": "visible {a}–{b}",
 }

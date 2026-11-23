@@ -81,7 +81,7 @@ jobs:
         run: >
           pyinstaller --noconfirm --clean --onedir --noconsole --name MonitorForBrandMeister --collect-submodules win32ctypes
           --add-data "bmmonitor/static;bmmonitor/static"
-          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring
+          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
       - name: Smoke test (starts, connects to BrandMeister, quits)
@@ -191,7 +191,7 @@ jobs:
           --name "Monitor for BrandMeister"
           --osx-bundle-identifier io.github.hannulma.monitorforbrandmeister
           --add-data "bmmonitor/static:bmmonitor/static"
-          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring
+          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
       - name: Verify architectures and smoke test
@@ -247,7 +247,7 @@ jobs:
         run: >
           pyinstaller --noconfirm --clean --onefile --name monitor-for-brandmeister
           --add-data "bmmonitor/static:bmmonitor/static"
-          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring
+          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
       - name: Package
