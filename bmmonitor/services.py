@@ -22,7 +22,7 @@ import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
-from .i18n import bearing, get_lang, num, tr
+from .i18n import bearing, dist, get_lang, num, tr
 from .messaging import friendly_error, http_session
 from . import satellites as sat
 
@@ -284,10 +284,10 @@ class Lightning(Service):
         self.last_alert_dist = nearest["km"]
         n15 = sum(1 for s in recent if now - s["time"] < 900)
         kind = tr("maasalama") if nearest["ground"] else tr("salama")
-        km = f"{nearest['km']:.0f}"
-        txt = tr("Salama {km} km {dir}, {n} iskua/15 min", km=km, dir=nearest["dir"], n=n15)
-        self.alert(tr("⚡ {kind} {km} km {dir}", kind=kind.capitalize(), km=km, dir=nearest["dir"]),
-                   tr("{n} iskua 15 min aikana {r} km säteellä", n=n15, r=self.cfg.get("radius_km")), txt, "bad")
+        km = dist(nearest["km"])
+        txt = tr("Salama {km} {dir}, {n} iskua/15 min", km=km, dir=nearest["dir"], n=n15)
+        self.alert(tr("⚡ {kind} {km} {dir}", kind=kind.capitalize(), km=km, dir=nearest["dir"]),
+                   tr("{n} iskua 15 min aikana {r} säteellä", n=n15, r=dist(self.cfg.get("radius_km"))), txt, "bad")
 
 
 # --------------------------------------------------------------------------
@@ -682,6 +682,38 @@ async def fetch_clouds(lat: float, lon: float) -> tuple[float | None, str]:
     return latest[c], names[idx] if 0 <= idx < len(names) else ""
 
 
+OPEN_METEO = "https://api.open-meteo.com/v1/forecast?latitude={lat:.3f}&longitude={lon:.3f}&current=cloud_cover"
+
+
+def in_finland(lat: float, lon: float) -> bool:
+    """Karkea rajaus: Ilmatieteen laitoksen havaintoasemien alue."""
+    return 59.3 <= lat <= 70.2 and 19.0 <= lon <= 31.7
+
+
+async def fetch_clouds_any(lat: float, lon: float, cache: dict) -> tuple[float | None, str]:
+    """Pilvisyys oktina: Suomessa lähimmän IL:n havaintoaseman havainto, muualla (tai jos havaintoa ei ole)
+    Open-Meteon malliarvo (CC BY 4.0). Open-Meteo haetaan enintään 30 min välein."""
+    if in_finland(lat, lon):
+        try:
+            c, st = await fetch_clouds(lat, lon)
+            if c is not None:
+                return c, st
+        except Exception:  # noqa: BLE001
+            pass
+    key = (round(lat, 2), round(lon, 2))
+    hit = cache.get("om")
+    if hit and hit[0] == key and time.time() - hit[1] < 1800:
+        return hit[2], "Open-Meteo"
+    try:
+        d = await fetch_json(OPEN_METEO.format(lat=lat, lon=lon), 30)
+        pct = (d.get("current") or {}).get("cloud_cover")
+        okta = None if pct is None else round(float(pct) / 100 * 8, 1)
+    except Exception:  # noqa: BLE001
+        return (hit[2], "Open-Meteo") if hit and hit[0] == key else (None, "")
+    cache["om"] = (key, time.time(), okta)
+    return okta, "Open-Meteo"
+
+
 def ovation_prob(data: dict, lat: float, lon: float, radius_km: float = 300) -> tuple[int, int]:
     """NOAA OVATION -ruudukosta (1° x 1°, pituuspiiri 0–359) todennäköisyys omalla kohdalla ja suurin
     arvo radius_km säteellä. Revontulet näkyvät taivaanrannassa kauempaakin kuin suoraan yläpuolella."""
@@ -732,8 +764,8 @@ class Aurora(Service):
             info, lvl, val, thr = await self._check_noaa(lat, lon)
             await self._decide(lat, lon, info, lvl, val, thr,
                                lambda word, cl: tr("Revontulet {word}: NOAA-ennuste {p} %{cl}", word=word, p=val, cl=cl),
-                               tr("NOAA:n OVATION-ennuste: näkyvien revontulien todennäköisyys {r} km säteellä. "
-                                  "VHF-revontulikelit mahdollisia.", r=self.RADIUS))
+                               tr("NOAA:n OVATION-ennuste: näkyvien revontulien todennäköisyys {r} säteellä. "
+                                  "VHF-revontulikelit mahdollisia.", r=dist(self.RADIUS)))
             return
         start = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 3900))
         xml = await fetch_text(f"{self.WFS}?service=WFS&version=2.0.0&request=getFeature"
@@ -767,18 +799,16 @@ class Aurora(Service):
         await self._decide(lat, lon, {"source": "fmi", "nearest": near}, lvl, rng, thr,
                            lambda word, cl: tr("Revontulet {word}: {name} {rng} nT/h{cl}", word=word, name=near["name"],
                                                rng=rng, cl=cl),
-                           tr("Magneettinen aktiivisuus lähimmällä magnetometrillä ({name}, {km} km). "
-                              "VHF-revontulikelit mahdollisia.", name=near["name"], km=near["km"]))
+                           tr("Magneettinen aktiivisuus lähimmällä magnetometrillä ({name}, {km}). "
+                              "VHF-revontulikelit mahdollisia.", name=near["name"], km=dist(near["km"])))
 
     async def _decide(self, lat, lon, info: dict, lvl: int, val: float, thr: float, text, body: str):
         """Yhteinen hälytyslogiikka: uusi hälytys, kun taso nousee ja revontulet voivat näkyä."""
         elev = sun_elevation(lat, lon)
         dark = elev < -6
-        clouds, cloud_st = (None, "")
-        try:
-            clouds, cloud_st = await fetch_clouds(lat, lon)
-        except Exception:  # noqa: BLE001
-            pass
+        if not hasattr(self, "_cloud_cache"):
+            self._cloud_cache = {}
+        clouds, cloud_st = await fetch_clouds_any(lat, lon, self._cloud_cache)
         for k in ("prob", "prob_here", "radius", "forecast_time"):
             self.status.pop(k, None)
         self.status.update(**info, sun=round(elev, 1), dark=dark, clouds=clouds, cloud_station=cloud_st, level=lvl)
@@ -865,10 +895,10 @@ class Radiation(Service):
             self.alerted[s["name"]] = time.time()
         top = max(new, key=lambda s: s["dr"])
         more = tr(" (+{n} asemaa)", n=len(new) - 1) if len(new) > 1 else ""
-        dist = f", {top['km']} km" if "km" in top else ""
+        dist_ = f", {dist(top['km'])}" if "km" in top else ""
         txt = tr("Säteily koholla: {name} {dr} µSv/h{more}", name=top["name"], dr=num(top["dr"], 2), more=more)
         self.alert(f"☢ {txt}", tr("Raja {thr} µSv/h{dist}. Normaali taso Suomessa n. 0,05–0,3 µSv/h. "
-                                 "Tarkista tilanne STUK:n sivuilta.", thr=num(thr, 2), dist=dist),
+                                 "Tarkista tilanne STUK:n sivuilta.", thr=num(thr, 2), dist=dist_),
                    txt.replace("µSv/h", "uSv/h"), "bad")
 
 
@@ -915,12 +945,12 @@ class Traffic(Service):
             prov = {x.get("province") for x in pts if x.get("province")}
             muni = [x.get("municipality") for x in pts if x.get("municipality")]
             rds = {(x.get("roadAddress") or {}).get("road") for x in pts} - {None}
-            dist = None
+            d_km = None
             if center:
-                dist = _min_dist(center, f.get("geometry"))
+                d_km = _min_dist(center, f.get("geometry"))
             why = []
-            if center and dist is not None and dist <= radius:
-                why.append(f"{dist:.0f} km")
+            if center and d_km is not None and d_km <= radius:
+                why.append(dist(d_km))
             if prov & provinces:
                 why.append(", ".join(sorted(prov & provinces)))
             if rds & roads:
@@ -931,7 +961,7 @@ class Traffic(Service):
             items.append({"id": p.get("situationId"), "version": p.get("version") or 0, "short": short_traffic(p, ann),
                           "type": p.get("situationType"), "title": (ann.get("title") or "").strip(),
                           "what": feats_txt, "where": ((ann.get("location") or {}).get("description") or "").strip(),
-                          "municipality": ", ".join(dict.fromkeys(muni)), "km": dist, "why": "; ".join(why),
+                          "municipality": ", ".join(dict.fromkeys(muni)), "km": d_km, "why": "; ".join(why),
                           "time": _iso_to_ts(p.get("releaseTime")) or _iso_to_ts(p.get("versionTime")),
                           "comment": (ann.get("comment") or "")[:300]})
         self.active = sorted(items, key=lambda i: (i["km"] if i["km"] is not None else 9999))

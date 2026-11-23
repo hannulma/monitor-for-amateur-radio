@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Monitor for BrandMeister</title>
+<title>Monitor for Amateur Radio</title>
 <style>
   :root {
     --bg: #0f1419; --panel: #171e26; --line: #26313d; --text: #d9e1e8; --muted: #7d8b99;
@@ -171,7 +171,12 @@
   .satwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 12px 14px; }
   @media (max-width: 980px) { .satwrap { grid-template-columns: 1fr; } }
   .satmapbox { position: relative; }
-  #satCanvas { width: 100%; display: block; border-radius: 8px; cursor: crosshair; }
+  #satCanvas { width: 100%; display: block; border-radius: 8px; cursor: grab; touch-action: none; }
+  .satctl { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; align-items: center; background: rgba(15,20,25,.8);
+            border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; }
+  .satctl button { min-width: 28px; padding: 2px 6px; font-size: 15px; line-height: 1.2; }
+  .satctl label { margin: 0 0 0 6px; display: inline-flex; gap: 5px; align-items: center; color: var(--text); font-size: 12px; cursor: pointer; }
+  .satctl #satZoom { font-size: 12px; min-width: 0; }
   .satnote { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(15,20,25,.85);
              border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; color: var(--text); text-align: center; max-width: 80%; }
   .satnote:empty { display: none; }
@@ -182,6 +187,8 @@
   #satInfo .kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin-top: 6px; }
   #satInfo .kv span:nth-child(odd) { color: var(--muted); }
   .sattab td { padding: 5px 8px; white-space: nowrap; }
+  .fionly { font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--muted); border: 1px solid var(--line);
+            border-radius: 10px; padding: 1px 8px; margin-left: 6px; vertical-align: middle; }
   .sattab td.wrap { white-space: normal; font-size: 12px; }
   .sattab tr.now td { background: rgba(34, 197, 94, .08); }
   .sattab .bell { background: none; border: 0; padding: 0 2px; font-size: 14px; opacity: .25; filter: grayscale(1); cursor: pointer; }
@@ -252,7 +259,7 @@
 </head>
 <body>
 <header>
-  <h1>Monitor for BrandMeister <span class="pill" style="vertical-align:middle">beta</span></h1>
+  <h1>Monitor for Amateur Radio <span class="pill" style="vertical-align:middle">beta</span></h1>
   <div class="status"><span id="dot" class="dot"></span><span id="statusText">Yhdistetään…</span></div>
   <div class="spacer"></div>
   <span class="muted" id="watching"></span>
@@ -277,7 +284,13 @@
     <h2>Satelliitit kartalla <span class="count" id="satCount"></span></h2>
     <div class="satwrap">
       <div class="satmapbox"><canvas id="satCanvas" aria-label="Maailmankartta: satelliittien paikat ja radat"></canvas>
-        <div class="satnote" id="satNote"></div></div>
+        <div class="satnote" id="satNote"></div>
+        <div class="satctl">
+          <button id="satZin" title="Lähennä">+</button><button id="satZout" title="Loitonna">−</button>
+          <button id="satWorld" title="Koko maailma">⤢</button><button id="satHome" title="Oma sijainti">⌂</button>
+          <span id="satZoom" class="muted"></span>
+          <label title="Pidä valittu satelliitti kartan keskellä"><input type="checkbox" id="satFollow"> Seuraa valittua</label>
+        </div></div>
       <div class="satside">
         <svg id="skySvg" viewBox="-118 -118 236 236" aria-label="Taivaskartta: seuraavan ylilennon reitti"></svg>
         <div id="satInfo"></div>
@@ -285,7 +298,7 @@
     </div>
     <div class="hint" style="margin:0 14px 12px">Kartalla ovat Palvelut-välilehdellä hälytettäviksi valitut satelliitit (🔔). Nimitagissa on seuraava
       aikaväli, jolloin satelliitti on sijaintisi yhteysalueella; ympyrä on satelliitin kuuluvuusalue. Klikkaa satelliittia nähdäksesi
-      sen taivaskartan. Karttapohja: Natural Earth.</div>
+      sen taivaskartan. Zoomaa hiiren rullalla tai nipistämällä ja siirrä karttaa raahaamalla. Karttapohja: Natural Earth.</div>
   </section>
   <section id="settings" class="cfg form" data-tab="asetukset" data-fold="cfg-monitor">
     <h2>Seuranta ja historia</h2>
@@ -340,11 +353,13 @@
     </div>
   </section>
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-lang">
-    <h2>Kieli</h2>
+    <h2>Kieli ja yksiköt</h2>
     <div class="inner">
     <div class="row">
       <div><label for="langSel">Käyttöliittymän kieli</label>
         <select id="langSel" data-noi18n><option value="fi">Suomi</option><option value="en">English</option></select></div>
+      <div><label for="unitSel">Mittayksiköt</label>
+        <select id="unitSel"><option value="metric">Metrijärjestelmä (km)</option><option value="imperial">Yhdysvaltalainen (mailit)</option></select></div>
       <div class="hint" style="max-width:560px">Kieli koskee myös ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
         Ilmatieteen laitoksen varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).</div>
     </div>
@@ -679,10 +694,10 @@
   </section>
   <div class="svcgrid" data-tab="palvelut" id="svcGrid">
     <section class="svc form" data-svc="lightning">
-      <h2>⚡ Salamahälytys <label class="switch"><input type="checkbox" data-en="lightning"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
+      <h2>⚡ Salamahälytys <span class="fionly" title="Lähde kattaa vain Suomen">vain Suomessa</span> <label class="switch"><input type="checkbox" data-en="lightning"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
         <div class="frow">
-          <div class="fld"><label>Säde (km)</label><input type="number" data-k="radius_km" min="1" max="300" style="width:90px"></div>
+          <div class="fld"><label>Säde (<span class="ukm">km</span>)</label><input type="number" data-k="radius_km" min="1" max="300" data-unit="km" style="width:90px"></div>
           <div class="fld" style="max-width:220px"><label>Uusi hälytys aikaisintaan (min)</label><input type="number" data-k="cooldown_min" min="0" style="width:90px">
             <div class="hint">Hälyttää heti uudestaan, jos salamat lähestyvät yli 5 km.</div></div>
           <div class="fld checks">
@@ -752,17 +767,18 @@
         <div class="hint noaa-only">NOAA:n OVATION-malli ennustaa 30–90 minuutin päähän, millä todennäköisyydellä revontulet näkyvät.
           Ohjelma käyttää suurinta arvoa 300 km säteellä, koska revontulet näkyvät taivaanrannassa kauempaakin. Raja = mahdollisia,
           2× = todennäköisiä, 4× = voimakkaita. 10 % on hyvä lähtökohta.</div>
+        <div class="hint">Pilvisyys: Suomessa lähimmän Ilmatieteen laitoksen sääaseman havainto, muualla Open-Meteon malliarvo (CC BY 4.0).</div>
         <div class="frow svcsave"><button class="primary" data-save="aurora">Tallenna</button><span class="err" data-err="aurora"></span></div>
         <div class="svcview" data-view="aurora"></div>
       </div>
       <div class="svcstatus" data-st="aurora"></div>
     </section>
     <section class="svc form" data-svc="radiation">
-      <h2>☢ Säteilyvalvonta <label class="switch"><input type="checkbox" data-en="radiation"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
+      <h2>☢ Säteilyvalvonta <span class="fionly" title="Lähde kattaa vain Suomen">vain Suomessa</span> <label class="switch"><input type="checkbox" data-en="radiation"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
         <div class="frow">
           <div class="fld"><label>Hälytysraja (µSv/h)</label><input type="number" data-k="threshold" min="0.1" step="0.05" style="width:90px"></div>
-          <div class="fld"><label>Säde (km)</label><input type="number" data-k="radius_km" min="0" style="width:90px"><div class="hint">0 = koko Suomi</div></div>
+          <div class="fld"><label>Säde (<span class="ukm">km</span>)</label><input type="number" data-k="radius_km" min="0" data-unit="km" style="width:90px"><div class="hint">0 = koko Suomi</div></div>
           <div class="fld checks"><label><input type="checkbox" data-k="sms"> Tekstiviesti radioon</label></div>
         </div>
         <div class="hint">STUK:n noin 250 mittausasemaa, päivitys 10 min välein. Normaali taso Suomessa n. 0,05–0,3 µSv/h; sade voi nostaa
@@ -773,11 +789,11 @@
       <div class="svcstatus" data-st="radiation"></div>
     </section>
     <section class="svc form" data-svc="traffic">
-      <h2>🚧 Tieliikennetiedotteet <label class="switch"><input type="checkbox" data-en="traffic"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
+      <h2>🚧 Tieliikennetiedotteet <span class="fionly" title="Lähde kattaa vain Suomen">vain Suomessa</span> <label class="switch"><input type="checkbox" data-en="traffic"><span class="sl"></span><span class="swtxt">Pois</span></label></h2>
       <div class="svcbody inner">
         <div class="hint" style="margin-top:0">Ilmoittaa tiedotteet, jotka osuvat <b>säteelle</b>, valittuihin <b>maakuntiin</b> tai valituille <b>teille</b> (riittää, että yksi ehto täyttyy).</div>
         <div class="frow" style="margin-top:10px">
-          <div class="fld"><label>Säde (km)</label><input type="number" data-k="radius_km" min="0" style="width:90px"><div class="hint">0 = ei sädettä</div></div>
+          <div class="fld"><label>Säde (<span class="ukm">km</span>)</label><input type="number" data-k="radius_km" min="0" data-unit="km" style="width:90px"><div class="hint">0 = ei sädettä</div></div>
           <div class="fld checks" style="padding-top:22px"><label><input type="checkbox" data-k="use_location"> Säde oman sijainnin ympärillä</label></div>
           <div class="fld tcenter"><label>tai muu keskipiste</label><input type="text" data-k="center" placeholder="61.50, 23.76 tai KP11RL" style="width:190px"></div>
           <div class="fld"><label>Tienumerot</label><input type="text" data-k="roads" placeholder="4 9 25" style="width:120px"></div>
@@ -1037,7 +1053,7 @@ function fillSettings() {
   $("minDur").value = S.config.min_duration;
   $("logCsv").checked = !!S.config.log_csv;
   $("verInfo").textContent = "";
-  $("langSel").value = LANG; $("updAuto").checked = S.config.update_check !== false;
+  $("langSel").value = LANG; $("unitSel").value = S.config.units || "metric"; $("updAuto").checked = S.config.update_check !== false;
   $("keyState").textContent = S.config.bm_api_key ? "Avain tallennettu" : "Ei avainta";
   $("apiKey").value = ""; $("myCall").value = S.config.devices.my_call || "";
   const p = S.paths;
@@ -1478,6 +1494,10 @@ $("langSel").onchange = async e => {
   const j = await saveCfg({language: l}); if (j.ok) S.config = j.config;
   render(); showTab(TAB);
 };
+$("unitSel").onchange = async e => {
+  const j = await saveCfg({units: e.target.value}); if (j.ok) S.config = j.config;
+  unitLabels(); render(); showTab(TAB);
+};
 $("updAuto").onchange = e => saveCfg({update_check: e.target.checked});
 $("btnUpdCheck").onclick = async () => { $("btnUpdCheck").disabled = true; await api("/api/update/check", {}); $("btnUpdCheck").disabled = false; };
 $("updPill").onclick = () => { showTab("asetukset"); unfold("cfg-update"); };
@@ -1890,6 +1910,16 @@ $("rSend").onclick = async () => {
 };
 
 // ---------------- palvelut ----------------
+// mittayksiköt: asetukset ja palvelimen arvot ovat kilometreinä, näyttö valitussa yksikössä
+const KM_PER_MI = 1.609344;
+const IMPERIAL = () => !!(S && S.config && S.config.units === "imperial");
+function D(km, dp = 0) {
+  if (km == null || km === "" || isNaN(km)) return "";
+  const v = IMPERIAL() ? Number(km) / KM_PER_MI : Number(km);
+  return `${v.toLocaleString(LOC(), {minimumFractionDigits: dp, maximumFractionDigits: dp})} ${IMPERIAL() ? "mi" : "km"}`;
+}
+function SPD(kms) { return `${dec((IMPERIAL() ? kms / KM_PER_MI : kms).toFixed(2))} ${IMPERIAL() ? "mi/s" : "km/s"}`; }
+function unitLabels() { document.querySelectorAll(".ukm").forEach(e => { e.textContent = IMPERIAL() ? "mi" : "km"; }); }
 const SVC = ["lightning", "warnings", "space", "aurora", "radiation", "traffic", "satellites"];
 function svcSec(n) { return document.querySelector(`.svc[data-svc="${n}"]`); }
 function fillServices() {
@@ -1898,6 +1928,7 @@ function fillServices() {
   const tSec = svcSec("traffic");
   tSec.querySelector("[data-provs]").innerHTML = st.provinces.map(p => `<label><input type="checkbox" value="${esc(p)}">${esc(p)}</label>`).join("");
   tSec.querySelector("[data-types]").innerHTML = Object.entries(st.traffic_types).map(([k, v]) => `<label><input type="checkbox" value="${k}">${esc(v)}</label>`).join("");
+  unitLabels();
   const mc = svcSec("warnings").querySelector("[data-macountry]");
   mc.innerHTML = `<option value="">${esc(T("– valitse –"))}</option>` + Object.entries(st.ma_countries || {}).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join("");
   SVC.forEach(n => {
@@ -1909,7 +1940,9 @@ function fillServices() {
       if (k === "center") v = cfg.center ? cfg.center.label : "";
       if (k === "roads") v = (v || []).join(" ");
       if (k === "areas") v = (v || []).join("; ");
+      if (el.dataset.unit === "km") { el.dataset.km = v ?? ""; if (v != null && v !== "" && IMPERIAL()) v = Math.round(v / KM_PER_MI * 10) / 10; }
       if (el.type === "checkbox") el.checked = !!v; else el.value = v ?? "";
+      if (el.dataset.unit === "km") el.dataset.shown = el.value;
     });
     if (n === "traffic") {
       sec.querySelectorAll("[data-provs] input").forEach(i => i.checked = (cfg.provinces || []).includes(i.value));
@@ -1942,7 +1975,14 @@ async function loadMaAreas() {
 }
 function collectSvc(n) {
   const sec = svcSec(n), o = {};
-  sec.querySelectorAll("[data-k]").forEach(el => { o[el.dataset.k] = el.type === "checkbox" ? el.checked : el.value; });
+  sec.querySelectorAll("[data-k]").forEach(el => {
+    let v = el.type === "checkbox" ? el.checked : el.value;
+    if (el.dataset.unit === "km" && v !== "") {
+      if (v === el.dataset.shown && el.dataset.km !== "") v = Number(el.dataset.km);   // ei muutettu: tarkka arvo talteen
+      else if (IMPERIAL()) v = Math.round(Number(String(v).replace(",", ".")) * KM_PER_MI * 10) / 10;
+    }
+    o[el.dataset.k] = v;
+  });
   if (n === "traffic") {
     o.provinces = [...sec.querySelectorAll("[data-provs] input:checked")].map(i => i.value);
     o.types = [...sec.querySelectorAll("[data-types] input:checked")].map(i => i.value);
@@ -2011,9 +2051,9 @@ function renderServices() {
     let v = "";
     if (n === "lightning" && on) {
       const near = s.nearest;
-      v = `<div class="tiles" style="padding:10px 0 0"><div class="tile"><div class="lbl">${esc(T("Iskuja 60 min / {r} km", {r: c.lightning.radius_km}))}</div><div class="val">${esc(s.count_60min ?? "–")}</div></div>
-        <div class="tile"><div class="lbl">Lähin isku</div><div class="val">${near ? Math.round(near.km) + " km" : "–"}</div><div class="muted">${near ? esc(near.dir) + " · " + ago(near.time) : ""}</div></div></div>` +
-        ((s.strikes || []).length ? `<table style="margin-top:8px"><tbody>${s.strikes.slice(0, 6).map(x => `<tr><td>${fmtTime(x.time)}</td><td class="num">${esc(x.km)} km</td><td>${esc(x.dir)}</td><td class="muted">${x.ground ? "maasalama" : "pilvisalama"}</td></tr>`).join("")}</tbody></table>` : "");
+      v = `<div class="tiles" style="padding:10px 0 0"><div class="tile"><div class="lbl">${esc(T("Iskuja 60 min / {r}", {r: D(c.lightning.radius_km)}))}</div><div class="val">${esc(s.count_60min ?? "–")}</div></div>
+        <div class="tile"><div class="lbl">Lähin isku</div><div class="val">${near ? esc(D(near.km)) : "–"}</div><div class="muted">${near ? esc(near.dir) + " · " + ago(near.time) : ""}</div></div></div>` +
+        ((s.strikes || []).length ? `<table style="margin-top:8px"><tbody>${s.strikes.slice(0, 6).map(x => `<tr><td>${fmtTime(x.time)}</td><td class="num">${esc(D(x.km))}</td><td>${esc(x.dir)}</td><td class="muted">${x.ground ? "maasalama" : "pilvisalama"}</td></tr>`).join("")}</tbody></table>` : "");
     }
     if (n === "warnings" && on) {
       const it = s.items || [];
@@ -2031,17 +2071,17 @@ function renderServices() {
     if (n === "aurora" && on && s.source === "noaa" && s.prob != null) {
       const thr = c.aurora.min_prob, lvlTxt = ["rauhallista", "mahdollisia", "todennäköisiä", "voimakkaita"][s.level || 0];
       v = `<div class="tiles" style="padding:10px 0 0">
-        <div class="tile"><div class="lbl">${esc(T("Todennäköisyys {r} km säteellä", {r: s.radius}))}</div><div class="val ${s.level ? "warn" : ""}">${esc(s.prob)} %</div><div class="muted">${esc(T(lvlTxt))}</div></div>
+        <div class="tile"><div class="lbl">${esc(T("Todennäköisyys {r} säteellä", {r: D(s.radius)}))}</div><div class="val ${s.level ? "warn" : ""}">${esc(s.prob)} %</div><div class="muted">${esc(T(lvlTxt))}</div></div>
         <div class="tile"><div class="lbl">Suoraan yläpuolella</div><div class="val">${esc(s.prob_here)} %</div><div class="muted">${s.forecast_time ? esc(T("ennuste klo {t}", {t: fmtTime(s.forecast_time)})) : ""}</div></div>
         <div class="tile"><div class="lbl">Pimeys</div><div class="val">${s.dark ? "pimeää" : "valoisaa"}</div><div class="muted">${esc(T("aurinko {s}°", {s: dec(String(s.sun))}))}</div></div>
-        <div class="tile"><div class="lbl">Pilvisyys</div><div class="val">${s.clouds != null ? Math.round(s.clouds) + "/8" : "–"}</div><div class="muted">${esc(s.clouds != null ? (s.cloud_station || "") : T("vain Suomessa"))}</div></div></div>
+        <div class="tile"><div class="lbl">Pilvisyys</div><div class="val">${s.clouds != null ? Math.round(s.clouds) + "/8" : "–"}</div><div class="muted">${esc(s.clouds != null ? (s.cloud_station || "") : "")}</div></div></div>
         <div class="muted" style="margin-top:4px">${esc(T("NOAA SWPC OVATION. Raja {thr} %.", {thr}))}</div>`;
     }
     if (n === "aurora" && on && s.source !== "noaa" && s.nearest) {
       const thr = c.aurora.threshold_nt, lvlTxt = ["rauhallista", "mahdollisia", "todennäköisiä", "voimakkaita"][s.level || 0];
       const mx = Math.max(thr * 2, ...(s.stations || []).map(x => x.range));
       v = `<div class="tiles" style="padding:10px 0 0">
-        <div class="tile"><div class="lbl">${esc(s.nearest.name)} (${esc(s.nearest.km)} km)</div><div class="val ${s.level ? "warn" : ""}">${esc(s.nearest.range)} nT/h</div><div class="muted">${lvlTxt}</div></div>
+        <div class="tile"><div class="lbl">${esc(s.nearest.name)} (${esc(D(s.nearest.km))})</div><div class="val ${s.level ? "warn" : ""}">${esc(s.nearest.range)} nT/h</div><div class="muted">${lvlTxt}</div></div>
         <div class="tile"><div class="lbl">Pimeys</div><div class="val">${s.dark ? "pimeää" : "valoisaa"}</div><div class="muted">${esc(T("aurinko {s}°", {s: dec(String(s.sun))}))}</div></div>
         <div class="tile"><div class="lbl">Pilvisyys</div><div class="val">${s.clouds != null ? Math.round(s.clouds) + "/8" : "–"}</div><div class="muted">${esc(s.cloud_station || "")}</div></div></div>
         <table style="margin-top:8px"><tbody>${(s.stations || []).map(x => `<tr><td>${esc(x.name)}</td><td class="num">${esc(x.range)} nT/h</td>
@@ -2051,10 +2091,10 @@ function renderServices() {
     if (n === "radiation" && on && s.fin_max) {
       const f = x => dec(x.toFixed(3)), thr = c.radiation.threshold;
       v = `<div class="tiles" style="padding:10px 0 0">
-        ${s.nearest ? `<div class="tile"><div class="lbl">${esc(T("Lähin: {name} ({km} km)", {name: s.nearest.name, km: s.nearest.km}))}</div><div class="val ${s.nearest.dr >= thr ? "bad" : ""}">${f(s.nearest.dr)}</div><div class="muted">µSv/h</div></div>` : ""}
-        ${s.area_max ? `<div class="tile"><div class="lbl">${esc(c.radiation.radius_km ? T("Korkein {r} km säteellä ({n} asemaa)", {r: c.radiation.radius_km, n: s.count}) : T("Korkein Suomessa ({n} asemaa)", {n: s.count}))}</div><div class="val ${s.area_max.dr >= thr ? "bad" : ""}">${f(s.area_max.dr)}</div><div class="muted">${esc(s.area_max.name)}</div></div>` : ""}
+        ${s.nearest ? `<div class="tile"><div class="lbl">${esc(T("Lähin: {name} ({km})", {name: s.nearest.name, km: D(s.nearest.km)}))}</div><div class="val ${s.nearest.dr >= thr ? "bad" : ""}">${f(s.nearest.dr)}</div><div class="muted">µSv/h</div></div>` : ""}
+        ${s.area_max ? `<div class="tile"><div class="lbl">${esc(c.radiation.radius_km ? T("Korkein {r} säteellä ({n} asemaa)", {r: D(c.radiation.radius_km), n: s.count}) : T("Korkein Suomessa ({n} asemaa)", {n: s.count}))}</div><div class="val ${s.area_max.dr >= thr ? "bad" : ""}">${f(s.area_max.dr)}</div><div class="muted">${esc(s.area_max.name)}</div></div>` : ""}
         <div class="tile"><div class="lbl">Korkein koko Suomessa</div><div class="val">${f(s.fin_max.dr)}</div><div class="muted">${esc(s.fin_max.name)}</div></div></div>
-        <table class="radtab"><tbody>${(s.stations || []).map(x => `<tr${x.dr >= thr ? ' class="over"' : ""}><td>${esc(x.name)}</td><td class="num muted">${x.km != null ? esc(x.km) + " km" : ""}</td>
+        <table class="radtab"><tbody>${(s.stations || []).map(x => `<tr${x.dr >= thr ? ' class="over"' : ""}><td>${esc(x.name)}</td><td class="num muted">${x.km != null ? esc(D(x.km)) : ""}</td>
           <td class="num">${esc(f(x.dr))}</td><td class="bar"><div class="hbar"><div style="width:${Math.min(100, x.dr / thr * 100).toFixed(1)}%"></div></div></td></tr>`).join("")}</tbody></table>
         <div class="muted" style="margin-top:4px">${esc(T("µSv/h. Pylvään täysi pituus = hälytysraja {thr} µSv/h.", {thr: f(thr)}))}</div>`;
     }
@@ -2123,48 +2163,73 @@ function satWindow(x) {   // nimitagin aikaväli: seuraava ylilento sijaintisi y
   const day = d.toDateString() === t.toDateString() ? "" : d.toLocaleDateString(LOC(), {weekday: "short"}) + " ";
   return p.aos <= now ? `${T("nyt")}–${hmS(p.los)}` : `${day}${hmS(p.aos)}–${hmS(p.los)}`;
 }
+// karttanäkymä: keskipiste (pituus, leveys) ja zoom 1–8; kartta jatkuu vaakasuunnassa
+const satView = {z: 1, cx: 0, cy: 0, follow: false};
+let satPaths = null, satRaf = 0;
+function satPathsBuild() {   // maailmankartta Path2D-muotoon (asteina), piirretään muunnoksella
+  const land = new Path2D(), bor = new Path2D();
+  for (const r of satWorld.land) { for (let i = 0; i < r.length; i += 2) (i ? land.lineTo : land.moveTo).call(land, r[i], r[i + 1]); land.closePath(); }
+  for (const r of satWorld.borders) { for (let i = 0; i < r.length; i += 2) (i ? bor.lineTo : bor.moveTo).call(bor, r[i], r[i + 1]); }
+  satPaths = {land, bor};
+}
+function satGeom() {
+  const cv = $("satCanvas"), W = cv.clientWidth, H = Math.round(W / 2), k = W / 360 * satView.z;
+  const maxCy = Math.max(0, 90 - H / 2 / k);
+  satView.cy = Math.max(-maxCy, Math.min(maxCy, satView.cy));
+  satView.cx = ((satView.cx + 540) % 360) - 180;
+  return {cv, W, H, k, X: lon => W / 2 + (lon - satView.cx) * k, Y: lat => H / 2 - (lat - satView.cy) * k};
+}
+function satRedraw() { cancelAnimationFrame(satRaf); satRaf = requestAnimationFrame(() => { drawSatMap(); }); }
 function drawSatMap() {
-  const cv = $("satCanvas"), dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = Math.round(W / 2);
+  const G = satGeom(), {cv, W, H, k, X, Y} = G, dpr = window.devicePixelRatio || 1;
   if (!W) return;
+  const D = satData;
+  if (satView.follow && D) { const f = D.sats.find(x => x.norad === satSel); if (f) { satView.cx = f.lon; satView.cy = f.lat; Object.assign(G, satGeom()); } }
   cv.style.height = H + "px"; cv.width = W * dpr; cv.height = H * dpr;
   const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const css = getComputedStyle(document.body), col = n => css.getPropertyValue(n).trim();
-  const X = lon => (lon + 180) / 360 * W, Y = lat => (90 - lat) / 180 * H;
+  const X2 = (lon, off) => W / 2 + (lon + off - satView.cx) * k;
+  const offs = [-360, 0, 360].filter(o => X2(180, o) >= 0 && X2(-180, o) <= W);   // näkyvät maailmankopiot
   g.fillStyle = "#0b1a26"; g.fillRect(0, 0, W, H);
-  // ruudukko 30° välein
+  // ruudukko
+  const step = satView.z >= 4 ? 10 : 30;
   g.strokeStyle = "rgba(255,255,255,.06)"; g.lineWidth = 1; g.beginPath();
-  for (let lo = -150; lo < 180; lo += 30) { g.moveTo(X(lo), 0); g.lineTo(X(lo), H); }
-  for (let la = -60; la <= 60; la += 30) { g.moveTo(0, Y(la)); g.lineTo(W, Y(la)); }
+  for (const o of offs) for (let lo = -180; lo < 180; lo += step) { g.moveTo(X2(lo, o), 0); g.lineTo(X2(lo, o), H); }
+  for (let la = -90 + step; la < 90; la += step) { g.moveTo(0, Y(la)); g.lineTo(W, Y(la)); }
   g.stroke();
   if (satWorld) {
-    g.fillStyle = "#1f2d3a"; g.strokeStyle = "#33465a"; g.lineWidth = .6;
-    for (const r of satWorld.land) { g.beginPath(); for (let i = 0; i < r.length; i += 2) (i ? g.lineTo : g.moveTo).call(g, X(r[i]), Y(r[i + 1])); g.closePath(); g.fill(); g.stroke(); }
-    g.strokeStyle = "rgba(125,139,153,.35)"; g.lineWidth = .5;
-    for (const r of satWorld.borders) { g.beginPath(); for (let i = 0; i < r.length; i += 2) (i ? g.lineTo : g.moveTo).call(g, X(r[i]), Y(r[i + 1])); g.stroke(); }
+    if (!satPaths) satPathsBuild();
+    for (const o of offs) {
+      g.save(); g.setTransform(dpr * k, 0, 0, -dpr * k, dpr * X2(0, o), dpr * Y(0));
+      g.fillStyle = "#1f2d3a"; g.fill(satPaths.land);
+      g.strokeStyle = "#33465a"; g.lineWidth = .6 / k; g.stroke(satPaths.land);
+      g.strokeStyle = "rgba(125,139,153,.35)"; g.lineWidth = .5 / k; g.stroke(satPaths.bor);
+      g.restore();
+    }
   }
-  const D = satData; satHit = [];
+  satHit = [];
   $("satCount").textContent = D ? `(${D.sats.length})` : "";
+  $("satZoom").textContent = satView.z > 1.01 ? `${dec(satView.z.toFixed(1))}×` : "";
   if (!D) return;
-  // yö: alue, jossa aurinko on horisontin alapuolella
-  { const [dec0, slon] = D.sun, dec = Math.abs(dec0) < .1 ? .1 : dec0, rad = Math.PI / 180;
-    g.fillStyle = "rgba(0,0,0,.38)"; g.beginPath();
-    for (let lo = -180; lo <= 180; lo += 2) { const la = Math.atan(-Math.cos((lo - slon) * rad) / Math.tan(dec * rad)) / rad; (lo === -180 ? g.moveTo : g.lineTo).call(g, X(lo), Y(la)); }
-    if (dec > 0) { g.lineTo(W, H); g.lineTo(0, H); } else { g.lineTo(W, 0); g.lineTo(0, 0); }
-    g.closePath(); g.fill(); }
-  const segs = (pts, cb) => {   // polku pisteinä [lon, lat, …], katkaistaan päivämäärärajalla
-    g.beginPath(); let prev = null;
+  // polku asteina [lon, lat, …] kaikkiin näkyviin kopioihin, katkaistaan päivämäärärajalla
+  const segs = (pts, cb) => { for (const o of offs) { g.beginPath(); let prev = null;
     for (let i = 0; i < pts.length; i += 2) { const lo = pts[i], la = pts[i + 1];
-      if (prev === null || Math.abs(lo - prev) > 180) g.moveTo(X(lo), Y(la)); else g.lineTo(X(lo), Y(la)); prev = lo; }
-    cb();
-  };
+      if (prev === null || Math.abs(lo - prev) > 180) g.moveTo(X2(lo, o), Y(la)); else g.lineTo(X2(lo, o), Y(la)); prev = lo; }
+    cb(); } };
+  // yö
+  { const [dec0, slon] = D.sun, dc = Math.abs(dec0) < .1 ? .1 : dec0, rad = Math.PI / 180;
+    g.fillStyle = "rgba(0,0,0,.38)";
+    for (const o of offs) { g.beginPath();
+      for (let lo = -180; lo <= 180; lo += 2) { const la = Math.atan(-Math.cos((lo - slon) * rad) / Math.tan(dc * rad)) / rad; (lo === -180 ? g.moveTo : g.lineTo).call(g, X2(lo, o), Y(la)); }
+      if (dc > 0) { g.lineTo(X2(180, o), Y(-90)); g.lineTo(X2(-180, o), Y(-90)); } else { g.lineTo(X2(180, o), Y(90)); g.lineTo(X2(-180, o), Y(90)); }
+      g.closePath(); g.fill(); } }
   const loc = D.location;
   D.sats.forEach((x, i) => {
-    const c = satColor(i), now = D.time, k = Math.max(0, Math.round((now - x.track_start) / x.track_step)) * 2;
-    g.lineWidth = 1.5; g.setLineDash([3, 4]); g.strokeStyle = c + "88"; segs(x.track.slice(0, k + 2), () => g.stroke());
-    g.setLineDash([]); g.strokeStyle = c; segs(x.track.slice(k), () => g.stroke());
-    // kuuluvuusalue
+    const c = satColor(i), now = D.time, kk = Math.max(0, Math.round((now - x.track_start) / x.track_step)) * 2;
+    g.lineWidth = 1.5; g.setLineDash([3, 4]); g.strokeStyle = c + "88"; segs(x.track.slice(0, kk + 2), () => g.stroke());
+    g.setLineDash([]); g.strokeStyle = c; segs(x.track.slice(kk), () => g.stroke());
     const rad = Math.PI / 180, d = x.footprint * rad, f1 = x.lat * rad, l1 = x.lon * rad, ring = [];
-    for (let b = 0; b <= 360; b += 5) { const br = b * rad, f2 = Math.asin(Math.sin(f1) * Math.cos(d) + Math.cos(f1) * Math.sin(d) * Math.cos(br));
+    for (let b = 0; b <= 360; b += 4) { const br = b * rad, f2 = Math.asin(Math.sin(f1) * Math.cos(d) + Math.cos(f1) * Math.sin(d) * Math.cos(br));
       const l2 = l1 + Math.atan2(Math.sin(br) * Math.sin(d) * Math.cos(f1), Math.cos(d) - Math.sin(f1) * Math.sin(f2));
       ring.push(((l2 / rad + 540) % 360) - 180, f2 / rad); }
     const inRange = x.el != null && x.el > 0;
@@ -2172,11 +2237,13 @@ function drawSatMap() {
     if (inRange) { let wrap = false; for (let j = 2; j < ring.length; j += 2) if (Math.abs(ring[j] - ring[j - 2]) > 180) wrap = true;
       if (!wrap) { g.fillStyle = c + "22"; segs(ring, () => { g.closePath(); g.fill(); }); } }
   });
-  if (loc) { g.fillStyle = col("--accent"); g.strokeStyle = "#fff"; g.lineWidth = 1.5; g.beginPath(); g.arc(X(loc[1]), Y(loc[0]), 4.5, 0, 7); g.fill(); g.stroke(); }
-  // satelliitit ja nimitagit päällimmäisinä
+  const near = lon => { const o = offs.reduce((a, b) => Math.abs(X2(lon, b) - W / 2) < Math.abs(X2(lon, a) - W / 2) ? b : a, offs[0] ?? 0); return X2(lon, o); };
+  if (loc) { const px = near(loc[1]), py = Y(loc[0]);
+    g.fillStyle = col("--accent"); g.strokeStyle = "#fff"; g.lineWidth = 1.5; g.beginPath(); g.arc(px, py, 4.5, 0, 7); g.fill(); g.stroke(); }
   g.font = "600 12px system-ui, sans-serif"; g.textBaseline = "middle";
   D.sats.forEach((x, i) => {
-    const c = satColor(i), px = X(x.lon), py = Y(x.lat), sel = satSel === x.norad;
+    const c = satColor(i), px = near(x.lon), py = Y(x.lat), sel = satSel === x.norad;
+    if (px < -60 || px > W + 60 || py < -30 || py > H + 30) return;
     g.fillStyle = c; g.strokeStyle = "#fff"; g.lineWidth = sel ? 2.5 : 1.5; g.beginPath(); g.arc(px, py, sel ? 7 : 5.5, 0, 7); g.fill(); g.stroke();
     const win = satWindow(x), txt = win ? `${x.name} · ${win}` : x.name, tw = g.measureText(txt).width + 12;
     let tx = px + 10, ty = py - 14; if (tx + tw > W - 2) tx = px - 10 - tw; if (ty < 10) ty = py + 14;
@@ -2185,27 +2252,59 @@ function drawSatMap() {
     g.fillStyle = x.pass && x.pass.aos <= D.time ? col("--live") : col("--text"); g.fillText(txt, tx + 6, ty + 1);
     satHit.push({norad: x.norad, x: px, y: py, box: [tx, ty - 10, tw, 20]});
   });
-  // ilmoitukset
   let note = "";
   if (!D.enabled) note = T("Ota satelliittipalvelu käyttöön Palvelut-välilehdellä.");
   else if (!D.location) note = T("Aseta oma sijainti Palvelut-välilehdellä.");
   else if (!D.sats.length) note = T("Valitse kartalla näytettävät satelliitit Palvelut-välilehdellä hälytettäviksi (🔔).");
   if ($("satNote").textContent !== note) $("satNote").textContent = note;
 }
-$("satCanvas").addEventListener("click", e => {
-  const r = e.target.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
-  let best = null, bd = 22;
-  for (const h of satHit) { const d = Math.hypot(h.x - x, h.y - y);
-    const inBox = x >= h.box[0] && x <= h.box[0] + h.box[2] && y >= h.box[1] && y <= h.box[1] + h.box[3];
-    if (inBox) { best = h; break; } if (d < bd) { bd = d; best = h; } }
-  if (best) { satSel = best.norad; drawSatMap(); drawSky(); }
-});
+// zoomaus: rulla kursorin kohdalle, raahaus siirtää, nipistys kosketusnäytöllä, tuplaklikkaus lähentää
+function satZoomAt(px, py, factor) {
+  const {W, H, k} = satGeom();
+  const lon = satView.cx + (px - W / 2) / k, lat = satView.cy - (py - H / 2) / k;
+  const z = Math.max(1, Math.min(8, satView.z * factor)), k2 = W / 360 * z;
+  satView.z = z; satView.cx = lon - (px - W / 2) / k2; satView.cy = lat + (py - H / 2) / k2;
+  satRedraw();
+}
+{
+  const cv = $("satCanvas"), ptrs = new Map(); let drag = null, pinch = null, moved = false;
+  cv.addEventListener("wheel", e => { e.preventDefault(); const r = cv.getBoundingClientRect();
+    satZoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0018))); }, {passive: false});
+  cv.addEventListener("pointerdown", e => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]); moved = false;
+    if (ptrs.size === 1) drag = {x: e.clientX, y: e.clientY, cx: satView.cx, cy: satView.cy};
+    if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = {d: Math.hypot(a[0] - b[0], a[1] - b[1]), z: satView.z}; drag = null; } });
+  cv.addEventListener("pointermove", e => { if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+    const r = cv.getBoundingClientRect();
+    if (pinch && ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      satZoomAt((a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top, (pinch.z * d / pinch.d) / satView.z); moved = true; return; }
+    if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.hypot(dx, dy) > 4) moved = true;
+      if (moved) { const {k} = satGeom(); satView.cx = drag.cx - dx / k; satView.cy = drag.cy + dy / k; setFollow(false); satRedraw(); cv.style.cursor = "grabbing"; } } });
+  const up = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (!ptrs.size) { drag = null; cv.style.cursor = ""; } };
+  cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+  cv.addEventListener("click", e => {
+    if (moved) { moved = false; return; }
+    const r = e.target.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    let best = null, bd = 22;
+    for (const h of satHit) { const d = Math.hypot(h.x - x, h.y - y);
+      const inBox = x >= h.box[0] && x <= h.box[0] + h.box[2] && y >= h.box[1] && y <= h.box[1] + h.box[3];
+      if (inBox) { best = h; break; } if (d < bd) { bd = d; best = h; } }
+    if (best) { satSel = best.norad; drawSatMap(); drawSky(); }
+  });
+  cv.addEventListener("dblclick", e => { const r = cv.getBoundingClientRect(); satZoomAt(e.clientX - r.left, e.clientY - r.top, 2); });
+}
+function setFollow(on) { satView.follow = on; $("satFollow").checked = on; }
+$("satZin").onclick = () => { const {W, H} = satGeom(); satZoomAt(W / 2, H / 2, 1.6); };
+$("satZout").onclick = () => { const {W, H} = satGeom(); satZoomAt(W / 2, H / 2, 1 / 1.6); };
+$("satWorld").onclick = () => { setFollow(false); Object.assign(satView, {z: 1, cx: 0, cy: 0}); satRedraw(); };
+$("satHome").onclick = () => { const L = satData && satData.location; if (!L) return; setFollow(false);
+  Object.assign(satView, {z: Math.max(satView.z, 3), cx: L[1], cy: L[0]}); satRedraw(); };
+$("satFollow").onchange = e => { satView.follow = e.target.checked; if (satView.follow && satView.z < 2.5) satView.z = 3; satRedraw(); };
 function drawSky() {
-  const D = satData, svg = $("skySvg");
-  if (!D || !D.sats.length) { svg.innerHTML = ""; $("satInfo").innerHTML = ""; return; }
-  let x = D.sats.find(s => s.norad === satSel);
-  if (!x) { x = [...D.sats].sort((a, b) => ((a.pass || {}).aos || 9e12) - ((b.pass || {}).aos || 9e12))[0]; satSel = x.norad; }
-  const i = D.sats.indexOf(x), c = satColor(i), p = x.pass;
+  const SD = satData, svg = $("skySvg");
+  if (!SD || !SD.sats.length) { svg.innerHTML = ""; $("satInfo").innerHTML = ""; return; }
+  let x = SD.sats.find(s => s.norad === satSel);
+  if (!x) { x = [...SD.sats].sort((a, b) => ((a.pass || {}).aos || 9e12) - ((b.pass || {}).aos || 9e12))[0]; satSel = x.norad; }
+  const i = SD.sats.indexOf(x), c = satColor(i), p = x.pass;
   const R = el => (90 - el) / 90 * 100, P = (az, el) => [R(el) * Math.sin(az * Math.PI / 180), -R(el) * Math.cos(az * Math.PI / 180)];
   const DIR = LANG === "fi" ? ["P", "I", "E", "L"] : ["N", "E", "S", "W"];
   let h = `<circle r="100" fill="#0b1a26" stroke="#33465a"/><circle r="66.7" fill="none" stroke="#26313d"/><circle r="33.3" fill="none" stroke="#26313d"/>
@@ -2222,15 +2321,16 @@ function drawSky() {
   if (x.el != null && x.el > 0) { const q = P(x.az, x.el); h += `<circle cx="${q[0]}" cy="${q[1]}" r="6" fill="${c}" stroke="#fff" stroke-width="2"/>`; }
   svg.innerHTML = h;
   const dirN = az => (LANG === "fi" ? ["P", "KO", "I", "KA", "E", "LO", "L", "LU"] : ["N", "NE", "E", "SE", "S", "SW", "W", "NW"])[Math.floor(((az + 22.5) % 360) / 45)];
-  const rows = [[T("Korkeus"), `${x.alt} km`], [T("Nopeus"), `${dec(String(x.speed))} km/s`]];
-  if (x.el != null) rows.push([T("Sinusta"), x.el > 0 ? `${x.az}° ${dirN(x.az)}, ${T("korkeus")} ${dec(String(x.el))}°, ${x.range} km` : T("horisontin alapuolella")]);
+  const rows = [[T("Korkeus"), D(x.alt)], [T("Nopeus"), SPD(x.speed)]];
+  if (x.range != null) rows.push([T("Etäisyys"), D(x.range)]);
+  if (x.el != null) rows.push([T("Sinusta"), x.el > 0 ? `${x.az}° ${dirN(x.az)}, ${T("korkeus")} ${dec(String(x.el))}°` : T("horisontin alapuolella")]);
   if (p) {
     rows.push([T("Nousu"), `${hmS(p.aos)} ${dirN(p.aos_az)}`], [T("Korkein"), `${p.max_el}° ${dirN(p.tca_az)} ${hmS(p.tca)}`], [T("Lasku"), `${hmS(p.los)} ${dirN(p.los_az)}`]);
     if (p.visible) rows.push([T("Näkyy"), `👁 ${hmS(p.visible.start)}–${hmS(p.visible.end)}`]);
   }
   if ((x.freqs || []).length) rows.push([T("Taajuudet"), x.freqs.join(" · ")]);
   $("satInfo").innerHTML = `<div style="color:${c};font-weight:700;font-size:15px">${esc(x.name)} <span class="muted" style="font-weight:400;font-size:12px">NORAD ${esc(x.norad)}</span></div>
-    ${p ? `<div class="muted">${esc(p.aos <= D.time ? T("Ylilento käynnissä") : T("Seuraava ylilento {d}", {d: satWindow(x)}))}</div>` : `<div class="muted">${esc(T("Ei ylilentoja seuraavan vuorokauden aikana."))}</div>`}
+    ${p ? `<div class="muted">${esc(p.aos <= SD.time ? T("Ylilento käynnissä") : T("Seuraava ylilento {d}", {d: satWindow(x)}))}</div>` : `<div class="muted">${esc(T("Ei ylilentoja seuraavan vuorokauden aikana."))}</div>`}
     <div class="kv">${rows.map(r => `<span>${esc(r[0])}</span><span>${esc(r[1])}</span>`).join("")}</div>`;
 }
 </script>

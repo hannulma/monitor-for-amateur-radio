@@ -26,7 +26,7 @@ import aiohttp
 import socketio
 from aiohttp import web
 
-from .i18n import set_lang, tr
+from .i18n import set_lang, set_units, tr
 from .updater import Updater
 from .checkin import CheckIn
 from .sheetsync import SheetError
@@ -60,6 +60,7 @@ DEFAULT_CONFIG = {
     "calls_limit": 10,          # Viimeisimmät puhelut -listan pituus (10/25/50/100/150)
     "bm_api_key": "",           # BM SelfCare API-avain (vain laitteen hallintaan)
     "language": "",             # "fi" / "en"; tyhjä = valitaan selaimen kielen mukaan
+    "units": "metric",          # "metric" (km) / "imperial" (mailit); asetukset tallennetaan aina kilometreinä
     "update_check": True,       # tarkista uudet versiot GitHubista kerran päivässä
 }
 CALLS_LIMITS = (10, 25, 50, 100, 150)
@@ -176,6 +177,7 @@ class Monitor:
         self.cfg["calls_limit"] = nearest_calls_limit(self.cfg.get("calls_limit"))
         self.matcher = Matcher(self.cfg["talkgroups"])
         set_lang(self.cfg.get("language") or "fi")
+        set_units(self.cfg.get("units"))
 
         self.tg_names: dict[int, str] = {}
         self.tg_stats: dict[int, dict] = {}
@@ -310,6 +312,11 @@ class Monitor:
                 raise ValueError(tr("Virheellinen kieli"))
             self.cfg["language"] = lang
             set_lang(lang)
+        if "units" in new:
+            if new["units"] not in ("metric", "imperial"):
+                raise ValueError(tr("Virheellinen yksikkö"))
+            self.cfg["units"] = new["units"]
+            set_units(new["units"])
         if "update_check" in new:
             self.cfg["update_check"] = bool(new["update_check"])
             self.updater.wake.set()

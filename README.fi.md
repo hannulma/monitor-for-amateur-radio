@@ -110,15 +110,15 @@ Jokaisella palvelulla on oma **päälle/pois-kytkin**; kaikki ovat oletuksena po
 
 | Palvelu | Lähde | Asetukset |
 |---|---|---|
-| ⚡ Salamahälytys | Ilmatieteen laitos | säde, uuden hälytyksen väli (heti uudestaan, jos salamat lähestyvät yli 5 km), vain maasalamat |
+| ⚡ Salamahälytys (vain Suomi) | Ilmatieteen laitos | säde, uuden hälytyksen väli (heti uudestaan, jos salamat lähestyvät yli 5 km), vain maasalamat |
 | ⚠ Säävaroitukset | Ilmatieteen laitoksen CAP-varoitukset tai MeteoAlarm (38 Euroopan maata) | vähimmäistaso (keltainen/oranssi/punainen), liikennesää (IL); varoitus tulee kun sijaintisi on varoitusalueella. MeteoAlarmissa valitaan maa, ja jos maan varoituksissa ei ole aluerajoja, alue nimellä tai EMMA-tunnuksella |
 | ☀ Avaruussää | NOAA SWPC | Kp-raja (oletus 5), auringonpurkaukset ≥ M5, NOAA:n K-ennusteet |
 | 🌌 Revontulihälytys | Ilmatieteen laitoksen magnetometrit tai NOAA:n OVATION-ennuste (koko maailma, raja %, suurin arvo 300 km säteellä) | raja nT/h (raja = mahdollisia, 2× = todennäköisiä, 4× = voimakkaita), vain pimeällä, ei täysin pilvisellä; viestissä pilvisyys |
-| ☢ Säteilyvalvonta | STUK (~250 asemaa) | raja (oletus 0,4 µSv/h = STUK:n hälytysraja), säde tai koko Suomi |
-| 🚧 Tieliikenne | Fintraffic Digitraffic | säde oman sijainnin tai muun pisteen ympärillä, maakunnat, tienumerot, tiedotetyypit |
+| ☢ Säteilyvalvonta (vain Suomi) | STUK (~250 asemaa) | raja (oletus 0,4 µSv/h = STUK:n hälytysraja), säde tai koko Suomi |
+| 🚧 Tieliikenne (vain Suomi) | Fintraffic Digitraffic | säde oman sijainnin tai muun pisteen ympärillä, maakunnat, tienumerot, tiedotetyypit |
 | 🛰 Satelliittien ylilennot | CelesTrak (ratatiedot), SatNOGS DB (taajuudet), SGP4-laskenta | ISS ja aktiiviset radioamatöörisatelliitit: seuraavat ylilennot suuntineen ja taajuuksineen, ISS:n näkyvät ylilennot, hälytys valituista satelliiteista (oletuksena ISS, 30 min ennen nousua, korkeuskulma ≥ 20°) |
 
-**Satelliitit-välilehti** näyttää hälytettäviksi valitut satelliitit maailmankartalla: paikka reaaliajassa, maajälki, kuuluvuusalue, yö ja päivä sekä nimitagissa seuraava aikaväli, jolloin satelliitti on sijaintisi yhteysalueella. Klikattu satelliitti näytetään taivaskartalla (seuraavan ylilennon reitti ilmansuuntineen ja korkeuskulmineen). Karttapohja: Natural Earth (public domain).
+**Satelliitit-välilehti** näyttää hälytettäviksi valitut satelliitit maailmankartalla: paikka reaaliajassa, maajälki, kuuluvuusalue, yö ja päivä sekä nimitagissa seuraava aikaväli, jolloin satelliitti on sijaintisi yhteysalueella. Klikattu satelliitti näytetään taivaskartalla (seuraavan ylilennon reitti ilmansuuntineen ja korkeuskulmineen). Karttaa voi zoomata (rulla, nipistys, +/−) ja siirtää raahaamalla, ja valittua satelliittia voi seurata. Karttapohja: Natural Earth (public domain).
 
 Ensimmäisen tarkistuksen jälkeen hälytetään vain **uusista** tapahtumista; voimassa olevat näkyvät kortissa.
 Viestit lyhennetään mahtumaan yhteen 67 merkin radioviestiin, esim.
@@ -137,6 +137,8 @@ Seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, BrandMeister API-av
 - **Kieli (suomi / English)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
   Radiokomennot toimivat kummallakin kielellä (`APUA`/`HELP`, `KUKA`/`WHO`, `NYT`/`NOW`). Ilmatieteen laitoksen
   varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).
+- **Mittayksiköt (km / mailit)** koskevat kaikkia näytettyjä etäisyyksiä ja nopeuksia sekä hälytyksiä. Asetukset
+  tallennetaan aina kilometreinä, joten yksikön vaihto ei muuta säteitä.
 - **Päivitykset:** ohjelma tarkistaa GitHubista kerran päivässä, onko uusi versio saatavilla (voi kytkeä pois).
   Windowsissa (asennusohjelmalla asennettu), macOS:ssä ja Linuxissa **Päivitä nyt** lataa uuden version,
   tarkistaa sen julkaisun `SHA256SUMS.txt`-tarkistussummaa vasten, asentaa sen ja käynnistää ohjelman uudelleen –

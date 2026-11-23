@@ -27,6 +27,29 @@ def tr(text: str, **kw) -> str:
     return out.format(**kw) if kw else out
 
 
+UNITS = ("metric", "imperial")
+_units = "metric"
+KM_PER_MI = 1.609344
+
+
+def set_units(units: str | None) -> None:
+    global _units
+    _units = units if units in UNITS else "metric"
+
+
+def get_units() -> str:
+    return _units
+
+
+def dist(km: float | None, digits: int = 0) -> str:
+    """Etäisyys valitussa yksikössä: '12 km' tai '7 mi'."""
+    if km is None:
+        return ""
+    if _units == "imperial":
+        return f"{num(float(km) / KM_PER_MI, digits)} mi"
+    return f"{num(float(km), digits)} km"
+
+
 def num(x: float, digits: int = 1) -> str:
     """Desimaaliluku kielen mukaisella erottimella."""
     s = f"{x:.{digits}f}"
@@ -108,9 +131,9 @@ EN: dict[str, str] = {
     "Erikoiskuljetukset": "Exempted (oversize) transports",
     "maasalama": "ground strike",
     "salama": "lightning",
-    "⚡ {kind} {km} km {dir}": "⚡ {kind} {km} km {dir}",
-    "Salama {km} km {dir}, {n} iskua/15 min": "Lightning {km} km {dir}, {n} strikes/15 min",
-    "{n} iskua 15 min aikana {r} km säteellä": "{n} strikes in 15 min within {r} km",
+    "⚡ {kind} {km} {dir}": "⚡ {kind} {km} {dir}",
+    "Salama {km} {dir}, {n} iskua/15 min": "Lightning {km} {dir}, {n} strikes/15 min",
+    "{n} iskua 15 min aikana {r} säteellä": "{n} strikes in 15 min within {r}",
     "Geomagneettinen myrsky: Kp {kp}": "Geomagnetic storm: Kp {kp}",
     "Revontulikelit VHF:llä mahdollisia, HF-kelit voivat heiketä.":
         "VHF aurora propagation possible, HF conditions may degrade.",
@@ -125,8 +148,8 @@ EN: dict[str, str] = {
     "voimakkaita": "strong",
     ", pilvisyys {c}/8": ", cloud cover {c}/8",
     "Revontulet {word}: {name} {rng} nT/h{cl}": "Aurora {word}: {name} {rng} nT/h{cl}",
-    "Magneettinen aktiivisuus lähimmällä magnetometrillä ({name}, {km} km). VHF-revontulikelit mahdollisia.":
-        "Magnetic activity at the nearest magnetometer ({name}, {km} km). VHF aurora propagation possible.",
+    "Magneettinen aktiivisuus lähimmällä magnetometrillä ({name}, {km}). VHF-revontulikelit mahdollisia.":
+        "Magnetic activity at the nearest magnetometer ({name}, {km}). VHF aurora propagation possible.",
     " (+{n} asemaa)": " (+{n} stations)",
     "Säteily koholla: {name} {dr} µSv/h{more}": "Radiation elevated: {name} {dr} µSv/h{more}",
     "Raja {thr} µSv/h{dist}. Normaali taso Suomessa n. 0,05–0,3 µSv/h. Tarkista tilanne STUK:n sivuilta.":
@@ -199,7 +222,7 @@ EN: dict[str, str] = {
     "Aseta oma sijainti tai valitse alue": "Set your location or choose a region",
     "Tuntematon maa: {c}": "Unknown country: {c}",
     "Revontulet {word}: NOAA-ennuste {p} %{cl}": "Aurora {word}: NOAA forecast {p} %{cl}",
-    "NOAA:n OVATION-ennuste: näkyvien revontulien todennäköisyys {r} km säteellä. VHF-revontulikelit mahdollisia.": "NOAA OVATION forecast: probability of visible aurora within {r} km. VHF aurora propagation possible.",
+    "NOAA:n OVATION-ennuste: näkyvien revontulien todennäköisyys {r} säteellä. VHF-revontulikelit mahdollisia.": "NOAA OVATION forecast: probability of visible aurora within {r}. VHF aurora propagation possible.",
     "Virheellinen kutsu: {x}": "Invalid callsign: {x}",
     "Brandmeister ei salli tätä toimintoa tälle laitteelle, joten se ei ole tämän API-avaimen tilin laite. Hallintatyökalut piilotettiin; ne saa takaisin valinnalla Oma laite.": "BrandMeister does not allow this action for this device, so it does not belong to the account of this API key. The management tools were hidden; turn on Own device to show them again.",
     "Satelliittien ylilennot": "Satellite passes",
@@ -209,4 +232,5 @@ EN: dict[str, str] = {
     "Taajuudet: {f}.": "Frequencies: {f}.",
     "{name} klo {t} max {el}° {az}": "{name} at {t} max {el}° {az}",
     "näkyy {a}–{b}": "visible {a}–{b}",
+    "Virheellinen yksikkö": "Invalid unit",
 }
