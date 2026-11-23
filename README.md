@@ -118,7 +118,7 @@ BrandMeister), `-v` (verbose).
 5. **Alerts on your radio (optional):** *Syötteet ja viestit* → set an APRS-IS login (your callsign with an
    unused SSID, e.g. `OH2ABC-13`) and the recipient = your radio's APRS SSID configured in
    BrandMeister SelfCare (e.g. `OH2ABC-7`), then *Send test message*.
-6. **Services:** *Palvelut* → set your location (coordinates or Maidenhead locator) and switch on the services you want. Weather warnings can come from the Finnish Meteorological Institute or MeteoAlarm (38 European countries), and the aurora alert from FMI magnetometers or the NOAA OVATION forecast (worldwide). Satellite passes lists upcoming passes of the ISS and active amateur radio satellites (CelesTrak orbits, SatNOGS DB frequencies, SGP4) with visible ISS passes and alerts before rise.
+6. **Services:** *Palvelut* → set your location (coordinates or Maidenhead locator) and switch on the services you want. Weather warnings can come from the Finnish Meteorological Institute or MeteoAlarm (38 European countries), and the aurora alert from FMI magnetometers or the NOAA OVATION forecast (worldwide). Satellite passes lists upcoming passes of the ISS and active amateur radio satellites (CelesTrak orbits, SatNOGS DB frequencies, SGP4) with visible ISS passes and alerts before rise. The *Satelliitit* tab shows the satellites chosen for alerts on a world map (position, ground track, coverage circle, day/night, next in-range window in the name tag) and a sky plot of the next pass. Base map: Natural Earth (public domain).
 
 ### Commands from your radio
 

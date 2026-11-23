@@ -890,6 +890,12 @@ def make_app(mon: Monitor) -> web.Application:
         except Exception as e:  # noqa: BLE001
             return web.json_response({"ok": False, "error": friendly_error(e)}, status=400)
 
+    async def sat_map(request):
+        """Satelliitit-välilehden kartta: lasketaan pyydettäessä (sivu kysyy muutaman sekunnin välein)."""
+        svc = mon.services.services["satellites"]
+        data = await asyncio.get_running_loop().run_in_executor(None, svc.map_data)
+        return web.json_response(data)
+
     async def ma_area_list(request):
         """MeteoAlarm-maan alueet (nimi ja EMMA_ID) syötteestä alueen valintaa varten."""
         country = request.query.get("country", "")
@@ -1129,6 +1135,7 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_post("/api/feeds/check", check_feeds)
     app.router.add_get("/api/feeds/preview", preview_feed)
     app.router.add_get("/api/services/meteoalarm_areas", ma_area_list)
+    app.router.add_get("/api/satellites/map", sat_map)
     app.router.add_get("/", index)
     app.router.add_get("/ws", ws_handler)
     app.router.add_get("/api/config", get_config)

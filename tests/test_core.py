@@ -394,3 +394,17 @@ def test_satellite_passes_match_reference():
         {"norad_cat_id": ISS, "alive": True, "status": "active", "type": "Transmitter", "description": "TLM",
          "mode": "FSK", "uplink_low": None, "downlink_low": 437800000}], {ISS})
     assert [freq_text(t) for t in tx[ISS]] == ["FM 145,990↑ 437,800↓"]
+
+
+def test_satellite_subpoint_and_map():
+    """Alipiste verrattuna Skyfieldiin (sama TLE) ja kartan tiedot."""
+    from bmmonitor.satellites import ISS, Orbit, parse_tle, short_name, sky_path, track, teme_to_geodetic
+    tle = parse_tle(ISS_TLE)
+    orb = Orbit(ISS, tle[ISS])
+    la, lo, h = teme_to_geodetic(orb.pos(1795354864), 1795354864)
+    assert abs(la - 45.315) < 0.02 and abs(lo - 22.224) < 0.02 and abs(h - 417.7) < 1
+    t = track(orb, 1795354864, 60.17, 24.94)
+    assert len(t["track"]) == 2 * 291 and 15 < t["footprint"] < 25 and 7.5 < t["speed"] < 7.8
+    path = sky_path(orb, 1795354743.7, 1795355259.9, 60.17, 24.94)
+    assert path[0][2] < 1 and max(p[2] for p in path) > 9
+    assert short_name("RS-44 & BREEZE-KM R/B") == "RS-44" and short_name("SAUDISAT 1C (SO-50)") == "SO-50"

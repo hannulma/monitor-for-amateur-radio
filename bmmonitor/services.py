@@ -1235,6 +1235,36 @@ class Satellites(Service):
                 break
         return out
 
+    def map_data(self) -> dict:
+        """Satelliitit-välilehti: hälytettävien satelliittien paikat, maajäljet, seuraava ylilento
+        ja sen taivaskartan reitti."""
+        now = time.time()
+        lat, lon = self.loc or (None, None)
+        out = {"time": now, "sun": sat.sun_subpoint(now), "location": None if lat is None else [lat, lon],
+               "enabled": bool(self.cfg.get("enabled")), "sats": []}
+        cache = getattr(self, "_orbits", {})
+        for n in sorted(set(self.cfg.get("alert_sats") or [])):
+            if n not in self.data.tle:
+                continue
+            orb = cache.get(n)
+            if orb is None or orb.name != self.data.tle[n]["name"] or getattr(orb, "_l1", None) != self.data.tle[n]["l1"]:
+                orb = sat.Orbit(n, self.data.tle[n])
+                orb._l1 = self.data.tle[n]["l1"]
+                cache[n] = orb
+            tr_ = sat.track(orb, now, lat, lon)
+            if not tr_:
+                continue
+            nxt = next((p for p in self.passes if p["norad"] == n and p["los"] > now), None)
+            item = {"norad": n, "name": sat.short_name(self.data.tle[n]["name"]), "freqs": self.freqs(n), **tr_,
+                    "pass": None}
+            if nxt and lat is not None:
+                item["pass"] = {**{k: nxt[k] for k in ("aos", "los", "tca", "max_el", "aos_az", "tca_az", "los_az")},
+                                "visible": nxt.get("visible") if self.cfg.get("iss_visible", True) else None,
+                                "path": sat.sky_path(orb, nxt["aos"], nxt["los"], lat, lon)}
+            out["sats"].append(item)
+        self._orbits = cache
+        return out
+
     def sat_list(self) -> list[dict]:
         return [{"norad": n, "name": sat.short_name(self.data.tle[n]["name"]), "freqs": self.freqs(n)}
                 for n in self.data.active()]

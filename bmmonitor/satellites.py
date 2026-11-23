@@ -65,7 +65,7 @@ def short_name(name: str) -> str:
         inner = name[name.rfind("(") + 1:-1]
         if inner and len(inner) <= 12:
             return inner
-    return name
+    return name.split(" & ")[0].strip()
 
 
 def pick_transmitters(tx: list[dict], norads: set[int]) -> dict[int, list[dict]]:
@@ -163,6 +163,77 @@ def sunlit(r_teme, ts: float) -> bool:
 def sun_elev(ts: float, lat: float, lon: float) -> float:
     s = sun_vector(ts)
     return look_angles((s[0] * 1.496e8, s[1] * 1.496e8, s[2] * 1.496e8), ts, lat, lon)[0]
+
+
+def teme_to_geodetic(r_teme, ts: float) -> tuple[float, float, float]:
+    """Satelliitin alipiste: (leveys°, pituus°, korkeus km), WGS84."""
+    g = gmst(ts)
+    cg, sg = math.cos(g), math.sin(g)
+    x = cg * r_teme[0] + sg * r_teme[1]
+    y = -sg * r_teme[0] + cg * r_teme[1]
+    z = r_teme[2]
+    lon = math.atan2(y, x)
+    p = math.hypot(x, y)
+    e2 = F * (2 - F)
+    lat = math.atan2(z, p * (1 - e2))
+    for _ in range(5):
+        n = RE / math.sqrt(1 - e2 * math.sin(lat) ** 2)
+        h = p / math.cos(lat) - n
+        lat = math.atan2(z, p * (1 - e2 * n / (n + h)))
+    n = RE / math.sqrt(1 - e2 * math.sin(lat) ** 2)
+    h = p / math.cos(lat) - n
+    return math.degrees(lat), (math.degrees(lon) + 540) % 360 - 180, h
+
+
+def sun_subpoint(ts: float) -> tuple[float, float]:
+    """Piste, jossa aurinko on zeniitissä (leveys°, pituus°): yö-päivä-rajan piirtämiseen."""
+    s = sun_vector(ts)
+    lat, lon, _ = teme_to_geodetic((s[0] * 1.496e8, s[1] * 1.496e8, s[2] * 1.496e8), ts)
+    return math.degrees(math.asin(s[2])), lon
+
+
+def footprint_deg(alt_km: float) -> float:
+    """Kuuluvuusalueen säde maapallon keskuskulmana (satelliitti horisontissa)."""
+    return math.degrees(math.acos(RE / (RE + max(alt_km, 1))))
+
+
+def track(orb: "Orbit", now: float, lat: float | None, lon: float | None, back: float = 45 * 60,
+          ahead: float = 100 * 60, step: float = 30) -> dict:
+    """Kartan tiedot: paikka nyt, nopeus, maajälki ja (jos sijainti tiedossa) suunta havaitsijasta."""
+    r = orb.pos(now)
+    if r is None:
+        return {}
+    la, lo, h = teme_to_geodetic(r, now)
+    r2 = orb.pos(now + 1)
+    v = math.dist(r, r2) if r2 else 0.0
+    pts = []
+    t = now - back
+    while t <= now + ahead:
+        rr = orb.pos(t)
+        if rr is not None:
+            a, b, _ = teme_to_geodetic(rr, t)
+            pts += [round(b, 2), round(a, 2)]
+        t += step
+    out = {"lat": round(la, 3), "lon": round(lo, 3), "alt": round(h), "speed": round(v, 2),
+           "footprint": round(footprint_deg(h), 2), "track": pts, "track_start": now - back, "track_step": step}
+    if lat is not None:
+        el, az, rng = look_angles(r, now, lat, lon)
+        out.update(el=round(el, 1), az=round(az), range=round(rng))
+    return out
+
+
+def sky_path(orb: "Orbit", aos: float, los: float, lat: float, lon: float, step: float = 10) -> list:
+    """Ylilennon reitti taivaskarttaan: [[aika, atsimuutti, korkeus], …]."""
+    obs = observer_ecef(lat, lon)
+    out = []
+    t = aos
+    while t <= los + 0.1:
+        r = orb.pos(t)
+        if r is not None:
+            el, az, _ = look_angles(r, t, lat, lon, obs)
+            out.append([round(t), round(az, 1), round(max(el, 0), 1)])
+        t += step
+    return out
 
 
 class Orbit:

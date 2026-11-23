@@ -118,6 +118,8 @@ Jokaisella palvelulla on oma **päälle/pois-kytkin**; kaikki ovat oletuksena po
 | 🚧 Tieliikenne | Fintraffic Digitraffic | säde oman sijainnin tai muun pisteen ympärillä, maakunnat, tienumerot, tiedotetyypit |
 | 🛰 Satelliittien ylilennot | CelesTrak (ratatiedot), SatNOGS DB (taajuudet), SGP4-laskenta | ISS ja aktiiviset radioamatöörisatelliitit: seuraavat ylilennot suuntineen ja taajuuksineen, ISS:n näkyvät ylilennot, hälytys valituista satelliiteista (oletuksena ISS, 30 min ennen nousua, korkeuskulma ≥ 20°) |
 
+**Satelliitit-välilehti** näyttää hälytettäviksi valitut satelliitit maailmankartalla: paikka reaaliajassa, maajälki, kuuluvuusalue, yö ja päivä sekä nimitagissa seuraava aikaväli, jolloin satelliitti on sijaintisi yhteysalueella. Klikattu satelliitti näytetään taivaskartalla (seuraavan ylilennon reitti ilmansuuntineen ja korkeuskulmineen). Karttapohja: Natural Earth (public domain).
+
 Ensimmäisen tarkistuksen jälkeen hälytetään vain **uusista** tapahtumista; voimassa olevat näkyvät kortissa.
 Viestit lyhennetään mahtumaan yhteen 67 merkin radioviestiin, esim.
 `Tie 101 Espoo, Kalevalantie: Liikennevalot, epäkunnossa` tai
