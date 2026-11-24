@@ -44,8 +44,10 @@ DMR radio via APRS.
   user history.
 - **APRS messaging** – see all APRS messages to and from every SSID of your callsign (including DMR ↔ APRS
   messages through the BrandMeister APRS gateway) and reply directly from the app.
-- **APRS RF coverage** – listens to the KISS TCP port of Graywolf or Dire Wolf (default `127.0.0.1:8001`),
-  receive only. A heat map shows where your station hears packets directly and via digipeaters (24 h / 7 days /
+  Optionally messages, acks and command replies are also transmitted on the radio through Graywolf
+  (Settings → APRS messages on the radio; route automatic / APRS-IS / radio, off by default).
+- **APRS RF coverage** – listens to the KISS TCP port of Graywolf or Dire Wolf (default `127.0.0.1:8001`).
+  A heat map shows where your station hears packets directly and via digipeaters (24 h / 7 days /
   30 days); click a digipeater to see the area heard through it. Tables of digipeater shares and the most
   common paths, and an alert when a known digipeater or a station you choose (e.g. an iGate) goes silent –
   only while your own reception works. Base map © OpenStreetMap contributors (tiles fetched through the app

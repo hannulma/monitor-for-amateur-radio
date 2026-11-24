@@ -29,6 +29,11 @@ APRS_MSG_MAX = 67
 TOCALL = "APZBMM"
 RETRY_INTERVAL = 45
 MAX_TRIES = 3
+RF_RETRY_INTERVAL = 60        # radiolla harvemmin kuin APRS-IS:ssä: kanava on yhteinen
+RF_MIN_GAP = 5                # sekuntia peräkkäisten radiolähetysten välillä
+RF_MAX_PER_10MIN = 30         # yläraja radiolähetyksille (viestit + kuittaukset)
+ACK_HOLD = 20                 # samaa viestiä ei kuitata uudelleen näin pian (sama viesti RF:ltä ja iGaten kautta IS:stä)
+ROUTES = ("auto", "is", "rf")
 
 DEFAULT_MESSAGING = {
     "enabled": False,
@@ -49,6 +54,10 @@ DEFAULT_MESSAGING = {
     "commands_enabled": True,  # vastaa radiosta lähetettyihin komentoihin (APUA, TG244, KUKA ...)
     "commands_all": False,     # False = vain vastaanottajat, oma kutsu ja sallittujen lista
     "commands_allow": [],
+    "rf_tx": False,            # salli APRS-viestien lähetys radiolla Graywolfin KISS-portin kautta
+    "route": "auto",           # oletusreitti: auto (RF, jos vastaanottaja kuultu radiolla äskettäin) / is / rf
+    "rf_path": "WIDE1-1,WIDE2-1",
+    "rf_heard_min": 30,        # automaattireitti: vastaanottaja kuultu radiolla näin monen minuutin sisällä
 }
 
 _SSL_CTX = None
@@ -246,43 +255,8 @@ class AprsClient:
             return
         # APRS-viesti:  SRC>DST,PATH::ADDRESSEE:ackNN / rejNN / teksti{NN
         m = re.match(r"^([^>]+)>[^:]*::([^:]{9}):(.*)$", line)
-        if not m:
-            return
-        src, addressee, body = m.group(1).upper(), m.group(2).strip().upper(), m.group(3)
-        bases = self.hub.watch_bases()
-        login_base = login.split("-")[0].upper()
-        if src.split("-")[0] not in bases and addressee.split("-")[0] not in bases:
-            return
-        am = re.match(r"^(ack|rej)([A-Za-z0-9}]{1,5})", body)
-        if am:
-            mid = am.group(2).split("}")[0]
-            entry = self.pending.get(mid)
-            if entry and entry.get("from", login).upper() == addressee and entry["to"].upper() == src:
-                self.pending.pop(mid, None)
-                entry["status"] = "kuitattu" if am.group(1) == "ack" else "hylätty"
-                entry["ack_time"] = time.time()
-            self.hub.mark_ack(sender=addressee, recipient=src, msgid=mid, ok=am.group(1) == "ack")
-            self.hub.touch()
-            return
-        txt, _, mid = body.partition("{")
-        mid = mid.split("}")[0] if mid else ""
-        if mid and addressee == login.upper():
-            self.queue.put_nowait(("raw", f"{login}>{TOCALL},TCPIP*::{src:<9}:ack{mid}"))
-        if not self.hub.add_aprs(src, addressee, txt, mid):
-            return          # uudelleenlähetys, jo käsitelty
-        if addressee.split("-")[0] == login_base:
-            self.hub.add_log({"time": time.time(), "dir": "in", "to": addressee, "from": src,
-                              "text": txt, "status": "vastaanotettu"})
-        if addressee == login.upper() and self.hub.command_handler:
-            try:
-                reply = self.hub.command_handler(src, txt)
-            except Exception as e:  # noqa: BLE001
-                log.warning("Komennon käsittely: %s", e)
-                reply = None
-            if reply:
-                text = clean_text(reply, bool(self.cfg.get("ascii")))
-                for part in split_message(text, max(2, int(self.cfg.get("max_parts") or 2))):
-                    self.send(src.upper(), part, source="komento")
+        if m:
+            self.hub.handle_message(m.group(1).upper(), m.group(2).strip().upper(), m.group(3), "is")
 
     async def _sender(self, login: str):
         while True:
@@ -323,18 +297,19 @@ class AprsClient:
             self.hub.touch()
             return
         entry["status"] = "uudelleen"
-        self.queue.put_nowait(("msg", entry))
+        (self.hub.rf_queue if entry.get("route") == "rf" else self.queue).put_nowait(("msg", entry))
 
-    def send(self, to: str, text: str, source: str = "", src: str | None = None) -> dict:
+    def send(self, to: str, text: str, source: str = "", src: str | None = None, route: str | None = None) -> dict:
         no_ack = bool(self.cfg.get("no_ack"))
         frm = (src or self.cfg.get("login") or "").upper()
         entry = {"time": time.time(), "dir": "out", "to": to.upper(), "from": frm, "text": text, "source": source,
-                 "msgid": "" if no_ack else self.next_id(), "no_ack": no_ack, "tries": 0, "status": "jonossa"}
+                 "msgid": "" if no_ack else self.next_id(), "no_ack": no_ack, "tries": 0, "status": "jonossa",
+                 "route": self.hub.pick_route(to.upper(), route)}
         self.hub.add_log(entry)
         bases = self.hub.watch_bases()
         if frm.split("-")[0] in bases or entry["to"].split("-")[0] in bases:
             self.hub.aprs_msgs.appendleft(entry)
-        self.queue.put_nowait(("msg", entry))
+        (self.hub.rf_queue if entry["route"] == "rf" else self.queue).put_nowait(("msg", entry))
         return entry
 
 
@@ -452,6 +427,151 @@ class MessagingHub:
         self.aprs_msgs: deque[dict] = deque(maxlen=300)
         self.aprs = AprsClient(self)
         self.feeds = FeedWatcher(self)
+        self.rf = None                       # AprsRx (Graywolfin KISS-yhteys), asetetaan sovelluksessa
+        self.rf_queue: asyncio.Queue = asyncio.Queue()
+        self.rf_sent: deque[float] = deque()
+        self.acked: dict[tuple[str, str], float] = {}   # (viestin lähettäjä, msgid) → kuitattu (aika)
+
+    # ---------------- reitti: APRS-IS vai radio ----------------
+    def rf_ready(self) -> bool:
+        return bool(self.cfg.get("rf_tx")) and self.rf is not None and bool(self.rf.status.get("connected"))
+
+    def pick_route(self, to: str, route: str | None = None) -> str:
+        r = route if route in ROUTES else self.cfg.get("route", "auto")
+        if not self.cfg.get("rf_tx"):
+            return "is"
+        if r in ("is", "rf"):
+            return r
+        mins = int(self.cfg.get("rf_heard_min") or 30)
+        if not self.rf_ready():
+            return "is"
+        # radiolla, jos vastaanottaja kuuluu radiolla – tai APRS-IS on poikki (Graywolfin iGate vie viestin sinne)
+        return "rf" if self.rf.heard_recently(to, mins * 60) or not self.aprs.connected else "is"
+
+    def rf_path(self) -> list[str]:
+        return [p for p in str(self.cfg.get("rf_path") or "").replace(" ", "").upper().split(",") if p]
+
+    async def _rf_sender(self):
+        while True:
+            item = await self.rf_queue.get()
+            # kanavan säästö: tauko lähetysten välillä ja yläraja kymmenelle minuutille
+            while True:
+                now = time.time()
+                while self.rf_sent and now - self.rf_sent[0] > 600:
+                    self.rf_sent.popleft()
+                wait = 0.0
+                if self.rf_sent:
+                    wait = max(wait, RF_MIN_GAP - (now - self.rf_sent[-1]))
+                if len(self.rf_sent) >= RF_MAX_PER_10MIN:
+                    wait = max(wait, 600 - (now - self.rf_sent[0]) + 0.1)
+                if wait <= 0:
+                    break
+                await asyncio.sleep(wait)
+            if item[0] == "ack":
+                _, frm, to, mid = item
+                if not self.rf_ready():
+                    continue
+                info = f":{to:<9}:ack{mid}"
+            else:
+                entry = item[1]
+                if entry["status"] not in ("jonossa", "uudelleen"):
+                    continue
+                if not self.rf_ready():
+                    entry["status"] = "virhe: ei radioyhteyttä"
+                    self.aprs.pending.pop(entry.get("msgid"), None)
+                    self.touch()
+                    continue
+                frm = entry.get("from") or (self.cfg.get("login") or "").upper()
+                entry["tries"] += 1
+                entry["sent_time"] = time.time()
+                if entry.get("no_ack"):
+                    entry["status"] = "lähetetty (ei kuittausta)"
+                    info = f":{entry['to']:<9}:{entry['text']}"
+                else:
+                    entry["status"] = "lähetetty"
+                    self.aprs.pending[entry["msgid"]] = entry
+                    info = f":{entry['to']:<9}:{entry['text']}{{{entry['msgid']}"
+                    asyncio.get_running_loop().call_later(RF_RETRY_INTERVAL, self.aprs._retry, entry)
+                self.touch()
+            try:
+                self.rf.transmit(frm, TOCALL, self.rf_path(), info.encode("utf-8"))
+                self.rf_sent.append(time.time())
+                log.info("APRS RF > %s>%s,%s:%s", frm, TOCALL, ",".join(self.rf_path()), info)
+            except Exception as e:  # noqa: BLE001
+                log.warning("APRS RF -lähetys: %s", e)
+                if item[0] == "msg":
+                    item[1]["status"] = "virhe: ei radioyhteyttä"
+                    self.aprs.pending.pop(item[1].get("msgid"), None)
+                    self.touch()
+
+    # ---------------- saapuneet viestit (APRS-IS ja radio) ----------------
+    def _own_echo(self, src: str, dst: str, text: str, msgid: str) -> bool:
+        """Oma lähetys palasi: digipiitterin toistama paketti radiolta tai iGaten välittämänä APRS-IS:stä."""
+        now = time.time()
+        for e in self.aprs_msgs:
+            if now - e["time"] > 1800:
+                break
+            if e.get("dir") == "out" and e["from"] == src and e["to"] == dst and \
+                    ((msgid and e.get("msgid") == msgid) or (not msgid and e["text"] == text)):
+                return True
+        return False
+
+    def _send_ack(self, frm: str, to: str, mid: str, route: str):
+        now = time.time()
+        for k in [k for k, t in self.acked.items() if now - t > 600]:
+            self.acked.pop(k, None)
+        if now - self.acked.get((to, mid), 0) < ACK_HOLD:
+            return                       # sama viesti tuli myös toista reittiä – kuitattu jo
+        if route == "rf":
+            if not self.rf_ready():
+                return                   # ei radiolähetystä: kuitataan, kun sama viesti tulee iGaten kautta APRS-IS:stä
+            self.rf_queue.put_nowait(("ack", frm, to, mid))
+        else:
+            self.aprs.queue.put_nowait(("raw", f"{frm}>{TOCALL},TCPIP*::{to:<9}:ack{mid}"))
+        self.acked[(to, mid)] = now
+
+    def handle_message(self, src: str, addressee: str, body: str, route: str):
+        login = (self.cfg.get("login") or "").upper()
+        bases = self.watch_bases()
+        if src.split("-")[0] not in bases and addressee.split("-")[0] not in bases:
+            return
+        am = re.match(r"^(ack|rej)([A-Za-z0-9}]{1,5})", body)
+        if am:
+            mid = am.group(2).split("}")[0]
+            if (addressee, mid) in self.acked and src == login:
+                return                   # oma kuittaus palasi
+            entry = self.aprs.pending.get(mid)
+            if entry and entry.get("from", login).upper() == addressee and entry["to"].upper() == src:
+                self.aprs.pending.pop(mid, None)
+                entry["status"] = "kuitattu" if am.group(1) == "ack" else "hylätty"
+                entry["ack_time"] = time.time()
+                entry["ack_route"] = route
+            self.mark_ack(sender=addressee, recipient=src, msgid=mid, ok=am.group(1) == "ack")
+            self.touch()
+            return
+        txt, _, mid = body.partition("{")
+        mid = mid.split("}")[0] if mid else ""
+        if self._own_echo(src, addressee, txt, mid):
+            return
+        if mid and login and addressee == login:
+            self._send_ack(login, src, mid, route)
+        if not self.add_aprs(src, addressee, txt, mid, route):
+            return          # uudelleenlähetys tai sama viesti toista reittiä, jo käsitelty
+        if login and addressee.split("-")[0] == login.split("-")[0]:
+            self.add_log({"time": time.time(), "dir": "in", "to": addressee, "from": src,
+                          "text": txt, "status": "vastaanotettu", "route": route})
+        if login and addressee == login and self.command_handler:
+            try:
+                reply = self.command_handler(src, txt)
+            except Exception as e:  # noqa: BLE001
+                log.warning("Komennon käsittely: %s", e)
+                reply = None
+            if reply:
+                text = clean_text(reply, bool(self.cfg.get("ascii")))
+                # vastaus samaa reittiä kuin komento tuli (radiosta → radioon, jos lähetys sallittu)
+                r = "rf" if route == "rf" and self.rf_ready() else "is"
+                for part in split_message(text, max(2, int(self.cfg.get("max_parts") or 2))):
+                    self.aprs.send(src.upper(), part, source="komento", route=r)
 
     def add_log(self, entry: dict):
         self.log.appendleft(entry)
@@ -463,7 +583,7 @@ class MessagingHub:
             bases.add(self.cfg["login"].upper().split("-")[0])
         return bases
 
-    def add_aprs(self, src: str, dst: str, text: str, msgid: str) -> bool:
+    def add_aprs(self, src: str, dst: str, text: str, msgid: str, route: str = "is") -> bool:
         """Lisää vastaanotettu viesti näkymään. False = uudelleenlähetys (jo nähty)."""
         now = time.time()
         for e in self.aprs_msgs:
@@ -471,9 +591,13 @@ class MessagingHub:
                 break
             if e.get("dir") == "in" and e["from"] == src and e["to"] == dst and \
                     ((msgid and e.get("msgid") == msgid) or (not msgid and e["text"] == text)):
-                e["copies"] = e.get("copies", 1) + 1
+                if route not in e.get("route", "").split("+"):
+                    e["route"] = "+".join(sorted(set((e.get("route") or route).split("+")) | {route}, reverse=True))
+                else:
+                    e["copies"] = e.get("copies", 1) + 1
+                self.touch()
                 return False
-        self.aprs_msgs.appendleft({"time": now, "dir": "in", "from": src, "to": dst, "text": text,
+        self.aprs_msgs.appendleft({"time": now, "dir": "in", "from": src, "to": dst, "text": text, "route": route,
                                    "msgid": msgid, "status": "vastaanotettu" if msgid else "ei kuittauspyyntöä"})
         self.touch()
         return True
@@ -516,13 +640,15 @@ class MessagingHub:
                      "passcode_auto": aprs_passcode(self.cfg["login"]) if self.cfg.get("login") else None},
             "feeds": self.feeds.status,
             "log": list(self.log)[:100],
-            "aprs_msgs": [{k: e.get(k) for k in ("time", "dir", "from", "to", "text", "msgid", "status", "tries", "copies")}
+            "rf": {"enabled": bool(self.cfg.get("rf_tx")), "ready": self.rf_ready(),
+                   "connected": bool(self.rf and self.rf.status.get("connected"))},
+            "aprs_msgs": [{k: e.get(k) for k in ("time", "dir", "from", "to", "text", "msgid", "status", "tries", "copies", "route")}
                           for e in list(self.aprs_msgs)[:150]],
             "watch_bases": sorted(self.watch_bases()),
         }
 
     async def run(self):
-        await asyncio.gather(self.aprs.run(), self.feeds.run())
+        await asyncio.gather(self.aprs.run(), self.feeds.run(), self._rf_sender())
 
 
 def validate_passcode(value) -> str:
@@ -557,7 +683,21 @@ def normalize_messaging(new: dict, old: dict) -> dict:
         if isinstance(r, str):
             r = r.replace(",", " ").split()
         out["commands_allow"] = [validate_call(x) for x in r if str(x).strip()]
-    for k in ("ascii", "no_ack", "commands_enabled", "commands_all"):
+    if "route" in new:
+        if new["route"] not in ROUTES:
+            raise ValueError(tr("Virheellinen arvo: {x}", x=new["route"]))
+        out["route"] = new["route"]
+    if "rf_path" in new:
+        path = [p for p in str(new["rf_path"] or "").replace(" ", "").upper().split(",") if p]
+        if len(path) > 8:
+            raise ValueError(tr("Polussa voi olla enintään 8 osaa"))
+        for p in path:
+            if not re.match(r"^[A-Z0-9]{1,6}(-([0-9]|1[0-5]))?$", p):
+                raise ValueError(tr("Virheellinen polku: {x}", x=p))
+        out["rf_path"] = ",".join(path)
+    if "rf_heard_min" in new:
+        out["rf_heard_min"] = min(1440, max(5, int(float(new["rf_heard_min"] or 30))))
+    for k in ("ascii", "no_ack", "commands_enabled", "commands_all", "rf_tx"):
         if k in new:
             out[k] = bool(new[k])
     for k, lo, hi in (("max_parts", 1, 5), ("max_per_check", 1, 20), ("feed_interval", 60, 86400)):

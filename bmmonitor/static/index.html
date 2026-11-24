@@ -468,6 +468,29 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="paths" id="paths"></div>
     </div>
   </section>
+  <section class="cfg form" data-tab="asetukset" data-fold="cfg-rftx">
+    <h2>APRS-viestit radiolla (Graywolf)</h2>
+    <div class="inner">
+    <div class="note">APRS-viestit, kuittaukset ja komentojen vastaukset voidaan lähettää myös radiolla Graywolfin kautta
+      (sama KISS TCP -yhteys kuin RF-kuuluvuudessa, ks. APRS-välilehti). Lähettäjänä on aina oma APRS-IS-tunnuksesi tai
+      viestikentässä valittu oma kutsu. Graywolfin iGate välittää radiolla lähetetyn viestin myös APRS-IS:ään, joten
+      samaa viestiä ei lähetetä molempia reittejä. Sijaintimajakan hoitaa Graywolf.</div>
+    <div class="frow" style="margin-top:10px">
+      <div class="fld checks"><label><input type="checkbox" id="rfTx"> Salli lähetys radiolla</label>
+        <div class="hint" id="rfState"></div></div>
+      <div class="fld"><label for="rfRoute">Oletusreitti</label>
+        <select id="rfRoute"><option value="auto">Automaattinen</option><option value="is">APRS-IS</option><option value="rf">Radio (RF)</option></select>
+        <div class="hint">Automaattinen: radiolla, jos vastaanottaja on kuultu radiolla äskettäin tai APRS-IS-yhteys on poikki, muuten APRS-IS.</div></div>
+      <div class="fld"><label for="rfHeard">Kuultu radiolla (min)</label><input type="number" id="rfHeard" min="5" max="1440" style="width:100px">
+        <div class="hint">automaattisen reitin aikaraja</div></div>
+      <div class="fld"><label for="rfPath">Polku</label><input type="text" id="rfPath" placeholder="WIDE1-1,WIDE2-1" style="width:170px">
+        <div class="hint">tyhjä = ei digipiitterien kautta</div></div>
+    </div>
+    <div class="hint">Radiolla viesti lähetetään uudelleen minuutin välein (enintään 3 kertaa), lähetysten väli on vähintään 5 s
+      ja enintään 30 lähetystä 10 minuutissa. Komentoihin, jotka tulevat radiosta, vastataan radiolla.</div>
+    <div class="frow svcsave"><button class="primary" id="btnRfSave">Tallenna</button><span class="err" id="rfErr"></span></div>
+    </div>
+  </section>
 
   <section id="msgPanel" class="msgp" data-tab="viestit" data-fold="msg-main">
     <h2>Syötteet → DMR-tekstiviestit
@@ -508,6 +531,8 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <div><label for="rTo">Vastaanottaja</label><input type="text" id="rTo" placeholder="OH2ABC-7" style="width:120px"></div>
         <div style="flex:1;min-width:200px"><label for="rText">Viesti <span class="muted" id="rCount"></span></label>
           <input type="text" id="rText" maxlength="200" placeholder="Klikkaa viestiä vastataksesi tai kirjoita uusi" style="width:100%"></div>
+        <div id="rRouteFld" style="display:none"><label for="rRoute">Reitti</label>
+          <select id="rRoute"><option value="auto">Automaattinen</option><option value="is">APRS-IS</option><option value="rf">Radio (RF)</option></select></div>
         <div><button class="primary" id="rSend">Lähetä</button></div>
       </div>
       <div class="hint" id="rMsg"></div>
@@ -553,7 +578,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <label class="switch" title="Vastaanotto päällä"><input type="checkbox" id="rxEnabled"><span class="sl"></span><span class="swtxt" id="rxEnabledTxt">Pois</span></label></h2>
     <div class="inner form msgform">
       <div class="note">Ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia samalla tavalla kuin NeoAprs.
-        Se ei lähetä mitään radiotielle. Kuullut paketit tallennetaan tälle koneelle 30 vuorokaudeksi.</div>
+        Radiolla lähetetään vain APRS-viestejä, jos se on sallittu Asetukset-välilehdellä. Kuullut paketit tallennetaan tälle koneelle 30 vuorokaudeksi.</div>
       <div class="frow">
         <div class="fld"><label for="rxHost">Palvelin</label><input type="text" id="rxHost" style="width:180px"><div class="hint">sama kone: 127.0.0.1</div></div>
         <div class="fld"><label for="rxPort">KISS TCP -portti</label><input type="number" id="rxPort" min="1" max="65535" style="width:110px"><div class="hint">oletus 8001</div></div>
@@ -1297,12 +1322,32 @@ function fillSettings() {
   $("logCsv").checked = !!S.config.log_csv;
   $("verInfo").textContent = ""; aboutLine(); fillUi(); $("themeSel").value = S.config.theme || "dark";
   $("langSel").value = LANG; $("unitSel").value = S.config.units || "metric"; $("updAuto").checked = S.config.update_check !== false;
+  fillRf();
   $("keyState").textContent = S.config.bm_api_key ? "Avain tallennettu" : "Ei avainta";
   $("apiKey").value = ""; $("myCall").value = S.config.devices.my_call || "";
   const p = S.paths;
   $("paths").innerHTML = [["Asetukset", p.config], ["Puheluloki", p.calls_csv], ["SMS/data-loki", p.data_csv], ["Datan raakatapahtumat", p.raw]]
     .map(([k, v]) => `${esc(T(k))}: ${esc(v)}`).join("<br>");
 }
+
+function fillRf() {
+  const m = S.config.messaging;
+  $("rfTx").checked = !!m.rf_tx; $("rfRoute").value = m.route || "auto";
+  $("rfHeard").value = m.rf_heard_min || 30; $("rfPath").value = m.rf_path == null ? "WIDE1-1,WIDE2-1" : m.rf_path;
+  rfState();
+}
+function rfState() {
+  const rx = S.aprsrx || {};
+  $("rfState").innerHTML = !rx.enabled ? esc(T("Graywolf-yhteys ei ole käytössä (APRS-välilehti).")) :
+    rx.connected ? `<span class="ok">${esc(T("Graywolf yhdistetty"))}</span>` : `<span class="bad">${esc(T("Ei yhteyttä Graywolfiin"))}</span>`;
+}
+$("btnRfSave").onclick = async () => {
+  $("rfErr").textContent = "";
+  const j = await saveCfg({messaging: {rf_tx: $("rfTx").checked, route: $("rfRoute").value, rf_path: $("rfPath").value,
+    rf_heard_min: $("rfHeard").value}});
+  if (!j.ok) { $("rfErr").textContent = j.error; return; }
+  S.config = j.config; fillRf(); $("rfErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+};
 
 // ---------------- check-in ----------------
 const CI_NETS = {244: "Suomi", 248: "Viro", 91: "Worldwide"};
@@ -2116,7 +2161,7 @@ $("btnBm").onclick = async () => {
 
 // ---------------- APRS-viestit ----------------
 let aprsSel = null;
-const APRS_ST = {"kuitattu": "ok", "vastaanotettu": "warn", "lähetetty": "warn", "jonossa": "warn", "uudelleen": "warn", "lähetetty (ei kuittausta)": "ok", "ei kuittauspyyntöä": "muted"};
+const APRS_ST = {"virhe: ei radioyhteyttä": "bad", "kuitattu": "ok", "vastaanotettu": "warn", "lähetetty": "warn", "jonossa": "warn", "uudelleen": "warn", "lähetetty (ei kuittausta)": "ok", "ei kuittauspyyntöä": "muted"};
 function renderAprs() {
   const M = S.messaging, a = M.aprs, bases = M.watch_bases || [];
   $("aprsWho").textContent = bases.length ? bases.map(b => b + "*").join(", ") : "";
@@ -2134,7 +2179,7 @@ function renderAprs() {
       <td>${fmtTime(m.time)}</td>
       <td style="white-space:nowrap"><span class="call clk" data-q="${esc((m.from || "").split("-")[0])}">${esc(m.from)}</span> <span class="muted">→</span> <span class="call">${esc(m.to)}</span></td>
       <td class="wrap">${mine ? '<span class="muted">↑</span> ' : ""}${esc(m.text)}</td>
-      <td class="${cls}" style="white-space:nowrap">${esc(T(st))}${m.tries > 1 ? ` (${esc(m.tries)}×)` : ""}${m.copies > 1 ? ` <span class="muted">(${esc(m.copies)}×)</span>` : ""}</td></tr>`;
+      <td class="${cls}" style="white-space:nowrap">${esc(T(st))}${m.tries > 1 ? ` (${esc(m.tries)}×)` : ""}${m.copies > 1 ? ` <span class="muted">(${esc(m.copies)}×)</span>` : ""}${routeTag(m.route)}</td></tr>`;
   }).join("");
   if ($("aprsBody").dataset.html !== html) { $("aprsBody").innerHTML = html; $("aprsBody").dataset.html = html; }
   // lähettäjävaihtoehdot: oma tunnus + seurattujen kutsujen SSID:t, jotka esiintyvät viesteissä
@@ -2144,6 +2189,17 @@ function renderAprs() {
   const opts = [...own].sort((x, y) => x === login ? -1 : y === login ? 1 : x.localeCompare(y)).map(c => `<option value="${esc(c)}">${esc(c)}${c === login ? " " + esc(T("(ohjelma)")) : ""}</option>`).join("");
   if ($("rFrom").dataset.opts !== opts) { const cur = $("rFrom").value; $("rFrom").innerHTML = opts; $("rFrom").dataset.opts = opts; if (cur && own.has(cur)) $("rFrom").value = cur; }
   $("aprsReply").style.display = login ? "" : "none";
+  if (TAB === "asetukset") rfState();
+  const rf = M.rf || {};
+  if ($("rRouteFld").dataset.on !== String(!!rf.enabled)) {
+    $("rRouteFld").dataset.on = String(!!rf.enabled); $("rRouteFld").style.display = rf.enabled ? "" : "none";
+    $("rRoute").value = S.config.messaging.route || "auto";
+  }
+}
+function routeTag(r) {
+  if (!r) return "";
+  const t = r.split("+").map(x => x === "rf" ? "RF" : "IS").join("+");
+  return ` <span class="muted" title="${esc(T(r.includes("+") ? "Tuli sekä radiolta että APRS-IS:stä" : r === "rf" ? "Radio (Graywolf)" : "APRS-IS"))}">· ${esc(t)}</span>`;
 }
 $("aprsBody").addEventListener("click", e => {
   if (e.target.closest(".clk")) return;
@@ -2166,8 +2222,9 @@ $("rText").addEventListener("input", updateCount);
 $("rText").addEventListener("keydown", e => { if (e.key === "Enter") $("rSend").click(); });
 $("rSend").onclick = async () => {
   $("rMsg").textContent = "Lähetetään…";
-  const j = await api("/api/aprs/send", {from: $("rFrom").value, to: $("rTo").value, text: $("rText").value});
-  if (j.ok) { $("rMsg").innerHTML = `<span class="ok">${esc(T("Lähetetty") + (j.parts > 1 ? T(" ({n} osaa)", {n: j.parts}) : "") + T(" – tila päivittyy listaan"))}</span>`; $("rText").value = ""; updateCount(); }
+  const j = await api("/api/aprs/send", {from: $("rFrom").value, to: $("rTo").value, text: $("rText").value,
+    route: S.messaging.rf && S.messaging.rf.enabled ? $("rRoute").value : "is"});
+  if (j.ok) { $("rMsg").innerHTML = `<span class="ok">${esc(T("Lähetetty") + (j.route === "rf" ? T(" radiolla") : "") + (j.parts > 1 ? T(" ({n} osaa)", {n: j.parts}) : "") + T(" – tila päivittyy listaan"))}</span>`; $("rText").value = ""; updateCount(); }
   else $("rMsg").innerHTML = `<span class="bad">${esc(j.error)}</span>`;
 };
 

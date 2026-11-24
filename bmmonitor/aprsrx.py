@@ -1,6 +1,7 @@
 """APRS-kuuluvuusanalyysi: Graywolfin (tai Dire Wolfin) KISS TCP -portin vastaanottamat paketit.
 
-Ohjelma vain kuuntelee – se ei lähetä mitään radiotielle. Jokaisesta paketista tallennetaan, keneltä se
+Ohjelma kuuntelee porttia; radiolla lähetetään vain, jos käyttäjä on sallinut APRS-viestien lähetyksen
+radiolla (messaging.rf_tx) – silloin viestit ja kuittaukset kirjoitetaan samaan KISS-yhteyteen. Jokaisesta paketista tallennetaan, keneltä se
 kuultiin radiotiellä (lähettäjä itse = suoraan, tai viimeinen digipiitteri, jonka H-bitti on asetettu),
 koko polku ja lähettäjän sijainti, jos paketissa on sellainen. Näistä lasketaan lämpökartta,
 digipiitterien osuudet, yleisimmät polut ja hälytys, kun tuttu digi tai iGate hiljenee.
@@ -80,8 +81,11 @@ class KissDecoder:
         return out
 
 
+AX25_CALL = re.compile(r"^[A-Z0-9]{1,6}(-([0-9]|1[0-5]))?$")
+
+
 def kiss_frame(ax25: bytes, port: int = 0) -> bytes:
-    """Testejä varten: AX.25-kehys KISS-muotoon."""
+    """AX.25-kehys KISS-muotoon (datakehys, portti ylänibblessä)."""
     body = bytes([port << 4]) + ax25
     body = body.replace(bytes([FESC]), bytes([FESC, TFESC])).replace(bytes([FEND]), bytes([FESC, TFEND]))
     return bytes([FEND]) + body + bytes([FEND])
@@ -94,7 +98,10 @@ def _addr(b: bytes) -> tuple[str, bool, bool]:
 
 
 def encode_ax25(src: str, dest: str, path: list[str], info: bytes) -> bytes:
-    """Testejä varten: rakentaa AX.25 UI -kehyksen. Polun alkio, jonka lopussa on *, merkitään käytetyksi."""
+    """Rakentaa AX.25 UI -kehyksen. Polun alkio, jonka lopussa on *, merkitään käytetyksi."""
+    for c in [src, dest, *[p.rstrip("*") for p in path]]:
+        if not AX25_CALL.match(c):
+            raise ValueError(tr("Kutsu ei kelpaa radiolähetykseen: {x}", x=c))
     def enc(call: str, last: bool, h: bool = False) -> bytes:
         c, _, s = call.partition("-")
         b = bytes((ord(ch) << 1) for ch in c.ljust(6)[:6])
@@ -282,6 +289,8 @@ class AprsRx:
         self.wake = asyncio.Event()
         self.pending = 0
         self.last_heard: dict[str, float] = {}     # kutsu → viimeksi kuultu radiotiellä (suoraan tai välittäjänä)
+        self.heard_src: dict[str, float] = {}      # kutsu → viimeksi kuultu sen oma paketti (mitä reittiä tahansa)
+        self.writer: asyncio.StreamWriter | None = None
         self.silent: set[str] = set()              # hälytetty hiljaisuudesta, odottaa paluuta
         self._load_last_heard()
 
@@ -295,6 +304,17 @@ class AprsRx:
             self.last_heard[call] = t
         for call, t in self.db.execute("SELECT src, MAX(ts) FROM packets WHERE ts > ? AND direct = 1 GROUP BY src", (since,)):
             self.last_heard[call] = max(t, self.last_heard.get(call, 0))
+        for call, t in self.db.execute("SELECT src, MAX(ts) FROM packets WHERE ts > ? GROUP BY src", (since,)):
+            self.heard_src[call] = t
+
+    def heard_recently(self, call: str, secs: float) -> bool:
+        return time.time() - self.heard_src.get(call.upper(), 0) < secs
+
+    def transmit(self, src: str, dest: str, path: list[str], info: bytes):
+        """Lähettää APRS-paketin radiolla Graywolfin kautta (vain viestien lähetys, ks. messaging)."""
+        if self.writer is None or not self.status.get("connected"):
+            raise ConnectionError(tr("Ei yhteyttä Graywolfiin"))
+        self.writer.write(kiss_frame(encode_ax25(src.upper(), dest, path, info)))
 
     def reconfigure(self):
         self.wake.set()
@@ -317,6 +337,7 @@ class AprsRx:
                     await self._sleep(15)
                     continue
                 log.info("KISS-yhteys %s:%s", host, port)
+                self.writer = writer
                 self._set_status(connected=True, error=None, since=time.time())
                 dec = KissDecoder()
                 try:
@@ -333,6 +354,7 @@ class AprsRx:
                     self._set_status(connected=False, error=str(e) or e.__class__.__name__)
                     log.warning("KISS: %s", e)
                 finally:
+                    self.writer = None
                     writer.close()
                     self._set_status(connected=False, since=None)
                 await self._sleep(5)
@@ -370,6 +392,16 @@ class AprsRx:
         self.last_heard[via] = now
         if direct:
             self.last_heard[p["src"]] = now
+        self.heard_src[p["src"]] = now
+        info = p["info"]
+        if info[:1] == b":" and len(info) >= 11 and info[10:11] == b":":    # APRS-viesti tai kuittaus
+            hub = getattr(self.mon, "hub", None)
+            if hub is not None:
+                try:
+                    hub.handle_message(p["src"].upper(), info[1:10].decode("ascii", "replace").strip().upper(),
+                                       info[11:].decode("utf-8", "replace").rstrip("\r\n"), "rf")
+                except Exception:  # noqa: BLE001
+                    log.exception("APRS-viesti radiolta")
         self.status["count"] += 1
         self.status["last"] = now
         if via in self.silent:

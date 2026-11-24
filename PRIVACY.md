@@ -28,7 +28,7 @@ tavallisesti tapaan IP-osoitteesi ja sen, mitä pyydetään; palveluiden omat ti
 | Uutis- ja kalenterisyötteet, jotka itse lisäät | kun syötteet ovat käytössä | syötteen haku | poista syöte |
 | Google Apps Script: check-in-taulukko | vain jos yhdistät check-in-taulukon | kirjatut check-in-rivit omaan taulukkoosi | irrota taulukko |
 | Google Apps Script: palaute (script.google.com) | **vain kun itse lähetät palautteen** | viestisi ja halutessasi lokit; salaisuudet poistetaan ja sijainti pyöristetään 4-merkkiseksi lokaattoriksi; paketin voi tarkistaa ennen lähetystä | älä lähetä palautetta |
-| Graywolf / Dire Wolf (KISS TCP, oletus 127.0.0.1) | kun APRS-kuuluvuus on päällä | ei mitään – ohjelma vain kuuntelee | APRS → Graywolf-yhteys pois |
+| Graywolf / Dire Wolf (KISS TCP, oletus 127.0.0.1) | kun APRS-kuuluvuus on päällä | ei mitään; vain jos sallit APRS-viestien lähetyksen radiolla, viestit ja kuittaukset lähetetään radiolla (ja Graywolfin iGate voi välittää ne APRS-IS:ään) | APRS → Graywolf-yhteys pois tai Asetukset → APRS-viestit radiolla pois |
 
 Ohjelman lähettämät APRS- ja DMR-viestit ovat radioamatööriliikennettä, joka on luonteeltaan julkista.
 
@@ -58,7 +58,8 @@ and what is requested, as with any internet connection; their own privacy polici
 - **Google Apps Script** – only if you connect a check-in sheet (rows go to your own sheet), and **only when you send
   feedback yourself** (your message and, if you choose, logs with secrets removed and location rounded to a
   4-character locator; you can inspect the bundle before sending).
-- **Graywolf / Dire Wolf KISS TCP** – receive only, nothing is sent.
+- **Graywolf / Dire Wolf KISS TCP** – receive only, unless you allow APRS messages on the radio (Settings);
+  then your messages and acks are transmitted on the radio (and Graywolf's iGate may pass them to APRS-IS).
 
 APRS and DMR messages sent by the program are amateur radio traffic, which is public by nature.
 

@@ -258,4 +258,9 @@ EN: dict[str, str] = {
     "Palautteita on lähetetty liikaa – yritä myöhemmin uudelleen": "Too much feedback has been sent – try again later",
     "Paketti on liian suuri – jätä puhelu- ja SMS-lokit pois": "The package is too large – leave out the call and SMS logs",
     "Vastaanotin hylkäsi palautteen": "The receiver rejected the feedback",
+    "Kutsu ei kelpaa radiolähetykseen: {x}": "Callsign not valid for radio transmission: {x}",
+    "Ei yhteyttä Graywolfiin": "No connection to Graywolf",
+    "Ei yhteyttä Graywolfiin – viestiä ei voi lähettää radiolla": "No connection to Graywolf – the message cannot be sent on the radio",
+    "Polussa voi olla enintään 8 osaa": "The path can have at most 8 parts",
+    "Virheellinen polku: {x}": "Invalid path: {x}",
 }

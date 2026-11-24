@@ -529,3 +529,90 @@ def test_nets_calendar(tmp_path):
     assert nc.check_reminders(now=k[0]["start"] - 500) == []                # ei toista kertaa
     with pytest.raises(ValueError):
         normalize_nets({"own": [{"name": "x", "day": 1, "time": "25:00"}]}, DEFAULT_NETS)
+
+
+def test_aprs_rf_messages(tmp_path, monkeypatch):
+    """Viestit radiolla Graywolfin kautta: reitti, kuittaus, kaksoiskappaleet (RF + iGate→IS), oma kaiku, botti."""
+    from types import SimpleNamespace
+    from bmmonitor.aprsrx import DEFAULT_APRSRX, AprsRx, KissDecoder, encode_ax25, parse_ax25
+    from bmmonitor import messaging
+    from bmmonitor.messaging import DEFAULT_MESSAGING, MessagingHub, normalize_messaging
+    monkeypatch.setattr(messaging, "RF_MIN_GAP", 0)
+
+    class W:
+        def __init__(self):
+            self.data = b""
+        def write(self, b):
+            self.data += b
+        def close(self):
+            pass
+
+    cfg = {**DEFAULT_MESSAGING, "login": "OH2BEA-3", "rf_tx": True, "route": "auto"}
+    hub = MessagingHub(cfg, tmp_path, lambda: None)
+    hub.command_handler = lambda src, txt: "PONG" if txt.strip().upper() == "PING" else None
+    mon = SimpleNamespace(cfg={"aprsrx": {**DEFAULT_APRSRX, "enabled": True}}, touch=lambda: None, hub=hub,
+                          watcher=SimpleNamespace(seq=0, alerts=[]))
+    rx = AprsRx(mon, tmp_path / "rx.sqlite")
+    hub.rf = rx
+    rx.writer, rx.status["connected"] = W(), True
+
+    # automaattireitti: radiolla äskettäin kuultu → RF, muut → APRS-IS; lähetys pois → aina IS
+    rx.handle_frame(encode_ax25("OH2ABC-9", "APRS", ["OH2RCH-1*"], b"!6012.34N/02456.78E>"))
+    assert hub.pick_route("OH2ABC-9") == "rf" and hub.pick_route("OH9ZZZ-7") == "rf"   # APRS-IS poikki → radio
+    hub.aprs.connected = True
+    assert hub.pick_route("OH2ABC-9") == "rf" and hub.pick_route("OH9ZZZ-7") == "is"
+    assert hub.pick_route("OH9ZZZ-7", "rf") == "rf"
+    cfg["rf_tx"] = False
+    assert hub.pick_route("OH2ABC-9", "rf") == "is"
+    cfg["rf_tx"] = True
+
+    async def drain():
+        task = asyncio.create_task(hub._rf_sender())
+        for _ in range(50):
+            await asyncio.sleep(0.01)
+            if hub.rf_queue.empty():
+                break
+        await asyncio.sleep(0.02)
+        task.cancel()
+
+    async def scenario():
+        # radiolta viesti botille kuittauspyynnöllä → kuittaus ja vastaus radioon
+        rx.handle_frame(encode_ax25("OH2ABC-9", "APZXXX", ["OH2RCH-1*"], b":OH2BEA-3 :PING{12"))
+        assert hub.aprs_msgs[0]["route"] == "rf" and hub.aprs_msgs[0]["text"] == "PONG"
+        # sama viesti iGaten kautta APRS-IS:stä: ei toista kuittausta eikä toista vastausta
+        hub.handle_message("OH2ABC-9", "OH2BEA-3", "PING{12", "is")
+        assert hub.aprs.queue.empty()
+        incoming = [m for m in hub.aprs_msgs if m["dir"] == "in"]
+        assert len(incoming) == 1 and incoming[0]["route"] == "rf+is"
+        await drain()
+        frames = [parse_ax25(f) for f in KissDecoder().feed(rx.writer.data)]
+        assert [f["info"] for f in frames] == [b":OH2ABC-9 :ack12", b":OH2ABC-9 :PONG{" + hub.aprs_msgs[0]["msgid"].encode()]
+        assert frames[0]["src"] == "OH2BEA-3" and frames[0]["dest"] == "APZBMM"
+        assert [c for c, _ in frames[0]["path"]] == ["WIDE1-1", "WIDE2-1"]
+        out = hub.aprs_msgs[0]
+        assert out["status"] == "lähetetty" and out["route"] == "rf"
+        # digin toistama oma viesti ja oma kuittaus palaavat: ohitetaan
+        n = len(hub.aprs_msgs)
+        rx.handle_frame(encode_ax25("OH2BEA-3", "APZBMM", ["OH2RCH-1*", "WIDE2*"], f":OH2ABC-9 :PONG{{{out['msgid']}".encode()))
+        rx.handle_frame(encode_ax25("OH2BEA-3", "APZBMM", ["OH2RCH-1*"], b":OH2ABC-9 :ack12"))
+        assert len(hub.aprs_msgs) == n
+        # vastaanottajan kuittaus radiolta
+        rx.handle_frame(encode_ax25("OH2ABC-9", "APZXXX", ["OH2RCH-1*"], f":OH2BEA-3 :ack{out['msgid']}".encode()))
+        assert out["status"] == "kuitattu" and out["ack_route"] == "rf"
+        # ilman Graywolf-yhteyttä radioviesti ei lähde
+        rx.status["connected"] = False
+        e = hub.aprs.send("OH2ABC-9", "testi", route="rf")
+        hub.rf_sent.clear()
+        await drain()
+        assert e["status"] == "virhe: ei radioyhteyttä"
+
+    asyncio.run(scenario())
+    # asetukset
+    n = normalize_messaging({"rf_tx": True, "route": "rf", "rf_path": "wide1-1, wide2-2", "rf_heard_min": 2}, cfg)
+    assert n["rf_path"] == "WIDE1-1,WIDE2-2" and n["rf_heard_min"] == 5 and n["route"] == "rf"
+    for bad in ({"route": "x"}, {"rf_path": "WIDE1-16"}, {"rf_path": "TOOLONGCALL"}):
+        with pytest.raises(ValueError):
+            normalize_messaging(bad, cfg)
+    with pytest.raises(ValueError):
+        encode_ax25("OH2ABC-X", "APZBMM", [], b"x")
+    rx.close()

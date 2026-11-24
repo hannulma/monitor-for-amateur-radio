@@ -242,6 +242,7 @@ class Monitor:
         self.updater = Updater(self)
         self.checkin = CheckIn(self, self.api)
         self.aprsrx = AprsRx(self, cfg_path.parent / "aprs_rx.sqlite")
+        self.hub.rf = self.aprsrx              # APRS-viestit myös radiolla (jos sallittu)
         self.nets = NetCalendar(self, cfg_path.parent / "nets_cache")
         self.tile_sem = asyncio.Semaphore(4)
         self.tile_fail, self.tile_down_until = 0, 0.0
@@ -1290,11 +1291,16 @@ def make_app(mon: Monitor) -> web.Application:
             if not m.get("login"):
                 raise ValueError(tr("Aseta oma APRS-IS-tunnus (APRS-välilehti)"))
             a = mon.hub.aprs
-            if not a.connected:
-                raise ValueError(tr("APRS-IS-yhteys ei ole auki"))
-            if a.verified is False:
-                raise ValueError(tr("Passcode ei kelpaa – viestejä ei välitetä"))
             to = validate_call(str(body.get("to", "")))
+            route = mon.hub.pick_route(to, body.get("route"))
+            if route == "rf":
+                if not mon.hub.rf_ready():
+                    raise ValueError(tr("Ei yhteyttä Graywolfiin – viestiä ei voi lähettää radiolla"))
+            else:
+                if not a.connected:
+                    raise ValueError(tr("APRS-IS-yhteys ei ole auki"))
+                if a.verified is False:
+                    raise ValueError(tr("Passcode ei kelpaa – viestejä ei välitetä"))
             frm = validate_call(str(body.get("from") or m["login"]))
             if frm.split("-")[0] not in mon.hub.watch_bases():
                 raise ValueError(tr("Lähettäjän pitää olla oma kutsusi tai seurattava kutsu"))
@@ -1303,8 +1309,8 @@ def make_app(mon: Monitor) -> web.Application:
                 raise ValueError(tr("Kirjoita viesti"))
             parts = split_message(text, 3)
             for part in parts:
-                a.send(to, part, source="vastaus", src=frm)
-            return web.json_response({"ok": True, "parts": len(parts)})
+                a.send(to, part, source="vastaus", src=frm, route=route)
+            return web.json_response({"ok": True, "parts": len(parts), "route": route})
         except Exception as e:  # noqa: BLE001
             return web.json_response({"ok": False, "error": str(e)}, status=400)
 
