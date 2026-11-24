@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SignPath-artefaktikonfiguraatio "exe": GitHub-artefakti (zip), jossa ohjelmatiedosto. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="MonitorForBrandMeister.exe" product-name="Monitor for Amateur Radio">
+      <authenticode-sign/>
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

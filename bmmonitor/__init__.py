@@ -1,4 +1,4 @@
-__version__ = "0.14.0b6"
+__version__ = "0.14.0b7"
 __date__ = "2026-11-24"          # julkaisupäivä (Tietoja-rivin vuosiluku)
 APP_NAME = "Monitor for BrandMeister"
 APP_ID = "monitor-for-brandmeister"

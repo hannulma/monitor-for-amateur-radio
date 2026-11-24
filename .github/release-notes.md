@@ -11,5 +11,7 @@
 | Linux x86_64 | `MonitorForBrandMeister-*-linux-x86_64.tar.gz` |
 | Python (pip) | `monitor_for_brandmeister-*.whl` |
 
-Ohjelmat eivät ole allekirjoitettuja: Windows voi näyttää SmartScreen-varoituksen (*Lisätietoja → Suorita silti*) ja macOS vaatii ensimmäisellä kerralla avaamisen *Järjestelmäasetukset → Tietosuoja ja turvallisuus → Avaa silti*.
+[Code signing policy](https://github.com/hannulma/monitor-for-amateur-radio/blob/main/CODE_SIGNING.md) · [Tietosuoja / Privacy](https://github.com/hannulma/monitor-for-amateur-radio/blob/main/PRIVACY.md)
+
+Ohjelmat eivät (vielä) ole allekirjoitettuja: Windows voi näyttää SmartScreen-varoituksen (*Lisätietoja → Suorita silti*) ja macOS vaatii ensimmäisellä kerralla avaamisen *Järjestelmäasetukset → Tietosuoja ja turvallisuus → Avaa silti*.
 *The binaries are unsigned; see README for first-launch instructions.*

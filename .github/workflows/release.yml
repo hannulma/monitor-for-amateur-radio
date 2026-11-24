@@ -66,8 +66,15 @@ jobs:
     needs: version
     if: needs.version.outputs.release == 'true'
     runs-on: windows-latest
+    timeout-minutes: 300          # allekirjoitus odottaa käsin tehtävää hyväksyntää
+    permissions:
+      contents: read
+      actions: read               # SignPath hakee allekirjoitettavan artefaktin tästä ajosta
     env:
       VT_API_KEY: ${{ secrets.VT_API_KEY }}   # valinnainen: VirusTotal-tarkistus, jos salaisuus on asetettu
+      # Koodin allekirjoitus (SignPath Foundation): käytössä, kun SIGNPATH_API_TOKEN-salaisuus on asetettu.
+      # Organisaation tunnus ja slugit repositorion muuttujina (Settings → Secrets and variables → Variables).
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -89,15 +96,58 @@ jobs:
           Pop-Location
           pip install $dir.FullName
           pip install .
+      - name: Version info
+        id: ver
+        shell: pwsh
+        run: |
+          $num = python installer/version_info.py build/version_info.txt
+          Write-Host "Numeerinen versio: $num"
+          "num=$num" >> $env:GITHUB_OUTPUT
       - name: Build exe
         run: >
           pyinstaller --noconfirm --clean --onedir --noconsole --name MonitorForBrandMeister --collect-submodules win32ctypes
+          --version-file build\version_info.txt
           --icon installer\icon.ico --hidden-import pystray._win32
           --hidden-import webview.platforms.winforms --hidden-import webview.platforms.edgechromium
           --add-data "bmmonitor/static;bmmonitor/static"
           --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
+      - name: Check exe version info
+        shell: pwsh
+        run: |
+          $vi = (Get-Item "dist\MonitorForBrandMeister\MonitorForBrandMeister.exe").VersionInfo
+          $vi | Format-List ProductName, ProductVersion, FileVersion, FileDescription, CompanyName
+          if ($vi.ProductName -ne "Monitor for Amateur Radio" -or $vi.ProductVersion -ne "${{ needs.version.outputs.version }}") {
+            Write-Error "Ohjelmatiedoston versiotiedot puuttuvat tai ovat väärin"; exit 1 }
+      - name: Upload unsigned exe for signing
+        if: env.SIGNPATH_API_TOKEN != ''
+        id: up-exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-exe
+          path: dist/MonitorForBrandMeister/MonitorForBrandMeister.exe
+      - name: Sign exe (SignPath – waits for manual approval)
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'monitor-for-amateur-radio' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_EXE || 'exe' }}
+          github-artifact-id: ${{ steps.up-exe.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 14400
+          output-artifact-directory: signed-exe
+      - name: Use signed exe
+        if: env.SIGNPATH_API_TOKEN != ''
+        shell: pwsh
+        run: |
+          Copy-Item signed-exe\MonitorForBrandMeister.exe dist\MonitorForBrandMeister\MonitorForBrandMeister.exe -Force
+          $sig = Get-AuthenticodeSignature dist\MonitorForBrandMeister\MonitorForBrandMeister.exe
+          Write-Host "Allekirjoitus: $($sig.Status) – $($sig.SignerCertificate.Subject)"
+          if ($sig.Status -ne "Valid") { Write-Error "Allekirjoitus ei kelpaa"; exit 1 }
       - name: Smoke test (starts, connects to BrandMeister, quits)
         shell: pwsh
         run: |
@@ -137,8 +187,37 @@ jobs:
             choco install innosetup -y --no-progress
             $iscc = Get-ChildItem "C:\Program Files (x86)\Inno Setup*\ISCC.exe" | Select-Object -First 1
           }
-          & $iscc.FullName "/DAppVersion=${{ needs.version.outputs.version }}" installer\windows.iss
+          & $iscc.FullName "/DAppVersion=${{ needs.version.outputs.version }}" "/DNumVersion=${{ steps.ver.outputs.num }}" installer\windows.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload unsigned installer for signing
+        if: env.SIGNPATH_API_TOKEN != ''
+        id: up-setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-setup
+          path: installer/Output/*.exe
+      - name: Sign installer (SignPath – waits for manual approval)
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'monitor-for-amateur-radio' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_SETUP || 'installer' }}
+          github-artifact-id: ${{ steps.up-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 14400
+          output-artifact-directory: signed-setup
+      - name: Use signed installer
+        if: env.SIGNPATH_API_TOKEN != ''
+        shell: pwsh
+        run: |
+          Copy-Item signed-setup\*.exe installer\Output\ -Force
+          Get-ChildItem installer\Output\*.exe | ForEach-Object {
+            $sig = Get-AuthenticodeSignature $_.FullName
+            Write-Host "$($_.Name): $($sig.Status) – $($sig.SignerCertificate.Subject)"
+            if ($sig.Status -ne "Valid") { Write-Error "Asennusohjelman allekirjoitus ei kelpaa"; exit 1 } }
       - name: Collect
         shell: pwsh
         run: |
@@ -146,17 +225,13 @@ jobs:
           Copy-Item installer\Output\*.exe out\
           Copy-Item LICENSE dist\MonitorForBrandMeister\LICENSE.txt
           Compress-Archive -Path dist\MonitorForBrandMeister -DestinationPath "out\MonitorForBrandMeister-${{ needs.version.outputs.version }}-windows-portable.zip"
-      - name: VirusTotal (optional)
+      - name: VirusTotal (optional, results in the run summary)
         if: env.VT_API_KEY != ''
         continue-on-error: true
-        shell: bash
+        shell: pwsh
         run: |
-          echo "### VirusTotal" >> "$GITHUB_STEP_SUMMARY"
-          for f in out/*-windows-setup.exe dist/MonitorForBrandMeister/MonitorForBrandMeister.exe; do
-            curl -sS --fail -H "x-apikey: $VT_API_KEY" -F "file=@$f" https://www.virustotal.com/api/v3/files > /dev/null
-            h=$(sha256sum "$f" | cut -d' ' -f1)
-            echo "- \`$(basename "$f")\`: https://www.virustotal.com/gui/file/$h" >> "$GITHUB_STEP_SUMMARY"
-          done
+          $files = @(Get-ChildItem out\*-windows-setup.exe | ForEach-Object FullName) + "dist\MonitorForBrandMeister\MonitorForBrandMeister.exe"
+          python installer/vt_check.py @files
       - uses: actions/upload-artifact@v4
         with:
           name: windows

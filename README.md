@@ -82,6 +82,8 @@ Several services use Finnish open data and are most useful in Finland; the Brand
 
 ## Download
 
+[Code signing policy](CODE_SIGNING.md) · [Privacy policy](PRIVACY.md)
+
 Get the latest version from **[Releases](https://github.com/hannulma/monitor-for-amateur-radio/releases)**:
 
 | OS | File |
@@ -154,6 +156,16 @@ Everything runs on your own computer. Settings, logs and statistics are stored l
 - Linux: `~/.config/BMMonitor/`
 
 Your optional BrandMeister API key and own APRS-IS passcode are kept in the operating system's keychain (Windows Credential Manager, macOS Keychain); where none is available, in `config.json` in that folder.
+
+No telemetry or analytics. The [privacy policy](PRIVACY.md) lists every service the program contacts when you enable
+the corresponding feature, and how to switch each one off.
+
+## Code signing policy
+
+The Windows builds are being prepared for free code signing by the SignPath Foundation (application pending; until
+then the builds are unsigned). Signed releases will read: *Free code signing provided by
+[SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).*
+Team roles, what is signed and how: [CODE_SIGNING.md](CODE_SIGNING.md).
 
 ## Data sources and APIs
 

@@ -16,7 +16,8 @@ hälytyksiä suoraan DMR-radioosi APRS:n kautta.
 
 ## Lataus ja asennus
 
-Lataa uusin versio **[Releases](https://github.com/hannulma/monitor-for-amateur-radio/releases)**-sivulta:
+Lataa uusin versio **[Releases](https://github.com/hannulma/monitor-for-amateur-radio/releases)**-sivulta
+([Code signing policy](CODE_SIGNING.md) · [tietosuoja](PRIVACY.md)):
 
 | Käyttöjärjestelmä | Tiedosto |
 |---|---|
@@ -230,6 +231,17 @@ python -m bmmonitor --demo
 ei ole vielä julkaistu, GitHub Actions rakentaa Windows-asennusohjelman,
 macOS-levykuvan (universal2: Intel ja Apple Silicon), Linux-ohjelman ja Python-paketin, luo tagin `v<versio>` ja julkaisee ne Releases-sivulle.
 Tekninen tausta ja rajapinnat: [docs/TECHNICAL.md](docs/TECHNICAL.md).
+
+## Tietosuoja ja allekirjoitus
+
+Ohjelma ei kerää käyttäjistään tietoja ylläpitäjälle (ei käyttötilastoja eikä analytiikkaa).
+[Tietosuojaseloste](PRIVACY.md) kertoo, mihin palveluihin ohjelma ottaa yhteyttä, kun kyseinen toiminto on
+käytössä, ja miten kunkin saa pois.
+
+**Code signing policy:** Windows-versioita valmistellaan SignPath Foundationin ilmaiseen koodin allekirjoitukseen
+(hakemus kesken; siihen asti versiot ovat allekirjoittamattomia). Allekirjoitetuissa versioissa lukee:
+*Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
+[SignPath Foundation](https://signpath.org/).* Roolit ja käytäntö: [CODE_SIGNING.md](CODE_SIGNING.md).
 
 ## Vastuuvapaus
 

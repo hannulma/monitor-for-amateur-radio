@@ -4,6 +4,9 @@
 #ifndef AppVersion
   #define AppVersion "0.0.0"
 #endif
+#ifndef NumVersion
+  #define NumVersion "0.0.0.0"
+#endif
 #define AppName "Monitor for BrandMeister"
 #define AppExe "MonitorForBrandMeister.exe"
 
@@ -27,12 +30,21 @@ WizardStyle=modern
 LicenseFile=..\LICENSE
 UninstallDisplayIcon={app}\{#AppExe}
 SetupIconFile=icon.ico
+; Tuote- ja versiotiedot asennusohjelmaan (allekirjoituksen vaatimus)
+VersionInfoVersion={#NumVersion}
+VersionInfoProductName=Monitor for Amateur Radio
+VersionInfoProductVersion={#NumVersion}
+VersionInfoTextVersion={#AppVersion}
+VersionInfoProductTextVersion={#AppVersion}
+VersionInfoDescription=Monitor for Amateur Radio setup
+VersionInfoCompany=OH2BEA
+VersionInfoCopyright=MIT License, OH2BEA
 CloseApplications=force
 RestartApplications=no
 
 [Languages]
-Name: "finnish"; MessagesFile: "compiler:Languages\Finnish.isl"
-Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "finnish"; MessagesFile: "compiler:Languages\Finnish.isl"; InfoBeforeFile: "privacy-fi.txt"
+Name: "english"; MessagesFile: "compiler:Default.isl"; InfoBeforeFile: "privacy-en.txt"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
@@ -68,7 +80,7 @@ end;
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
   { Päivityksessä näytetään vain "Valmis asentamaan" ja lopetussivu }
-  Result := IsUpdate and ((PageID = wpLicense) or (PageID = wpSelectDir) or (PageID = wpSelectTasks));
+  Result := IsUpdate and ((PageID = wpLicense) or (PageID = wpInfoBefore) or (PageID = wpSelectDir) or (PageID = wpSelectTasks));
 end;
 
 [UninstallRun]

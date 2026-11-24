@@ -1,0 +1,15 @@
+﻿TIETOSUOJA
+
+Monitor for Amateur Radio ei kerää käyttäjistään mitään tietoja ylläpitäjälle: ei käyttötilastoja, analytiikkaa eikä mainoksia. Asetukset, lokit ja tallennetut tiedot ovat vain tällä koneella.
+
+Ohjelma ottaa yhteyttä ulkoisiin palveluihin vain niiden toimintojen ollessa käytössä:
+- BrandMeister (perustoiminto: Last Heard -syöte ja haut; Hoseline kuunneltaessa)
+- APRS-IS, kun APRS-viestit tai syötteet radioon ovat päällä
+- GitHub: päivitystarkistus kerran päivässä (voi kytkeä pois Asetuksista)
+- avoimet datapalvelut (esim. Ilmatieteen laitos, MeteoAlarm, NOAA, Digitraffic, CelesTrak), vain Palvelut-välilehdellä päälle kytketyt
+- OpenStreetMap-karttatiilet APRS-kuuluvuuskarttaa katsottaessa
+- itse lisäämäsi syötteet ja kalenterit sekä check-in-taulukko, jos yhdistät sen
+- palaute ylläpitäjälle vain, kun itse lähetät sen (salaisuudet poistetaan)
+
+Jokaisen toiminnon voi kytkeä pois ohjelman asetuksista. Koko tietosuojaseloste:
+https://github.com/hannulma/monitor-for-amateur-radio/blob/main/PRIVACY.md
