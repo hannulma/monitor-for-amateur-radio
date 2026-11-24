@@ -29,8 +29,8 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     --map: #cfe3f2; --land: #eef1ea; --landline: #b9c4b3; --mapgrid: rgba(0,0,0,.07); --night: rgba(10,20,40,.18);
     --covmap: #dfe9f1; --covland: #eef1ea; --axis: #b8c2cc;
     color-scheme: light;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
+  html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font-size: 14px; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
@@ -208,8 +208,9 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .netcfg { border-top: 1px solid var(--line); padding: 10px 14px; }
   .netcfg summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   .netsrc, .netown { display: grid; gap: 6px; align-items: center; margin: 4px 0; }
-  .netsrc { grid-template-columns: 22px minmax(120px, 1fr) minmax(200px, 2.4fr) auto; }
-  .netown { grid-template-columns: minmax(120px, 1.6fr) 80px 120px 80px 70px auto; }
+  .netsrc { grid-template-columns: 22px minmax(80px, 1fr) minmax(120px, 2.4fr) auto; }
+  .netown { grid-template-columns: minmax(90px, 1.6fr) 64px 104px 64px 60px auto; }
+  .netsrc input, .netown input, .netown select { min-width: 0; }
   .covwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 12px 14px; }
   @media (max-width: 980px) { .covwrap { grid-template-columns: 1fr; } }
   #covMap { height: 540px; border-radius: 8px; background: var(--covmap); border: 1px solid var(--line); }
@@ -473,6 +474,16 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <label class="switch" title="Lähetys päällä"><input type="checkbox" id="mEnabled"><span class="sl"></span><span class="swtxt" id="mEnabledTxt">Pois</span></label></h2>
     <div class="inner form msgform">
       <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. APRS-IS-tunnus, vastaanottajat ja viestiasetukset ovat <a href="#" id="toAprs">APRS-välilehdellä</a>.</div>
+      <h3>Viestit radioon</h3>
+      <div class="frow">
+        <div class="fld"><label for="mParts">Viestejä / otsikko</label><input type="number" id="mParts" min="1" max="5" style="width:90px">
+          <div class="hint">67 merkkiä / viesti</div></div>
+        <div class="fld"><label for="mInterval">Tarkistusväli (min)</label><input type="number" id="mInterval" min="1" style="width:90px">
+          <div class="hint">kuinka usein syötteet haetaan</div></div>
+        <div class="fld checks">
+          <label><input type="checkbox" id="mAscii"> Muunna ääkköset (ä→a)</label>
+          <div class="hint">Jos radio ei näytä ääkkösiä oikein.</div></div>
+      </div>
       <h3>Syötteet (RSS, Atom tai JSON Feed)</h3>
       <div class="feedrow feedhead"><span class="fen-h">Käytössä</span><span class="fname">Etuliite</span><span class="furl">Osoite</span><span class="fcmd">Komento</span><span class="fbtns"></span></div>
       <div id="feedRows"></div>
@@ -593,13 +604,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       </div>
       <h3>Viestit</h3>
       <div class="frow">
-        <div class="fld"><label for="mParts">Viestejä / otsikko</label><input type="number" id="mParts" min="1" max="5" style="width:90px">
-          <div class="hint">67 merkkiä / viesti</div></div>
-        <div class="fld"><label for="mInterval">Tarkistusväli (min)</label><input type="number" id="mInterval" min="1" style="width:90px">
-          <div class="hint">kuinka usein syötteet haetaan</div></div>
         <div class="fld checks">
-          <label><input type="checkbox" id="mAscii"> Muunna ääkköset (ä→a)</label>
-          <div class="hint">Jos radio ei näytä ääkkösiä oikein.</div>
           <label><input type="checkbox" id="mNoAck"> Älä odota kuittausta</label>
           <div class="hint">Viesti lähetetään kerran eikä tule koskaan kahdesti, mutta perillemenoa ei voi seurata.</div></div>
       </div>
@@ -676,13 +681,15 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="empty" id="callEmpty">Ei puheluita.</div>
     </div>
   </section>
-  <section class="wide" data-tab="seuranta" data-fold="bm-nets">
+  <section data-tab="seuranta" data-fold="bm-nets">
     <h2>Netit tänään ja huomenna <span class="count" id="netCount"></span>
       <select class="filter" id="netFilter" title="Näytettävät netit">
         <option value="all">Kaikki netit</option><option value="watched">Vain seuratut puheryhmät</option></select>
+      <select class="filter" id="netLimit" style="margin-left:6px" title="Näytettävien nettien määrä">
+        <option value="10">10 seuraavaa</option><option value="25">25 seuraavaa</option><option value="0">Kaikki</option></select>
       <label class="switch" title="Netit käytössä"><input type="checkbox" id="netEnabled"><span class="sl"></span><span class="swtxt" id="netEnabledTxt">Pois</span></label></h2>
-    <div class="scroll" style="max-height:420px">
-      <table><thead><tr><th>Aika</th><th>Netti</th><th>TG</th><th>Lähde</th><th>Tila</th><th></th></tr></thead><tbody id="netBody"></tbody></table>
+    <div class="scroll" style="max-height:none">
+      <table><thead><tr><th>Aika</th><th>Netti</th><th>TG</th><th>Tila</th><th></th></tr></thead><tbody id="netBody"></tbody></table>
       <div class="empty" id="netEmpty">Ei nettejä tänään tai huomenna.</div>
     </div>
     <details class="netcfg form" id="netCfg">
@@ -2591,7 +2598,7 @@ function drawSky() {
 // ---------------- päivän netit ----------------
 let NETS = null, netTimer = null, netFilled = false;
 const WEEKDAYS = ["Ma", "Ti", "Ke", "To", "Pe", "La", "Su", "Joka päivä"];
-try { $("netFilter").value = localStorage.getItem("bmm.netFilter") || "all"; } catch (e) { /* */ }
+try { $("netFilter").value = localStorage.getItem("bmm.netFilter") || "all"; $("netLimit").value = localStorage.getItem("bmm.netLimit") || "10"; } catch (e) { /* */ }
 function netsShow() {
   if (!netFilled) { fillNets(); netFilled = true; }
   netsLoad(); clearInterval(netTimer);
@@ -2611,15 +2618,17 @@ function renderNets() {
   if (!NETS || !S) return;
   const t = now(), only = $("netFilter").value === "watched";
   // päättyneet näkyvät vielä tunnin, ettei lista täyty yön aikana pidetyistä neteistä
-  const list = NETS.nets.filter(n => (!only || tgWatched(n.tg)) && n.end > t - 3600);
-  $("netCount").textContent = list.length ? `(${list.length})` : "";
+  const all = NETS.nets.filter(n => (!only || tgWatched(n.tg)) && n.end > t - 3600);
+  const lim = Number($("netLimit").value) || 0;
+  const list = lim ? all.slice(0, lim) : all;
+  $("netCount").textContent = all.length ? (list.length < all.length ? `(${list.length}/${all.length})` : `(${all.length})`) : "";
   $("netEmpty").style.display = list.length ? "none" : "";
   $("netEmpty").textContent = T(S.config.nets && !S.config.nets.enabled ? "Netit eivät ole käytössä." : "Ei nettejä tänään tai huomenna.");
   let day = "", h = "";
   const today = new Date().toDateString();
   list.forEach(n => {
     const d = new Date(n.start * 1000), ds = d.toDateString();
-    if (ds !== day) { day = ds; h += `<tr class="netday"><td colspan="6">${esc(ds === today ? T("Tänään") : T("Huomenna"))} · ${esc(d.toLocaleDateString(LOC(), {weekday: "long", day: "numeric", month: "numeric"}))}</td></tr>`; }
+    if (ds !== day) { day = ds; h += `<tr class="netday"><td colspan="5">${esc(ds === today ? T("Tänään") : T("Huomenna"))} · ${esc(d.toLocaleDateString(LOC(), {weekday: "long", day: "numeric", month: "numeric"}))}</td></tr>`; }
     const running = t >= n.start && t < n.end, past = t >= n.end, act = tgActive(n.tg);
     const hm = x => new Date(x * 1000).toLocaleTimeString(LOC(), {hour: "2-digit", minute: "2-digit"});
     const st = running ? (act ? `<span class="st-ok">● ${esc(T("käynnissä – liikennettä"))}</span>` : `<span class="st-ok">${esc(T("käynnissä"))}</span>`)
@@ -2627,8 +2636,8 @@ function renderNets() {
     const info = [n.where, n.info].filter(x => x && !/^\s*\d+\s*$/.test(x) && !/^\s*\d*\s*https?:\/\/\S+\s*$/.test(x) && !(n.tg != null && x.trim() === `TG ${n.tg}`)).join(" · ");
     h += `<tr class="netrow${running ? " now" : ""}${past ? " past" : ""}${tgWatched(n.tg) ? " mine" : ""}">
       <td style="white-space:nowrap">${esc(hm(n.start))}–${esc(hm(n.end))}</td>
-      <td class="wrap"><span class="nname">${esc(n.name)}</span>${info ? `<div class="muted" style="font-size:12px">${esc(info.slice(0, 160))}</div>` : ""}</td>
-      <td>${n.tg != null ? `<span class="tg">${n.tg}</span>` : ""}</td><td class="muted">${esc(n.source)}</td><td>${st}</td>
+      <td class="wrap"><span class="nname">${esc(n.name)}</span><div class="muted" style="font-size:12px">${esc(n.source)}${info ? " · " + esc(info.slice(0, 140)) : ""}</div></td>
+      <td>${n.tg != null ? `<span class="tg">${n.tg}</span>` : ""}</td><td>${st}</td>
       <td style="white-space:nowrap">${n.tg != null && n.tg > 90 ? `<button class="netlisten" data-tg="${n.tg}" title="${esc(T("Kuuntele"))}">▶</button> <button class="netci" data-tg="${n.tg}" title="${esc(T("Aloita check-in-kierros tässä puheryhmässä"))}">${esc(T("Check-in"))}</button>` : ""}</td></tr>`;
   });
   $("netBody").innerHTML = h;
@@ -2651,6 +2660,7 @@ function ciUseTg(tg) {
   if ([...sel.options].some(o => o.value === String(tg))) { sel.value = String(tg); $("ciTgOther").style.display = "none"; }
   else { sel.value = "other"; $("ciTgOther").style.display = ""; $("ciTgOther").value = String(tg); }
 }
+$("netLimit").onchange = () => { try { localStorage.setItem("bmm.netLimit", $("netLimit").value); } catch (e) { /* */ } renderNets(); };
 $("netFilter").onchange = () => { try { localStorage.setItem("bmm.netFilter", $("netFilter").value); } catch (e) { /* */ } renderNets(); };
 function netSrcRow(x) {
   const d = document.createElement("div"); d.className = "netsrc";
