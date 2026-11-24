@@ -2638,7 +2638,7 @@ function renderNets() {
       <td style="white-space:nowrap">${esc(hm(n.start))}–${esc(hm(n.end))}</td>
       <td class="wrap"><span class="nname">${esc(n.name)}</span><div class="muted" style="font-size:12px">${esc(n.source)}${info ? " · " + esc(info.slice(0, 140)) : ""}</div></td>
       <td>${n.tg != null ? `<span class="tg">${n.tg}</span>` : ""}</td><td>${st}</td>
-      <td style="white-space:nowrap">${n.tg != null && n.tg > 90 ? `<button class="netlisten" data-tg="${n.tg}" title="${esc(T("Kuuntele"))}">▶</button> <button class="netci" data-tg="${n.tg}" title="${esc(T("Aloita check-in-kierros tässä puheryhmässä"))}">${esc(T("Check-in"))}</button>` : ""}</td></tr>`;
+      <td style="white-space:nowrap">${n.tg != null && n.tg > 90 ? `<button class="netlisten" data-tg="${n.tg}" title="${esc(T("Kuuntele"))}">▶</button>` : ""}</td></tr>`;
   });
   $("netBody").innerHTML = h;
   $("netSrcStatus").innerHTML = (NETS.sources || []).map(x => `${esc(x.name)}: ${!x.enabled ? esc(T("pois käytöstä"))
@@ -2651,7 +2651,6 @@ function inTime(sec) {
 }
 $("netBody").addEventListener("click", e => {
   const l = e.target.closest(".netlisten"); if (l) { listen(Number(l.dataset.tg)); return; }
-  const c = e.target.closest(".netci"); if (c) ciUseTg(Number(c.dataset.tg));
 });
 function ciUseTg(tg) {
   showTab("checkin");
