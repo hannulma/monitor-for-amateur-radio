@@ -69,11 +69,11 @@ BrandMeister lähettää), `-v` (enemmän lokia).
 - **APRS-viestit:** kutsusi kaikkien SSID:iden saapuvat ja lähtevät APRS-viestit, myös BrandMeisterin kautta
   DMR-radiosta lähtevät. Viestiä klikkaamalla voit vastata suoraan (valittavissa millä SSID:llä).
   Halutessasi viestit, kuittaukset ja komentojen vastaukset lähtevät myös radiolla Graywolfin kautta
-  (Asetukset → APRS-viestit radiolla; reitti automaattinen / APRS-IS / radio, oletuksena pois).
-- **RF-kuuluvuus:** ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia (oletus `127.0.0.1:8001`)
-  samaan tapaan kuin NeoAprs. Kartalla näkyy lämpökarttana, mistä asemasi kuulee
-  paketteja suoraan ja mistä digipiitterien kautta (24 h / 7 vrk / 30 vrk). Digiä klikkaamalla näkyy sen kautta
-  kuultu alue. Taulukoissa digien osuudet ja yleisimmät polut. Hälytys, kun tuttu digi tai valitsemasi asema
+  (Asetukset → APRS-viestit radiolla; reitti automaattinen / APRS-IS / radio / radio ja APRS-IS, oletuksena pois).
+- **APRS-kartta:** ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia (oletus `127.0.0.1:8001`).
+  Kartan tasot (24 h / 7 vrk / 30 vrk): **RF-kuuluvuus** – lämpökartta siitä, mistä asemasi kuulee paketteja
+  suoraan ja mistä digipiitterien kautta; **APRS-asemat** – radiolla kuultujen asemien viimeisin sijainti;
+  **Digipiitterit** – digiä klikkaamalla näkyy sen kautta kuultu alue. Taulukoissa digien osuudet ja yleisimmät polut. Hälytys, kun tuttu digi tai valitsemasi asema
   (esim. iGate) hiljenee – vain silloin, kun oma vastaanotto toimii. Paketit säilytetään koneella 30 vrk.
   Karttapohja: OpenStreetMap (© OpenStreetMap contributors), tiilet haetaan ohjelman kautta omalla
   tunnisteella ja välimuistitetaan; osoitteen voi vaihtaa.

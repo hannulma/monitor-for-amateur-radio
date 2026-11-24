@@ -164,6 +164,8 @@ def test_update_versions():
     rels = [{"tag_name": "v1.0.0b1"}, {"tag_name": "v0.9.0"}, {"tag_name": "v2.0.0", "draft": True}, {"tag_name": "nightly"}]
     assert U.pick_latest(rels, "0.8.0")["tag_name"] == "v0.9.0"          # vakaa käyttäjä: ei betoja
     assert U.pick_latest(rels, "0.8.0b3")["tag_name"] == "v1.0.0b1"      # beta-käyttäjä: myös betat
+    assert U.pick_latest(rels, "0.9.0", beta=True)["tag_name"] == "v1.0.0b1"   # vakaa + testiversiot-asetus
+    assert U.pick_latest(rels, "0.8.0b3", beta=False)["tag_name"] == "v0.9.0"
     sums = U.parse_sums("a" * 64 + "  file.dmg\n" + "B" * 64 + " *other.exe\nroska\n")
     assert sums == {"file.dmg": "a" * 64, "other.exe": "b" * 64}
     atom = """<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">
@@ -599,6 +601,18 @@ def test_aprs_rf_messages(tmp_path, monkeypatch):
         # vastaanottajan kuittaus radiolta
         rx.handle_frame(encode_ax25("OH2ABC-9", "APZXXX", ["OH2RCH-1*"], f":OH2BEA-3 :ack{out['msgid']}".encode()))
         assert out["status"] == "kuitattu" and out["ack_route"] == "rf"
+        # radio + APRS-IS: sama viestinumero molempiin, tila ja kuittaus yhteiset
+        rx.writer.data = b""
+        e2 = hub.aprs.send("OH9ZZZ-7", "molemmat", route="both")
+        assert e2["route"] == "both"
+        kind, item = hub.aprs.queue.get_nowait()
+        assert kind == "msg" and item is e2
+        await drain()
+        f = parse_ax25(KissDecoder().feed(rx.writer.data)[0])
+        assert f["info"] == f":OH9ZZZ-7 :molemmat{{{e2['msgid']}".encode()
+        hub.aprs.connected = False
+        assert hub.pick_route("OH9ZZZ-7", "both") == "rf"
+        hub.aprs.connected = True
         # ilman Graywolf-yhteyttä radioviesti ei lähde
         rx.status["connected"] = False
         e = hub.aprs.send("OH2ABC-9", "testi", route="rf")
@@ -615,4 +629,31 @@ def test_aprs_rf_messages(tmp_path, monkeypatch):
             normalize_messaging(bad, cfg)
     with pytest.raises(ValueError):
         encode_ax25("OH2ABC-X", "APZBMM", [], b"x")
+    rx.close()
+
+
+def test_aprs_stations_layer(tmp_path):
+    import sqlite3
+    from types import SimpleNamespace
+    from bmmonitor.aprsrx import DEFAULT_APRSRX, AprsRx, encode_ax25, parse_symbol, symbol_kind
+    # vanha tietokanta ilman symbolisaraketta päivittyy
+    db = sqlite3.connect(str(tmp_path / "rx.sqlite"))
+    db.execute("CREATE TABLE packets (ts REAL, src TEXT, via TEXT, direct INTEGER, path TEXT, lat REAL, lon REAL)")
+    db.execute("INSERT INTO packets VALUES (?, 'OH2OLD', 'OH2OLD', 1, '', 60.1, 24.1)", (time.time() - 60,))
+    db.commit(); db.close()
+    mon = SimpleNamespace(cfg={"aprsrx": {**DEFAULT_APRSRX}}, touch=lambda: None, hub=None,
+                          watcher=SimpleNamespace(seq=0, alerts=[]))
+    rx = AprsRx(mon, tmp_path / "rx.sqlite")
+    rx.handle_frame(encode_ax25("OH2CAR-9", "APRS", ["OH2RCH-1*"], b"!6012.34N/02456.78E>auto"))
+    rx.handle_frame(encode_ax25("OH2CAR-9", "APRS", [], b">status ilman sijaintia"))
+    rx.handle_frame(encode_ax25("OH2IG", "APRS", [], b"!6015.00NI02450.00E&igate"))
+    rx._commit()
+    st = {s["call"]: s for s in rx.stations("24h", "all", None, (60.2, 24.9))["stations"]}
+    assert set(st) == {"OH2CAR-9", "OH2IG", "OH2OLD"}
+    car = st["OH2CAR-9"]
+    assert car["kind"] == "mobile" and car["packets"] == 2 and car["via"] == "OH2RCH-1" and not car["via_direct"]
+    assert st["OH2IG"]["kind"] == "igate" and st["OH2IG"]["via_direct"] and st["OH2OLD"]["kind"] == "fixed"
+    assert [s["call"] for s in rx.stations("24h", "all", "OH2RCH-1", None)["stations"]] == ["OH2CAR-9"]
+    assert {s["call"] for s in rx.stations("24h", "direct", None, None)["stations"]} == {"OH2IG", "OH2OLD"}
+    assert parse_symbol("APRS", b"=6012.34N\\02456.78E_wx") == "\\_" and symbol_kind("\\_") == "wx"
     rx.close()

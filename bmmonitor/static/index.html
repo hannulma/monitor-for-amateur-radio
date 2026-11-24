@@ -19,6 +19,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     --rowline: #1f2933; --overlay: rgba(15,20,25,.85); --shadow: rgba(0,0,0,.45); --bar: #3987e5;
     --map: #0b1a26; --land: #1f2d3a; --landline: #33465a; --mapgrid: rgba(255,255,255,.06); --night: rgba(0,0,0,.38);
     --covmap: #0c1116; --covland: #1a2632; --axis: #3a4754;
+    --sta-fixed: #e6edf3; --sta-mobile: #c792ff; --sta-igate: #4fe0d0; --sta-wx: #9fd36b;
     color-scheme: dark;
   }
   html[data-theme="light"] {
@@ -28,6 +29,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     --rowline: #e3e8ed; --overlay: rgba(255,255,255,.9); --shadow: rgba(20,30,40,.18); --bar: #2a73c9;
     --map: #cfe3f2; --land: #eef1ea; --landline: #b9c4b3; --mapgrid: rgba(0,0,0,.07); --night: rgba(10,20,40,.18);
     --covmap: #dfe9f1; --covland: #eef1ea; --axis: #b8c2cc;
+    --sta-fixed: #2b3640; --sta-mobile: #7b3fc4; --sta-igate: #0d8a7d; --sta-wx: #4c7a12;
     color-scheme: light;
   }
   html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -90,6 +92,11 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .listen:hover { color: var(--accent); border-color: var(--accent); }
   .listen.on { background: var(--live); border-color: var(--live); color: var(--onaccent); }
   .listen svg { width: 14px; height: 14px; fill: currentColor; }
+  .rfhint { max-width: 220px; }
+  .rfstate { font-size: 12px; padding: 2px 10px; border-radius: 10px; border: 1px solid var(--line); }
+  .netlisten { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; }
+  .netlisten svg { width: 14px; height: 14px; fill: currentColor; }
+  .netlisten.on { background: var(--live); border-color: var(--live); color: var(--onaccent); }
   #dock { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 2px solid var(--live); display: none; align-items: center; gap: 14px; padding: 10px 16px; z-index: 20; box-shadow: 0 -8px 24px var(--shadow); flex-wrap: wrap; }
   #dock.open { display: flex; }
   body.docked main { padding-bottom: 90px; }
@@ -221,6 +228,15 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .darktiles { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9) saturate(.6); }
   .leaflet-tooltip.covlbl { background: var(--overlay); color: var(--text); border: 1px solid var(--line); box-shadow: none; font-size: 11px; padding: 1px 5px; }
   .leaflet-tooltip.covlbl::before { display: none; }
+  .leaflet-control-layers { background: var(--panel); color: var(--text); border: 1px solid var(--line) !important; box-shadow: 0 2px 8px var(--shadow) !important; }
+  .leaflet-control-layers-expanded { padding: 6px 14px 6px 8px; font-size: 12px; }
+  .leaflet-control-layers label span { white-space: nowrap; }
+  .leaflet-control-layers label { margin: 2px 0; color: var(--text); }
+  .stamark svg { overflow: visible; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--text); }
+  .leaflet-popup-content { font-size: 12px; margin: 10px 12px; }
+  .leaflet-popup-content code { font-size: 11px; }
+  .stalegend span { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
   .leaflet-tooltip.covtip { background: var(--panel); color: var(--text); border: 1px solid var(--line); font-size: 12px; }
   .covside h3 { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 6px; }
   .covside table td { padding: 3px 6px; }
@@ -437,7 +453,9 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="inner">
     <div id="updBox"></div>
     <div class="row">
-      <div><label><input id="updAuto" type="checkbox"> Tarkista päivitykset automaattisesti (kerran päivässä)</label></div>
+      <div><label><input id="updAuto" type="checkbox"> Tarkista päivitykset automaattisesti (kerran päivässä)</label>
+        <label style="margin-top:6px"><input id="updBeta" type="checkbox"> Asenna myös testiversiot (beta)</label>
+        <div class="hint">Testiversioissa on uusimmat ominaisuudet ennen vakaata julkaisua, mutta niissä voi olla vielä virheitä.</div></div>
       <div><button id="btnUpdCheck">Tarkista nyt</button></div>
     </div>
     </div>
@@ -471,23 +489,23 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-rftx">
     <h2>APRS-viestit radiolla (Graywolf)</h2>
     <div class="inner">
-    <div class="note">APRS-viestit, kuittaukset ja komentojen vastaukset voidaan lähettää myös radiolla Graywolfin kautta
-      (sama KISS TCP -yhteys kuin RF-kuuluvuudessa, ks. APRS-välilehti). Lähettäjänä on aina oma APRS-IS-tunnuksesi tai
-      viestikentässä valittu oma kutsu. Graywolfin iGate välittää radiolla lähetetyn viestin myös APRS-IS:ään, joten
-      samaa viestiä ei lähetetä molempia reittejä. Sijaintimajakan hoitaa Graywolf.</div>
-    <div class="frow" style="margin-top:10px">
-      <div class="fld checks"><label><input type="checkbox" id="rfTx"> Salli lähetys radiolla</label>
-        <div class="hint" id="rfState"></div></div>
-      <div class="fld"><label for="rfRoute">Oletusreitti</label>
-        <select id="rfRoute"><option value="auto">Automaattinen</option><option value="is">APRS-IS</option><option value="rf">Radio (RF)</option></select>
-        <div class="hint">Automaattinen: radiolla, jos vastaanottaja on kuultu radiolla äskettäin tai APRS-IS-yhteys on poikki, muuten APRS-IS.</div></div>
-      <div class="fld"><label for="rfHeard">Kuultu radiolla (min)</label><input type="number" id="rfHeard" min="5" max="1440" style="width:100px">
-        <div class="hint">automaattisen reitin aikaraja</div></div>
-      <div class="fld"><label for="rfPath">Polku</label><input type="text" id="rfPath" placeholder="WIDE1-1,WIDE2-1" style="width:170px">
-        <div class="hint">tyhjä = ei digipiitterien kautta</div></div>
+    <div class="note">APRS-viestit, kuittaukset ja komentojen vastaukset voidaan lähettää myös radiolla.
+      Lähetys käyttää APRS-välilehden Graywolf-yhteyttä.</div>
+    <div class="frow" style="align-items:center;margin-top:12px">
+      <label style="margin:0;color:var(--text)"><input type="checkbox" id="rfTx"> Salli lähetys radiolla</label>
+      <span id="rfState" class="rfstate"></span>
     </div>
-    <div class="hint">Radiolla viesti lähetetään uudelleen minuutin välein (enintään 3 kertaa), lähetysten väli on vähintään 5 s
-      ja enintään 30 lähetystä 10 minuutissa. Komentoihin, jotka tulevat radiosta, vastataan radiolla.</div>
+    <div class="frow" id="rfFields" style="margin-top:12px">
+      <div class="fld"><label for="rfRoute">Oletusreitti</label>
+        <select id="rfRoute" style="width:220px"><option value="auto">Automaattinen</option><option value="is">APRS-IS</option><option value="rf">Radio (RF)</option><option value="both">Radio (RF) ja APRS-IS</option></select>
+        <div class="hint rfhint" id="rfRouteHint"></div></div>
+      <div class="fld" id="rfHeardFld"><label for="rfHeard">Kuultu radiolla (min)</label><input type="number" id="rfHeard" min="5" max="1440" style="width:110px">
+        <div class="hint rfhint">automaattisen reitin aikaraja</div></div>
+      <div class="fld"><label for="rfPath">Polku</label><input type="text" id="rfPath" placeholder="WIDE1-1,WIDE2-1" style="width:170px">
+        <div class="hint rfhint">tyhjä = ei digipiitterien kautta</div></div>
+    </div>
+    <div class="hint" style="margin-top:12px">Radiolla viesti lähetetään uudelleen minuutin välein (enintään 3 kertaa); lähetysten väli on vähintään 5 s ja
+      enintään 30 lähetystä 10 minuutissa. Komentoihin vastataan samaa reittiä, jota pitkin ne tulivat.</div>
     <div class="frow svcsave"><button class="primary" id="btnRfSave">Tallenna</button><span class="err" id="rfErr"></span></div>
     </div>
   </section>
@@ -532,27 +550,29 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <div style="flex:1;min-width:200px"><label for="rText">Viesti <span class="muted" id="rCount"></span></label>
           <input type="text" id="rText" maxlength="200" placeholder="Klikkaa viestiä vastataksesi tai kirjoita uusi" style="width:100%"></div>
         <div id="rRouteFld" style="display:none"><label for="rRoute">Reitti</label>
-          <select id="rRoute"><option value="auto">Automaattinen</option><option value="is">APRS-IS</option><option value="rf">Radio (RF)</option></select></div>
+          <select id="rRoute"><option value="auto">Automaattinen</option><option value="is">APRS-IS</option><option value="rf">Radio (RF)</option><option value="both">Radio (RF) ja APRS-IS</option></select></div>
         <div><button class="primary" id="rSend">Lähetä</button></div>
       </div>
       <div class="hint" id="rMsg"></div>
     </div>
   </section>
   <section class="wide" data-tab="aprs" data-fold="aprs-cov">
-    <h2>RF-kuuluvuus <span class="count" id="covCount"></span>
+    <h2>APRS-kartta <span class="count" id="covCount"></span>
       <select class="filter" id="covPeriod" title="Tarkastelujakso"><option value="24h">24 h</option><option value="7d">7 vrk</option><option value="30d">30 vrk</option></select>
       <select class="filter" id="covMode" style="margin-left:6px" title="Mitkä paketit kartalla">
         <option value="all">Kaikki paketit</option><option value="direct">Suoraan kuullut</option><option value="digi">Digin kautta kuullut</option></select>
     </h2>
     <div class="covwrap">
-      <div id="covMap" aria-label="Kartta: mistä asemasi kuulee APRS-paketteja"></div>
+      <div id="covMap" aria-label="APRS-kartta: radiolla kuullut asemat, digipiitterit ja RF-kuuluvuus"></div>
       <div class="covside">
         <div class="hint" id="covStatus" style="margin:0"></div>
         <div id="covChip"></div>
         <h3>Jakso</h3>
         <div class="covtot" id="covTotals"></div>
         <div class="covleg" id="covLegend"></div>
-        <div class="hint">Ruutu = lähettäjän ilmoittama sijainti. Klikkaa digiä kartalla tai taulukossa, niin näet sen kautta kuullut alueet.</div>
+        <div class="covleg" id="covStaLegend"></div>
+        <div class="hint">Tasot valitaan kartan oikeasta yläkulmasta. RF-kuuluvuuden ruutu = lähettäjän ilmoittama sijainti.
+          Klikkaa digiä kartalla tai taulukossa, niin näet sen kautta kuullut alueet ja asemat.</div>
         <h3>Kauimmat suoraan kuullut</h3>
         <table><tbody id="covFar"></tbody></table>
       </div>
@@ -577,7 +597,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <h2>Graywolf-yhteys (KISS TCP)
       <label class="switch" title="Vastaanotto päällä"><input type="checkbox" id="rxEnabled"><span class="sl"></span><span class="swtxt" id="rxEnabledTxt">Pois</span></label></h2>
     <div class="inner form msgform">
-      <div class="note">Ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia samalla tavalla kuin NeoAprs.
+      <div class="note">Ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia.
         Radiolla lähetetään vain APRS-viestejä, jos se on sallittu Asetukset-välilehdellä. Kuullut paketit tallennetaan tälle koneelle 30 vuorokaudeksi.</div>
       <div class="frow">
         <div class="fld"><label for="rxHost">Palvelin</label><input type="text" id="rxHost" style="width:180px"><div class="hint">sama kone: 127.0.0.1</div></div>
@@ -1096,6 +1116,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
 <script>
 const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg>';
 const ICON_STOP = '<svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>';
+const ICON_TRI = '<svg viewBox="0 0 24 24"><path d="M7 5v14l12-7z"/></svg>';
 const player = new HosePlayer();
 function tgLabel(tg) { const r = S && S.talkgroups.find(x => x.tg === tg); return r && r.name ? r.name : ""; }
 function lookupCaller(id) {
@@ -1321,7 +1342,7 @@ function fillSettings() {
   $("minDur").value = S.config.min_duration;
   $("logCsv").checked = !!S.config.log_csv;
   $("verInfo").textContent = ""; aboutLine(); fillUi(); $("themeSel").value = S.config.theme || "dark";
-  $("langSel").value = LANG; $("unitSel").value = S.config.units || "metric"; $("updAuto").checked = S.config.update_check !== false;
+  $("langSel").value = LANG; $("unitSel").value = S.config.units || "metric"; $("updAuto").checked = S.config.update_check !== false; $("updBeta").checked = !!S.config.update_beta;
   fillRf();
   $("keyState").textContent = S.config.bm_api_key ? "Avain tallennettu" : "Ei avainta";
   $("apiKey").value = ""; $("myCall").value = S.config.devices.my_call || "";
@@ -1330,16 +1351,27 @@ function fillSettings() {
     .map(([k, v]) => `${esc(T(k))}: ${esc(v)}`).join("<br>");
 }
 
+const RF_HINTS = {auto: "Radiolla, jos vastaanottaja on kuultu radiolla äskettäin; muuten APRS-IS.",
+  is: "Viestit lähtevät vain APRS-IS:n kautta.", rf: "Viestit lähtevät vain radiolla.",
+  both: "Sama viesti lähtee radiolla ja APRS-IS:ään; vastaanottaja saa sen kerran."};
 function fillRf() {
   const m = S.config.messaging;
   $("rfTx").checked = !!m.rf_tx; $("rfRoute").value = m.route || "auto";
   $("rfHeard").value = m.rf_heard_min || 30; $("rfPath").value = m.rf_path == null ? "WIDE1-1,WIDE2-1" : m.rf_path;
-  rfState();
+  rfFields(); rfState();
 }
+function rfFields() {
+  $("rfRouteHint").textContent = T(RF_HINTS[$("rfRoute").value] || "");
+  $("rfHeardFld").style.display = $("rfRoute").value === "auto" ? "" : "none";
+  $("rfFields").style.opacity = $("rfTx").checked ? "" : "0.55";
+}
+$("rfRoute").onchange = rfFields; $("rfTx").onchange = rfFields;
 function rfState() {
   const rx = S.aprsrx || {};
-  $("rfState").innerHTML = !rx.enabled ? esc(T("Graywolf-yhteys ei ole käytössä (APRS-välilehti).")) :
-    rx.connected ? `<span class="ok">${esc(T("Graywolf yhdistetty"))}</span>` : `<span class="bad">${esc(T("Ei yhteyttä Graywolfiin"))}</span>`;
+  const [cls, txt] = !rx.enabled ? ["muted", "Graywolf-yhteys ei ole käytössä (APRS-välilehti)"] :
+    rx.connected ? ["ok", "● Graywolf yhdistetty"] : ["bad", "● Ei yhteyttä Graywolfiin"];
+  const h = `<span class="${cls}">${esc(T(txt))}</span>`;
+  if ($("rfState").innerHTML !== h) $("rfState").innerHTML = h;
 }
 $("btnRfSave").onclick = async () => {
   $("rfErr").textContent = "";
@@ -1795,6 +1827,7 @@ $("unitSel").onchange = async e => {
   unitLabels(); render(); showTab(TAB);
 };
 $("updAuto").onchange = e => saveCfg({update_check: e.target.checked});
+$("updBeta").onchange = async e => { const j = await saveCfg({update_beta: e.target.checked}); if (j.ok) { S.config = j.config; api("/api/update/check", {}); } };
 $("themeSel").onchange = async e => { applyTheme(e.target.value); const j = await saveCfg({theme: e.target.value}); if (j.ok) S.config = j.config; };
 $("uiSel").onchange = async e => { const j = await saveCfg({ui: e.target.value}); if (j.ok) S.config = j.config; fillUi(); };
 $("btnOpenBrowser").onclick = () => { const d = desk(); if (d) d.open_url(location.origin + "/"); };
@@ -2198,6 +2231,7 @@ function renderAprs() {
 }
 function routeTag(r) {
   if (!r) return "";
+  if (r === "both") return ` <span class="muted" title="${esc(T("Radio (RF) ja APRS-IS"))}">· RF+IS</span>`;
   const t = r.split("+").map(x => x === "rf" ? "RF" : "IS").join("+");
   return ` <span class="muted" title="${esc(T(r.includes("+") ? "Tuli sekä radiolta että APRS-IS:stä" : r === "rf" ? "Radio (Graywolf)" : "APRS-IS"))}">· ${esc(t)}</span>`;
 }
@@ -2224,7 +2258,7 @@ $("rSend").onclick = async () => {
   $("rMsg").textContent = "Lähetetään…";
   const j = await api("/api/aprs/send", {from: $("rFrom").value, to: $("rTo").value, text: $("rText").value,
     route: S.messaging.rf && S.messaging.rf.enabled ? $("rRoute").value : "is"});
-  if (j.ok) { $("rMsg").innerHTML = `<span class="ok">${esc(T("Lähetetty") + (j.route === "rf" ? T(" radiolla") : "") + (j.parts > 1 ? T(" ({n} osaa)", {n: j.parts}) : "") + T(" – tila päivittyy listaan"))}</span>`; $("rText").value = ""; updateCount(); }
+  if (j.ok) { $("rMsg").innerHTML = `<span class="ok">${esc(T("Lähetetty") + (j.route === "rf" ? T(" radiolla") : j.route === "both" ? T(" radiolla ja APRS-IS:ään") : "") + (j.parts > 1 ? T(" ({n} osaa)", {n: j.parts}) : "") + T(" – tila päivittyy listaan"))}</span>`; $("rText").value = ""; updateCount(); }
   else $("rMsg").innerHTML = `<span class="bad">${esc(j.error)}</span>`;
 };
 
@@ -2450,7 +2484,7 @@ function renderServices() {
 }
 
 player.onLevel = db => { $("pVu").style.width = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + "%"; };
-player.on(() => { renderPlayer(); render(); });
+player.on(() => { renderPlayer(); render(); renderNets(); });
 $("pVol").value = player.volume;
 $("pVol").oninput = e => player.setVolume(e.target.value);
 $("pChips").addEventListener("click", e => { const b = e.target.closest("[data-leave]"); if (b) player.toggle(Number(b.dataset.leave)); });
@@ -2708,7 +2742,9 @@ function renderNets() {
       <td style="white-space:nowrap">${esc(hm(n.start))}–${esc(hm(n.end))}</td>
       <td class="wrap"><span class="nname">${esc(n.name)}</span><div class="muted" style="font-size:12px">${esc(n.source)}${info ? " · " + esc(info.slice(0, 140)) : ""}</div></td>
       <td>${n.tg != null ? `<span class="tg">${n.tg}</span>` : ""}</td><td>${st}</td>
-      <td style="white-space:nowrap">${n.tg != null && n.tg > 90 ? `<button class="netlisten" data-tg="${n.tg}" title="${esc(T("Kuuntele"))}">▶</button>` : ""}</td></tr>`;
+      <td style="white-space:nowrap">${n.tg != null && n.tg > 90 ? (player.isOn(n.tg)
+        ? `<button class="netlisten on" data-tg="${n.tg}" title="${esc(T("Lopeta kuuntelu"))}">${ICON_STOP}</button>`
+        : `<button class="netlisten" data-tg="${n.tg}" title="${esc(T("Kuuntele"))}">${ICON_TRI}</button>`) : ""}</td></tr>`;
   });
   $("netBody").innerHTML = h;
   $("netSrcStatus").innerHTML = (NETS.sources || []).map(x => `${esc(x.name)}: ${!x.enabled ? esc(T("pois käytöstä"))
@@ -2782,6 +2818,19 @@ $("netEnabled").onchange = async () => { $("netEnabledTxt").textContent = T($("n
 
 // ---------------- APRS-kuuluvuus (Graywolf KISS) ----------------
 let covMap = null, covTiles = null, covCells = null, covMarks = null, covVia = null, covRes = 0, covTimer = null, covSum = null;
+let covStations = null, covDigis = null, covStaData = null, covLabels = false;
+const COV_LAYERS_KEY = "bmm.covLayers";
+// asemien merkit: muoto + väri (ei pelkkä väri): kiinteä ●, liikkuva ▲, iGate ◆, sää ■
+const STA_KIND = {fixed: ["Kiinteä", "--sta-fixed", "M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1z"],
+  mobile: ["Liikkuva", "--sta-mobile", "M6 0.5L11.5 10.5H0.5z"], igate: ["iGate", "--sta-igate", "M6 0L12 6L6 12L0 6z"],
+  wx: ["Sää", "--sta-wx", "M1.5 1.5h9v9h-9z"], digi: ["Digi", "--warn", "M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1z"]};
+function staIcon(kind, sel) {
+  const k = STA_KIND[kind] || STA_KIND.fixed;
+  return L.divIcon({className: "stamark", iconSize: [12, 12], iconAnchor: [6, 6],
+    html: `<svg width="12" height="12" viewBox="0 0 12 12"><path d="${k[2]}" fill="${col(k[1])}" stroke="${col("--bg")}" stroke-width="${sel ? 2.5 : 1.5}"/></svg>`});
+}
+function covLayersSaved() { try { return JSON.parse(localStorage.getItem(COV_LAYERS_KEY) || "null") || {}; } catch (e) { return {}; } }
+function covLayerOn(name) { const v = covLayersSaved()[name]; return v !== false; }
 const COV_DARK = ["#16405a", "#1f5f86", "#2c82b6", "#4fb3ff", "#b3e0ff"];    // vähän → paljon (yksi sävy, tumma pohja)
 const COV_LIGHT = ["#c6e0f4", "#8fc2ea", "#4f9cd9", "#1f6fb5", "#0b3f75"];   // vaalea pohja: vähän = vaalea
 const covColors = () => isLight() ? COV_LIGHT : COV_DARK;
@@ -2798,8 +2847,19 @@ async function covInit() {
     covLand = L.polygon(polys, {pane: "basePane", stroke: false, fillColor: col("--covland"), fillOpacity: 1, interactive: false}).addTo(covMap);
   } catch (e) { /* ei pohjakarttaa */ }
   covSetTiles();
-  covCells = L.layerGroup().addTo(covMap); covMarks = L.layerGroup().addTo(covMap);
-  covMap.on("zoomend", () => { if (covResFor(covMap.getZoom()) !== covRes) covLoadCells(); });
+  covCells = L.layerGroup(); covStations = L.layerGroup(); covDigis = L.layerGroup(); covMarks = L.layerGroup().addTo(covMap);
+  const layers = {cells: covCells, stations: covStations, digis: covDigis};
+  Object.entries(layers).forEach(([k, l]) => { if (covLayerOn(k)) l.addTo(covMap); });
+  L.control.layers(null, {"RF-kuuluvuus": covCells, "APRS-asemat": covStations, "Digipiitterit": covDigis},
+    {collapsed: false, position: "topright"}).addTo(covMap);
+  const remember = () => { const o = {}; Object.entries(layers).forEach(([k, l]) => { o[k] = covMap.hasLayer(l); });
+    try { localStorage.setItem(COV_LAYERS_KEY, JSON.stringify(o)); } catch (e) { /* ei tallennusta */ } };
+  covMap.on("overlayadd", e => { remember(); if (e.layer === covStations) covLoadStations(); if (e.layer === covCells) covLoadCells(); });
+  covMap.on("overlayremove", remember);
+  covMap.on("zoomend", () => {
+    if (covResFor(covMap.getZoom()) !== covRes) covLoadCells();
+    if ((covMap.getZoom() >= 10) !== covLabels) renderStations();
+  });
 }
 function covSetTiles() {
   if (!covMap) return;
@@ -2812,13 +2872,44 @@ function covShow() {
   covInit().then(() => { setTimeout(() => covMap && covMap.invalidateSize(), 50); covRefresh(); });
   clearInterval(covTimer); covTimer = setInterval(() => { if (TAB === "aprs") covRefresh(); }, 60000);
 }
-async function covRefresh() { await Promise.all([covLoadSummary(), covLoadCells()]); }
+async function covRefresh() { await Promise.all([covLoadSummary(), covLoadCells(), covLoadStations()]); }
+async function covLoadStations() {
+  if (!covMap || !covMap.hasLayer(covStations)) return;
+  const q = new URLSearchParams({period: $("covPeriod").value, mode: $("covMode").value, via: covVia || ""});
+  let j; try { j = await (await fetchT("/api/aprsrx/stations?" + q, 30000)).json(); } catch (e) { return; }
+  covStaData = j.stations || []; renderStations();
+}
+function staPopup(st) {
+  const k = STA_KIND[st.kind] || STA_KIND.fixed;
+  const how = st.via_direct ? T("suoraan") : T("digin {d} kautta", {d: st.via});
+  return `<b>${esc(st.call)}</b> <span class="muted">${esc(T(k[0]))}${st.sym ? " · " + esc(st.sym) : ""}</span><br>`
+    + `${esc(T("Viimeksi kuultu"))}: ${esc(ago(st.last))} (${esc(how)})<br>`
+    + `${esc(T("Paketteja"))}: ${esc(st.packets)}${st.direct ? " · " + esc(T("suoraan {n}", {n: st.direct})) : ""}<br>`
+    + (st.km != null ? `${esc(T("Etäisyys"))}: ${esc(D(st.km))}<br>` : "")
+    + (st.path ? `${esc(T("Polku"))}: <code>${esc(st.path)}</code><br>` : "")
+    + `<span class="muted">${esc(T("Sijainti ilmoitettu {a}", {a: ago(st.pos_time)}))}</span>`;
+}
+function renderStations() {
+  if (!covStations) return;
+  covStations.clearLayers();
+  covLabels = covMap.getZoom() >= 10;
+  const digiCalls = new Set(((covSum && covSum.digis) || []).filter(d => d.lat != null).map(d => d.call));
+  (covStaData || []).filter(st => !digiCalls.has(st.call)).forEach(st => {
+    L.marker([st.lat, st.lon], {icon: staIcon(st.kind), keyboard: false})
+      .bindTooltip(st.call, {permanent: covLabels, direction: "right", offset: [6, 0], className: "covlbl"})
+      .bindPopup(staPopup(st)).addTo(covStations);
+  });
+  $("covStaLegend").innerHTML = `<span class="stalegend">` + ["fixed", "mobile", "igate", "wx"].map(k =>
+    `<span><svg width="10" height="10" viewBox="0 0 12 12"><path d="${STA_KIND[k][2]}" fill="${col(STA_KIND[k][1])}"/></svg>${esc(T(STA_KIND[k][0]))}</span>`).join("")
+    + `</span><span class="muted">${esc(T("{n} asemaa kartalla", {n: (covStaData || []).length}))}</span>`;
+}
 async function covLoadSummary() {
   let j; try { j = await (await fetchT(`/api/aprsrx/summary?period=${$("covPeriod").value}`, 30000)).json(); } catch (e) { return; }
   covSum = j; renderCov();
 }
 async function covLoadCells() {
   if (!covMap) return;
+  if (!covMap.hasLayer(covCells)) { $("covLegend").innerHTML = ""; return; }
   covRes = covResFor(covMap.getZoom());
   const q = new URLSearchParams({period: $("covPeriod").value, mode: $("covMode").value, res: covRes, via: covVia || ""});
   let j; try { j = await (await fetchT("/api/aprsrx/cells?" + q, 30000)).json(); } catch (e) { return; }
@@ -2832,7 +2923,7 @@ async function covLoadCells() {
   $("covLegend").innerHTML = j.cells.length ? `<span>${esc(T("vähän"))}</span>` + covColors().map(c => `<i style="background:${c}"></i>`).join("")
     + `<span>${esc(T("paljon"))} (${max})</span><span style="margin-left:auto">${esc(T("ruutu {r}", {r: D(covRes)}))}</span>` : "";
 }
-function covPick(call) { covVia = covVia === call ? null : call; covLoadCells(); renderCov(); }
+function covPick(call) { covVia = covVia === call ? null : call; covLoadCells(); covLoadStations(); renderCov(); }
 function renderCov() {
   const j = covSum; if (!j) return;
   const st = j.status, t = j.totals;
@@ -2863,18 +2954,19 @@ function renderCov() {
   $("pathBody").innerHTML = j.paths.map(p => `<tr><td><code>${esc(p.path || T("(suoraan, ei polkua)"))}</code></td><td class="num">${p.count}</td></tr>`).join("");
   // kartan merkit
   if (!covMarks) return;
-  covMarks.clearLayers();
+  covMarks.clearLayers(); covDigis.clearLayers();
   if (j.home) L.circleMarker(j.home, {radius: 7, color: col("--bg"), weight: 2, fillColor: col("--live"), fillOpacity: 1})
     .bindTooltip(T("Oma asema"), {className: "covlbl"}).addTo(covMarks);
   j.digis.filter(d => d.lat != null).forEach(d => {
     const m = L.circleMarker([d.lat, d.lon], {radius: 6, color: col("--bg"), weight: 2, fillOpacity: 1,
       fillColor: d.silent ? col("--bad") : covVia === d.call ? col("--strong") : col("--warn")})
-      .bindTooltip(d.call, {permanent: true, direction: "right", offset: [6, 0], className: "covlbl"}).addTo(covMarks);
+      .bindTooltip(d.call, {permanent: true, direction: "right", offset: [6, 0], className: "covlbl"}).addTo(covDigis);
     m.on("click", () => covPick(d.call));
   });
+  renderStations();
 }
 $("covPeriod").onchange = covRefresh;
-$("covMode").onchange = covLoadCells;
+$("covMode").onchange = () => { covLoadCells(); covLoadStations(); };
 $("digiBody").addEventListener("click", e => { const r = e.target.closest("tr[data-via]"); if (r) covPick(r.dataset.via); });
 function fillRx() {
   const c = S.config.aprsrx || {};

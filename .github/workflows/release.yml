@@ -301,6 +301,16 @@ jobs:
             a=$(lipo -archs "$f"); case "$a" in *x86_64*arm64*|*arm64*x86_64*) ;; *) echo "::error::$f: $a"; exit 1;; esac
           done
           echo "Kaikki binäärit ovat universal2"
+      - name: Display name (Monitor for Amateur Radio)
+        run: |
+          # Näkyvä nimi valikkoriville ja Dockiin; paketin tiedosto, ohjelmatiedosto ja bundle id pysyvät ennallaan
+          # (automaattinen päivitys korvaa käyttäjän nykyisen .app-paketin samassa paikassa).
+          APP="dist/Monitor for BrandMeister.app"
+          plutil -replace CFBundleName -string "Monitor for Amateur Radio" "$APP/Contents/Info.plist"
+          plutil -replace CFBundleDisplayName -string "Monitor for Amateur Radio" "$APP/Contents/Info.plist"
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict "$APP"
+          plutil -p "$APP/Contents/Info.plist" | grep -E "CFBundle(Name|DisplayName|Identifier|Executable)"
       - name: Smoke test (connects to BrandMeister)
         run: |
           BIN="dist/Monitor for BrandMeister.app/Contents/MacOS/Monitor for BrandMeister"
@@ -332,11 +342,12 @@ jobs:
         run: |
           VERSION=$(python3 -c "import re;print(re.search(r'__version__ = \"([^\"]+)\"', open('bmmonitor/__init__.py').read()).group(1))")
           mkdir -p out dmgroot
-          cp -R "dist/Monitor for BrandMeister.app" dmgroot/
+          # uudessa asennuksessa paketin nimi on uusi; päivitys käyttää käyttäjän nykyistä polkua
+          cp -R "dist/Monitor for BrandMeister.app" "dmgroot/Monitor for Amateur Radio.app"
           ln -s /Applications dmgroot/Applications
           # hdiutil epäonnistuu CI-koneella toisinaan "Resource busy" -virheeseen: yritetään uudelleen
           for i in 1 2 3 4 5; do
-            hdiutil create -volname "Monitor for BrandMeister" -srcfolder dmgroot -ov -format UDZO \
+            hdiutil create -volname "Monitor for Amateur Radio" -srcfolder dmgroot -ov -format UDZO \
               "out/MonitorForBrandMeister-${VERSION}-macos-universal.dmg" && break
             echo "hdiutil epäonnistui (yritys $i), odotetaan…"; sleep 15
             [ "$i" = 5 ] && exit 1

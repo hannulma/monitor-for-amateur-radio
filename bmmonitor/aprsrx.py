@@ -231,6 +231,45 @@ def parse_position(dest: str, info: bytes):
     return round(lat, 5), round(lon, 5)
 
 
+def parse_symbol(dest: str, info: bytes) -> str | None:
+    """APRS-symboli kahtena merkkinä (taulu + koodi), esim. "/>" auto, "/#" digi, "I&" iGate, "/_" sää."""
+    if not info:
+        return None
+    t = chr(info[0])
+    try:
+        if t in "`'\x1c\x1d":
+            return info[8:9].decode("latin-1") + info[7:8].decode("latin-1") if len(info) >= 9 else None
+        if t in "!=/@":
+            s = info.decode("latin-1")
+            body = s[8:] if t in "/@" else s[1:]
+            if _uncompressed(body) and len(body) >= 19:
+                return body[8] + body[18]
+            if _compressed(body):
+                return body[0] + body[9]
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+MOBILE = set(">kvjbR<sY'^uUfaO[")
+
+
+def symbol_kind(sym: str | None) -> str:
+    """Karkea luokka kartan merkkiä varten: digi / igate / wx / mobile / fixed."""
+    if not sym or len(sym) != 2:
+        return "fixed"
+    table, code = sym
+    if code == "#":
+        return "digi"
+    if code == "&":
+        return "igate"
+    if code in "_W" and table in "/\\":
+        return "wx"
+    if code in MOBILE:
+        return "mobile"
+    return "fixed"
+
+
 def km(lat1, lon1, lat2, lon2) -> float:
     p1, p2 = math.radians(lat1), math.radians(lat2)
     a = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
@@ -284,6 +323,8 @@ class AprsRx:
         self.db.execute("""CREATE TABLE IF NOT EXISTS packets (ts REAL, src TEXT, via TEXT, direct INTEGER,
                            path TEXT, lat REAL, lon REAL)""")
         self.db.execute("CREATE INDEX IF NOT EXISTS packets_ts ON packets(ts)")
+        if "sym" not in {r[1] for r in self.db.execute("PRAGMA table_info(packets)")}:
+            self.db.execute("ALTER TABLE packets ADD COLUMN sym TEXT")     # APRS-symboli (0.14.0b14 alkaen)
         self.db.commit()
         self.status = {"connected": False, "error": None, "since": None, "last": None, "count": 0}
         self.wake = asyncio.Event()
@@ -386,8 +427,9 @@ class AprsRx:
             pos = parse_position(p["dest"], p["info"])
         via, direct = heard_via(p["src"], p["path"])
         path = ",".join(c + ("*" if h else "") for c, h in p["path"])
-        self.db.execute("INSERT INTO packets VALUES (?,?,?,?,?,?,?)",
-                        (now, p["src"], via, 1 if direct else 0, path, pos[0] if pos else None, pos[1] if pos else None))
+        sym = parse_symbol(p["dest"], p["info"]) if pos else None
+        self.db.execute("INSERT INTO packets (ts, src, via, direct, path, lat, lon, sym) VALUES (?,?,?,?,?,?,?,?)",
+                        (now, p["src"], via, 1 if direct else 0, path, pos[0] if pos else None, pos[1] if pos else None, sym))
         self.pending += 1
         self.last_heard[via] = now
         if direct:
@@ -577,6 +619,38 @@ class AprsRx:
         cells = [[round(i * dlat, 5), round(j * dlon, 5), n, st, d or 0]
                  for i, j, n, st, d in self._query(sql, args)]
         return {"dlat": dlat, "dlon": dlon, "cells": cells}
+
+    def stations(self, period: str, mode: str, via: str | None, home) -> dict:
+        """APRS-asemat-taso: radiolla kuultujen asemien viimeisin oma sijainti jaksolla."""
+        since = self._since(period)
+        cond, args = "ts > ?", [since]
+        if mode == "direct":
+            cond += " AND direct = 1"
+        elif mode == "digi":
+            cond += " AND direct = 0"
+        if via:
+            cond += " AND via = ?"
+            args.append(via)
+        db = self._reader()
+        try:
+            stats = {src: (n, d or 0, last) for src, n, d, last in db.execute(
+                f"SELECT src, COUNT(*), SUM(direct), MAX(ts) FROM packets WHERE {cond} GROUP BY src", args)}
+            rows = db.execute(f"SELECT src, lat, lon, sym, via, direct, path, MAX(ts) FROM packets "
+                              f"WHERE {cond} AND lat IS NOT NULL GROUP BY src", args).fetchall()
+            # symboli voi puuttua uusimmasta paketista (vanhat rivit): viimeisin tunnettu symboli
+            syms = {src: sym for src, sym, _ in db.execute(
+                "SELECT src, sym, MAX(ts) FROM packets WHERE ts > ? AND sym IS NOT NULL GROUP BY src", (since,))}
+        finally:
+            db.close()
+        out = []
+        for src, lat, lon, sym, v, direct, path, ts in rows:
+            n, nd, last = stats.get(src, (0, 0, ts))
+            sym = sym or syms.get(src)
+            out.append({"call": src, "lat": lat, "lon": lon, "sym": sym, "kind": symbol_kind(sym), "pos_time": ts,
+                        "last": last, "packets": n, "direct": nd, "via": v, "via_direct": bool(direct), "path": path or "",
+                        "km": round(km(home[0], home[1], lat, lon), 1) if home else None})
+        out.sort(key=lambda x: -x["last"])
+        return {"stations": out[:2000]}
 
     def _query(self, sql, args):
         db = self._reader()

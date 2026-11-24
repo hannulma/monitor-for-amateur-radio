@@ -33,7 +33,7 @@ RF_RETRY_INTERVAL = 60        # radiolla harvemmin kuin APRS-IS:ssä: kanava on 
 RF_MIN_GAP = 5                # sekuntia peräkkäisten radiolähetysten välillä
 RF_MAX_PER_10MIN = 30         # yläraja radiolähetyksille (viestit + kuittaukset)
 ACK_HOLD = 20                 # samaa viestiä ei kuitata uudelleen näin pian (sama viesti RF:ltä ja iGaten kautta IS:stä)
-ROUTES = ("auto", "is", "rf")
+ROUTES = ("auto", "is", "rf", "both")      # both = radio ja APRS-IS samalla viestinumerolla
 
 DEFAULT_MESSAGING = {
     "enabled": False,
@@ -55,7 +55,7 @@ DEFAULT_MESSAGING = {
     "commands_all": False,     # False = vain vastaanottajat, oma kutsu ja sallittujen lista
     "commands_allow": [],
     "rf_tx": False,            # salli APRS-viestien lähetys radiolla Graywolfin KISS-portin kautta
-    "route": "auto",           # oletusreitti: auto (RF, jos vastaanottaja kuultu radiolla äskettäin) / is / rf
+    "route": "auto",           # oletusreitti: auto (RF, jos vastaanottaja kuultu radiolla äskettäin) / is / rf / both
     "rf_path": "WIDE1-1,WIDE2-1",
     "rf_heard_min": 30,        # automaattireitti: vastaanottaja kuultu radiolla näin monen minuutin sisällä
 }
@@ -281,7 +281,9 @@ class AprsClient:
                     entry["status"] = "lähetetty"
                     self.pending[entry["msgid"]] = entry
                     line = f"{entry.get('from') or login}>{TOCALL},TCPIP*::{entry['to']:<9}:{entry['text']}{{{entry['msgid']}"
-                    asyncio.get_running_loop().call_later(RETRY_INTERVAL, self._retry, entry)
+                    # radio + APRS-IS: uudelleenlähetys radion tahdissa (kopio radioon lähtee samalla)
+                    asyncio.get_running_loop().call_later(RF_RETRY_INTERVAL if entry.get("route") == "both" else RETRY_INTERVAL,
+                                                          self._retry, entry)
                 self.hub.touch()
             self.writer.write((line + "\r\n").encode("utf-8"))
             await self.writer.drain()
@@ -297,7 +299,7 @@ class AprsClient:
             self.hub.touch()
             return
         entry["status"] = "uudelleen"
-        (self.hub.rf_queue if entry.get("route") == "rf" else self.queue).put_nowait(("msg", entry))
+        self.hub.enqueue(entry)
 
     def send(self, to: str, text: str, source: str = "", src: str | None = None, route: str | None = None) -> dict:
         no_ack = bool(self.cfg.get("no_ack"))
@@ -309,7 +311,7 @@ class AprsClient:
         bases = self.hub.watch_bases()
         if frm.split("-")[0] in bases or entry["to"].split("-")[0] in bases:
             self.hub.aprs_msgs.appendleft(entry)
-        (self.hub.rf_queue if entry["route"] == "rf" else self.queue).put_nowait(("msg", entry))
+        self.hub.enqueue(entry)
         return entry
 
 
@@ -436,10 +438,26 @@ class MessagingHub:
     def rf_ready(self) -> bool:
         return bool(self.cfg.get("rf_tx")) and self.rf is not None and bool(self.rf.status.get("connected"))
 
+    def enqueue(self, entry: dict):
+        """Viesti lähtöjonoon reitin mukaan. Radio + APRS-IS: APRS-IS hoitaa tilan ja uudelleenlähetykset,
+        radioon lähtee samalla kopio (sama viestinumero; IS-palvelimet hylkäävät iGaten välittämän kaksoiskappaleen)."""
+        r = entry.get("route")
+        if r == "rf":
+            self.rf_queue.put_nowait(("msg", entry))
+            return
+        self.aprs.queue.put_nowait(("msg", entry))
+        if r == "both":
+            self.rf_queue.put_nowait(("copy", entry))
+
     def pick_route(self, to: str, route: str | None = None) -> str:
         r = route if route in ROUTES else self.cfg.get("route", "auto")
         if not self.cfg.get("rf_tx"):
             return "is"
+        if r == "both":
+            # kumpi tahansa reitti puuttuu → lähetetään sitä, joka toimii
+            if not self.rf_ready():
+                return "is"
+            return "both" if self.aprs.connected else "rf"
         if r in ("is", "rf"):
             return r
         mins = int(self.cfg.get("rf_heard_min") or 30)
@@ -472,6 +490,12 @@ class MessagingHub:
                 if not self.rf_ready():
                     continue
                 info = f":{to:<9}:ack{mid}"
+            elif item[0] == "copy":                 # radio + APRS-IS: kopio radioon, tila hoidetaan IS-puolella
+                entry = item[1]
+                if entry["status"] in ("kuitattu", "hylätty", "ei kuittausta") or not self.rf_ready():
+                    continue
+                frm = entry.get("from") or (self.cfg.get("login") or "").upper()
+                info = f":{entry['to']:<9}:{entry['text']}" + (f"{{{entry['msgid']}" if entry.get("msgid") else "")
             else:
                 entry = item[1]
                 if entry["status"] not in ("jonossa", "uudelleen"):

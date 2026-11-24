@@ -7,7 +7,10 @@
 #ifndef NumVersion
   #define NumVersion "0.0.0.0"
 #endif
-#define AppName "Monitor for BrandMeister"
+; Näkyvä nimi (pikakuvakkeet, Sovellukset-luettelo). Sisäiset tunnisteet (AppId, exe, asennuskansio) pysyvät
+; vanhoina, jotta päivitys osuu samaan asennukseen.
+#define AppName "Monitor for Amateur Radio"
+#define OldName "Monitor for BrandMeister"
 #define AppExe "MonitorForBrandMeister.exe"
 
 [Setup]
@@ -17,8 +20,9 @@ AppVersion={#AppVersion}
 AppPublisher=hannulma
 AppPublisherURL=https://github.com/hannulma/monitor-for-amateur-radio
 AppSupportURL=https://github.com/hannulma/monitor-for-amateur-radio/issues
-DefaultDirName={autopf}\{#AppName}
+DefaultDirName={autopf}\{#OldName}
 DefaultGroupName={#AppName}
+UsePreviousGroup=no
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
@@ -53,6 +57,10 @@ Name: "autostart"; Description: "Käynnistä Windowsin käynnistyessä / Start w
 [InstallDelete]
 ; vanhat kirjastot pois ennen uusia (kansiomuotoinen paketti, versiosta 0.10.0b2 alkaen)
 Type: filesandordirs; Name: "{app}\_internal"
+; vanhalla nimellä tehdyt pikakuvakkeet pois (0.14.0b14 alkaen nimi on Monitor for Amateur Radio)
+Type: filesandordirs; Name: "{autoprograms}\{#OldName}"
+Type: files; Name: "{autodesktop}\{#OldName}.lnk"
+Type: files; Name: "{userstartup}\{#OldName}.lnk"
 
 [Files]
 Source: "..\dist\MonitorForBrandMeister\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs

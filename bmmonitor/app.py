@@ -80,6 +80,7 @@ DEFAULT_CONFIG = {
     "language": "",             # "fi" / "en"; tyhjä = valitaan selaimen kielen mukaan
     "units": "metric",          # "metric" (km) / "imperial" (mailit); asetukset tallennetaan aina kilometreinä
     "update_check": True,       # tarkista uudet versiot GitHubista kerran päivässä
+    # "update_beta": asennetaanko myös testiversiot; puuttuessa päätetään käynnistyksessä (beta-asennus → True)
     "theme": "dark",            # "dark" / "light" / "auto" (käyttöjärjestelmän mukaan)
     "ui": "window",             # "window" = oma ikkuna (Windows/macOS), "browser" = oletusselain
     "map_tiles": DEFAULT_TILES,           # karttatiilten osoite (haetaan paikallisen palvelimen kautta)
@@ -200,6 +201,10 @@ class Monitor:
         self.cfg["calls_limit"] = nearest_calls_limit(self.cfg.get("calls_limit"))
         self.cfg["aprsrx"] = {**DEFAULT_APRSRX, **(self.cfg.get("aprsrx") or {})}
         self.cfg["nets"] = {**DEFAULT_NETS, **(self.cfg.get("nets") or {})}
+        if "update_beta" not in self.cfg:
+            # beta-asennuksen käyttäjä pysyy testiversioissa myös vakaan version jälkeen; uusi vakaa asennus ei
+            from .updater import is_prerelease
+            self.cfg["update_beta"] = is_prerelease(__version__)
         self.matcher = Matcher(self.cfg["talkgroups"])
         set_lang(self.cfg.get("language") or "fi")
         set_units(self.cfg.get("units"))
@@ -370,6 +375,8 @@ class Monitor:
             self.cfg["ui"] = new["ui"]
         if "update_check" in new:
             self.cfg["update_check"] = bool(new["update_check"])
+        if "update_beta" in new:
+            self.cfg["update_beta"] = bool(new["update_beta"])
             self.updater.wake.set()
         if "bm_api_key" in new:
             key = str(new["bm_api_key"] or "").strip()
@@ -1202,6 +1209,13 @@ def make_app(mon: Monitor) -> web.Application:
         mon.aprsrx._commit()
         return web.json_response(await in_thread(mon.aprsrx.cells, q.get("period", "24h"), mode, via, res, home()))
 
+    async def aprsrx_stations(request):
+        q = request.query
+        via = (q.get("via") or "").upper() or None
+        mon.aprsrx._commit()
+        return web.json_response(await in_thread(mon.aprsrx.stations, q.get("period", "24h"), q.get("mode", "all"),
+                                                 via, home()))
+
     async def tile(request):
         try:
             z, x, y = (int(request.match_info[k]) for k in ("z", "x", "y"))
@@ -1275,6 +1289,7 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_get("/api/aprsrx/summary", aprsrx_summary)
     app.router.add_get("/api/nets", nets_list)
     app.router.add_get("/api/aprsrx/cells", aprsrx_cells)
+    app.router.add_get("/api/aprsrx/stations", aprsrx_stations)
     app.router.add_get("/tiles/{z}/{x}/{y}.png", tile)
     app.router.add_get("/api/station", station)
     app.router.add_get("/api/stats", stats)

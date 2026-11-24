@@ -71,9 +71,9 @@ def is_prerelease(v: str) -> bool:
     return bool(p and p[3] < 3)
 
 
-def pick_latest(releases: list[dict], current: str) -> dict | None:
-    """Uusin julkaisu. Betaa käyttävälle myös betat, vakaalle vain vakaat."""
-    allow_pre = is_prerelease(current)
+def pick_latest(releases: list[dict], current: str, beta: bool | None = None) -> dict | None:
+    """Uusin julkaisu. beta=True: myös testiversiot; None: betaa käyttävälle betat, vakaalle vain vakaat."""
+    allow_pre = is_prerelease(current) if beta is None else bool(beta)
     best, best_v = None, None
     for r in releases:
         if r.get("draft"):
@@ -235,12 +235,14 @@ class Updater:
                     async with s.get(RELEASES_ATOM) as r:
                         r.raise_for_status()
                         releases = releases_from_atom(await r.text())
-            rel = pick_latest(releases, __version__)
+            rel = pick_latest(releases, __version__, self.mon.cfg.get("update_beta"))
             self._release = rel
             if rel:
                 self.state.update(latest=rel["tag_name"].lstrip("v"), url=rel.get("html_url") or RELEASES_PAGE,
                                   notes=(rel.get("body") or "")[:4000], published=rel.get("published_at"),
                                   asset=find_asset(rel, self.kind))
+            else:          # esim. testiversiot otettiin pois eikä vakaata ole: ei vanhaa beta-tietoa näkyviin
+                self.state.update(latest=None, asset=None)
             self.state.update(checked=time.time(), error=None)
             self._evaluate()
             self._save()
