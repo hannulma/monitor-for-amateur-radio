@@ -188,7 +188,7 @@
   #covMap .leaflet-control-attribution { background: rgba(15,20,25,.8); color: var(--muted); }
   #covMap .leaflet-control-attribution a { color: var(--accent); }
   #covMap .leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
-  .darktiles { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.55); }
+  .darktiles { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9) saturate(.6); }
   .leaflet-tooltip.covlbl { background: rgba(15,20,25,.85); color: var(--text); border: 1px solid var(--line); box-shadow: none; font-size: 11px; padding: 1px 5px; }
   .leaflet-tooltip.covlbl::before { display: none; }
   .leaflet-tooltip.covtip { background: var(--panel); color: var(--text); border: 1px solid var(--line); font-size: 12px; }
@@ -2513,7 +2513,8 @@ async function covInit() {
   try {   // ilman verkkoa näkyy ainakin maailmankartta
     const w = await (await fetch("/static/world.json")).json();
     const polys = w.land.map(r => { const ll = []; for (let i = 0; i + 1 < r.length; i += 2) ll.push([r[i + 1], r[i]]); return ll; });
-    L.polygon(polys, {stroke: false, fillColor: "#1a2632", fillOpacity: 1, interactive: false}).addTo(covMap);
+    covMap.createPane("basePane").style.zIndex = 150;     // karttatiilten (200) alle: näkyy vain, jos tiilet puuttuvat
+    L.polygon(polys, {pane: "basePane", stroke: false, fillColor: "#1a2632", fillOpacity: 1, interactive: false}).addTo(covMap);
   } catch (e) { /* ei pohjakarttaa */ }
   covSetTiles();
   covCells = L.layerGroup().addTo(covMap); covMarks = L.layerGroup().addTo(covMap);
