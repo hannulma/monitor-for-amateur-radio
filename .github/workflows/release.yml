@@ -334,8 +334,13 @@ jobs:
           mkdir -p out dmgroot
           cp -R "dist/Monitor for BrandMeister.app" dmgroot/
           ln -s /Applications dmgroot/Applications
-          hdiutil create -volname "Monitor for BrandMeister" -srcfolder dmgroot -ov -format UDZO \
-            "out/MonitorForBrandMeister-${VERSION}-macos-universal.dmg"
+          # hdiutil epäonnistuu CI-koneella toisinaan "Resource busy" -virheeseen: yritetään uudelleen
+          for i in 1 2 3 4 5; do
+            hdiutil create -volname "Monitor for BrandMeister" -srcfolder dmgroot -ov -format UDZO \
+              "out/MonitorForBrandMeister-${VERSION}-macos-universal.dmg" && break
+            echo "hdiutil epäonnistui (yritys $i), odotetaan…"; sleep 15
+            [ "$i" = 5 ] && exit 1
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: macos-universal
