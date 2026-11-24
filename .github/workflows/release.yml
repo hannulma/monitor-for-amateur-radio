@@ -73,14 +73,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install
-        env:
+      - name: Install (PyInstaller with a self-compiled bootloader)
+        shell: pwsh
+        run: |
           # PyInstallerin käynnistysohjelma käännetään itse: valmiiksi käännetty bootloader on monen
           # virustorjunnan koneoppimistunnistuksen (esim. Defenderin Wacatac!ml) yleinen väärä hälytys.
-          PYINSTALLER_COMPILE_BOOTLOADER: "1"
-        run: |
           python -m pip install --upgrade pip wheel
-          pip install --no-binary pyinstaller pyinstaller
+          pip download --no-binary :all: --no-deps -d pyi_src pyinstaller
+          $tgz = Get-ChildItem pyi_src\pyinstaller-*.tar.gz | Select-Object -First 1
+          tar -xzf $tgz.FullName -C pyi_src
+          $dir = Get-ChildItem pyi_src -Directory | Select-Object -First 1
+          Push-Location (Join-Path $dir.FullName "bootloader")
+          python ./waf distclean all --target-arch=64bit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Pop-Location
+          pip install $dir.FullName
           pip install .
       - name: Build exe
         run: >
