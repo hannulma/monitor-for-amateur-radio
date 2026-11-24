@@ -10,6 +10,7 @@ import argparse
 import asyncio
 import csv
 import fnmatch
+import hashlib
 import json
 import logging
 import os
@@ -31,6 +32,7 @@ from .updater import Updater
 from .checkin import CheckIn
 from .sheetsync import SheetError
 from . import APP_ID, APP_NAME, __date__, __version__, desktop, feedback, secret_store
+from .aprsrx import DEFAULT_APRSRX, DEFAULT_TILES, DEFAULT_TILES_ATTR, AprsRx, normalize_aprsrx
 from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
                         validate_passcode, ws_options)
 from .bmapi import BMApi, BMApiError
@@ -63,6 +65,8 @@ DEFAULT_CONFIG = {
     "units": "metric",          # "metric" (km) / "imperial" (mailit); asetukset tallennetaan aina kilometreinä
     "update_check": True,       # tarkista uudet versiot GitHubista kerran päivässä
     "ui": "window",             # "window" = oma ikkuna (Windows/macOS), "browser" = oletusselain
+    "map_tiles": DEFAULT_TILES,           # karttatiilten osoite (haetaan paikallisen palvelimen kautta)
+    "map_tiles_attr": DEFAULT_TILES_ATTR,
 }
 CALLS_LIMITS = (10, 25, 50, 100, 150)
 
@@ -177,6 +181,7 @@ class Monitor:
         svc = self.cfg.get("services") or {}
         self.cfg["services"] = {k: {**v, **(svc.get(k) or {})} for k, v in DEFAULT_SERVICES.items()}
         self.cfg["calls_limit"] = nearest_calls_limit(self.cfg.get("calls_limit"))
+        self.cfg["aprsrx"] = {**DEFAULT_APRSRX, **(self.cfg.get("aprsrx") or {})}
         self.matcher = Matcher(self.cfg["talkgroups"])
         set_lang(self.cfg.get("language") or "fi")
         set_units(self.cfg.get("units"))
@@ -218,6 +223,8 @@ class Monitor:
         self.hub.command_handler = self.commands.handle
         self.updater = Updater(self)
         self.checkin = CheckIn(self, self.api)
+        self.aprsrx = AprsRx(self, cfg_path.parent / "aprs_rx.sqlite")
+        self.tile_sem = asyncio.Semaphore(4)
 
     def touch(self):
         self.dirty = True
@@ -319,6 +326,16 @@ class Monitor:
                 raise ValueError(tr("Virheellinen yksikkö"))
             self.cfg["units"] = new["units"]
             set_units(new["units"])
+        if "aprsrx" in new:
+            self.cfg["aprsrx"] = normalize_aprsrx(new["aprsrx"] or {}, self.cfg["aprsrx"])
+            self.aprsrx.reconfigure()
+        if "map_tiles" in new:
+            t = str(new["map_tiles"] or "").strip() or DEFAULT_TILES
+            if not re.match(r"^https?://[^\s]+$", t) or not all(k in t for k in ("{z}", "{x}", "{y}")):
+                raise ValueError(tr("Karttatiilten osoitteessa pitää olla {z}, {x} ja {y}"))
+            self.cfg["map_tiles"] = t
+            self.cfg["map_tiles_attr"] = str(new.get("map_tiles_attr") or "").strip()[:200] or (
+                DEFAULT_TILES_ATTR if t == DEFAULT_TILES else "")
         if "ui" in new:
             if new["ui"] not in ("window", "browser"):
                 raise ValueError(tr("Virheellinen valinta"))
@@ -605,6 +622,7 @@ class Monitor:
             "now": time.time(),
             "version": __version__, "date": __date__,
             "ui": {"window": self.ui is not None, "available": desktop.available()},
+            "aprsrx": self.aprsrx.snapshot(),
             "config": self.public_config(),
             "status": self.status,
             "started": self.started,
@@ -1139,6 +1157,58 @@ def make_app(mon: Monitor) -> web.Application:
     async def ping(_):
         return web.json_response({"app": APP_ID, "version": __version__})
 
+    def home():
+        loc = mon.cfg["services"]["location"]
+        return (loc["lat"], loc["lon"]) if loc.get("lat") is not None else None
+
+    async def aprsrx_summary(request):
+        period = request.query.get("period", "24h")
+        mon.aprsrx._commit()
+        return web.json_response(await asyncio.get_running_loop().run_in_executor(
+            None, mon.aprsrx.summary, period, home()))
+
+    async def aprsrx_cells(request):
+        q = request.query
+        try:
+            res = min(100.0, max(0.5, float(q.get("res", 5))))
+        except ValueError:
+            res = 5.0
+        mode = q.get("mode", "all")
+        via = (q.get("via") or "").upper() or None
+        mon.aprsrx._commit()
+        return web.json_response(await asyncio.get_running_loop().run_in_executor(
+            None, mon.aprsrx.cells, q.get("period", "24h"), mode, via, res, home()))
+
+    async def tile(request):
+        try:
+            z, x, y = (int(request.match_info[k]) for k in ("z", "x", "y"))
+        except ValueError:
+            raise web.HTTPNotFound()
+        if not (0 <= z <= 19 and 0 <= x < 2 ** z and 0 <= y < 2 ** z):
+            raise web.HTTPNotFound()
+        tmpl = mon.cfg.get("map_tiles") or DEFAULT_TILES
+        key = hashlib.sha1(tmpl.encode()).hexdigest()[:10]
+        path = mon.cfg_path.parent / "tiles" / key / str(z) / str(x) / f"{y}.png"
+        fresh = path.exists() and time.time() - path.stat().st_mtime < 7 * 86400
+        if not fresh:
+            url = tmpl.replace("{s}", "abc"[(x + y) % 3]).replace("{z}", str(z)).replace("{x}", str(x)).replace("{y}", str(y))
+            # OpenStreetMapin käyttöehdot: sovellus tunnistaa itsensä omalla User-Agentilla.
+            ua = f"MonitorForAmateurRadio/{__version__} (+https://github.com/hannulma/monitor-for-amateur-radio)"
+            try:
+                async with mon.tile_sem, http_session(20) as s, s.get(url, headers={"User-Agent": ua}) as r:
+                    if r.status == 200:
+                        data = await r.read()
+                        path.parent.mkdir(parents=True, exist_ok=True)
+                        path.write_bytes(data)
+                        fresh = True
+                    else:
+                        log.debug("Karttatiili %s: HTTP %s", url, r.status)
+            except Exception as e:  # noqa: BLE001
+                log.debug("Karttatiili %s: %s", url, e)
+        if not path.exists():
+            raise web.HTTPNotFound()
+        return web.FileResponse(path, headers={"Cache-Control": "max-age=86400"})
+
     async def ui_show(_):
         if mon.ui is None:
             return web.json_response({"ok": False})
@@ -1157,6 +1227,9 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_post("/api/update/install", update_install)
     app.router.add_post("/api/shutdown", shutdown)
     app.router.add_post("/api/ui/show", ui_show)
+    app.router.add_get("/api/aprsrx/summary", aprsrx_summary)
+    app.router.add_get("/api/aprsrx/cells", aprsrx_cells)
+    app.router.add_get("/tiles/{z}/{x}/{y}.png", tile)
     app.router.add_get("/api/station", station)
     app.router.add_get("/api/stats", stats)
     app.router.add_get("/api/stats/bm", stats_bm)
@@ -1301,6 +1374,7 @@ async def _run(args, mon, cfg_path, ui):
              asyncio.create_task(mon.hub.run()), asyncio.create_task(mon.devmon.run()),
              asyncio.create_task(mon.services.run())]
     tasks.append(asyncio.create_task(mon.checkin.run()))
+    tasks.append(asyncio.create_task(mon.aprsrx.run()))
     if not args.demo:
         tasks.append(asyncio.create_task(mon.updater.run()))
     tasks.append(asyncio.create_task(demo_loop(mon) if args.demo else bm_loop(mon)))
@@ -1316,6 +1390,7 @@ async def _run(args, mon, cfg_path, ui):
             except Exception:  # noqa: BLE001
                 pass
         await runner.cleanup()
+        mon.aprsrx.close()
 
 
 def main():

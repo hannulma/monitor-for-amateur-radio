@@ -51,7 +51,7 @@ packages = ["bmmonitor"]
 version = { attr = "bmmonitor.__version__" }
 
 [tool.setuptools.package-data]
-bmmonitor = ["static/*"]
+bmmonitor = ["static/*", "static/icons/*", "static/vendor/leaflet/*", "static/vendor/leaflet/images/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

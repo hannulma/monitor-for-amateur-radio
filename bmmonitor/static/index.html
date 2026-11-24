@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monitor for Amateur Radio</title>
 <link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
+<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+<script src="/static/vendor/leaflet/leaflet.js"></script>
 <style>
   :root {
     --bg: #0f1419; --panel: #171e26; --line: #26313d; --text: #d9e1e8; --muted: #7d8b99;
@@ -180,6 +182,27 @@
   .svc .hint { margin-top: 8px; }
   .hdrlink { margin-left: auto; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--accent); text-decoration: none; }
   .hdrlink:hover { text-decoration: underline; }
+  .covwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 12px 14px; }
+  @media (max-width: 980px) { .covwrap { grid-template-columns: 1fr; } }
+  #covMap { height: 540px; border-radius: 8px; background: #0c1116; border: 1px solid var(--line); }
+  #covMap .leaflet-control-attribution { background: rgba(15,20,25,.8); color: var(--muted); }
+  #covMap .leaflet-control-attribution a { color: var(--accent); }
+  #covMap .leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
+  .darktiles { filter: invert(1) hue-rotate(180deg) brightness(.82) contrast(.92) saturate(.55); }
+  .leaflet-tooltip.covlbl { background: rgba(15,20,25,.85); color: var(--text); border: 1px solid var(--line); box-shadow: none; font-size: 11px; padding: 1px 5px; }
+  .leaflet-tooltip.covlbl::before { display: none; }
+  .leaflet-tooltip.covtip { background: var(--panel); color: var(--text); border: 1px solid var(--line); font-size: 12px; }
+  .covside h3 { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 6px; }
+  .covside table td { padding: 3px 6px; }
+  .covtot { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 13px; }
+  .covtot b { text-align: right; }
+  .covleg { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin-top: 10px; }
+  .covleg i { display: inline-block; width: 22px; height: 10px; border-radius: 2px; }
+  .covchip { display: inline-flex; gap: 6px; align-items: center; background: var(--bg); border: 1px solid var(--accent); border-radius: 12px; padding: 2px 4px 2px 10px; margin-top: 10px; font-size: 12px; }
+  .covchip button { padding: 0 6px; border: 0; background: none; color: var(--muted); }
+  tr.clkrow { cursor: pointer; } tr.clkrow:hover td { background: rgba(79,179,255,.06); }
+  tr.clkrow.sel td { background: rgba(79,179,255,.12); }
+  .st-bad { color: var(--bad); } .st-ok { color: var(--live); }
   .satwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 12px 14px; }
   @media (max-width: 980px) { .satwrap { grid-template-columns: 1fr; } }
   .satmapbox { position: relative; }
@@ -443,6 +466,73 @@
         <div><button class="primary" id="rSend">Lähetä</button></div>
       </div>
       <div class="hint" id="rMsg"></div>
+    </div>
+  </section>
+  <section class="wide" data-tab="aprs" data-fold="aprs-cov">
+    <h2>RF-kuuluvuus <span class="count" id="covCount"></span>
+      <select class="filter" id="covPeriod" title="Tarkastelujakso"><option value="24h">24 h</option><option value="7d">7 vrk</option><option value="30d">30 vrk</option></select>
+      <select class="filter" id="covMode" style="margin-left:6px" title="Mitkä paketit kartalla">
+        <option value="all">Kaikki paketit</option><option value="direct">Suoraan kuullut</option><option value="digi">Digin kautta kuullut</option></select>
+    </h2>
+    <div class="covwrap">
+      <div id="covMap" aria-label="Kartta: mistä asemasi kuulee APRS-paketteja"></div>
+      <div class="covside">
+        <div class="hint" id="covStatus" style="margin:0"></div>
+        <div id="covChip"></div>
+        <h3>Jakso</h3>
+        <div class="covtot" id="covTotals"></div>
+        <div class="covleg" id="covLegend"></div>
+        <div class="hint">Ruutu = lähettäjän ilmoittama sijainti. Klikkaa digiä kartalla tai taulukossa, niin näet sen kautta kuullut alueet.</div>
+        <h3>Kauimmat suoraan kuullut</h3>
+        <table><tbody id="covFar"></tbody></table>
+      </div>
+    </div>
+  </section>
+  <section data-tab="aprs" data-fold="aprs-digis">
+    <h2>Digipiitterit ja seuratut asemat <span class="count" id="digiCount"></span></h2>
+    <div class="scroll" style="max-height:440px">
+      <table><thead><tr><th>Asema</th><th class="num">Paketit</th><th class="num">Asemat</th><th class="num">Osuus</th><th>Viimeksi</th><th class="num">Etäisyys</th><th>Tila</th></tr></thead>
+        <tbody id="digiBody"></tbody></table>
+      <div class="empty" id="digiEmpty">Ei digin kautta kuultuja paketteja tällä jaksolla.</div>
+    </div>
+  </section>
+  <section data-tab="aprs" data-fold="aprs-paths">
+    <h2>Yleisimmät polut</h2>
+    <div class="scroll" style="max-height:440px">
+      <table><thead><tr><th>Polku (* = välittänyt)</th><th class="num">Paketit</th></tr></thead><tbody id="pathBody"></tbody></table>
+      <div class="empty" id="pathEmpty">Ei paketteja tällä jaksolla.</div>
+    </div>
+  </section>
+  <section class="msgp form" data-tab="aprs" data-fold="aprs-rx">
+    <h2>Graywolf-yhteys (KISS TCP)
+      <label class="switch" title="Vastaanotto päällä"><input type="checkbox" id="rxEnabled"><span class="sl"></span><span class="swtxt" id="rxEnabledTxt">Pois</span></label></h2>
+    <div class="inner form msgform">
+      <div class="note">Ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia samalla tavalla kuin NeoAprs.
+        Se ei lähetä mitään radiotielle. Kuullut paketit tallennetaan tälle koneelle 30 vuorokaudeksi.</div>
+      <div class="frow">
+        <div class="fld"><label for="rxHost">Palvelin</label><input type="text" id="rxHost" style="width:180px"><div class="hint">sama kone: 127.0.0.1</div></div>
+        <div class="fld"><label for="rxPort">KISS TCP -portti</label><input type="number" id="rxPort" min="1" max="65535" style="width:110px"><div class="hint">oletus 8001</div></div>
+      </div>
+      <h3>Hiljentyneet digit ja iGatet</h3>
+      <div class="frow">
+        <div class="fld checks">
+          <label><input type="checkbox" id="rxAlerts"> Hälytä, kun seurattu asema hiljenee</label>
+          <label><input type="checkbox" id="rxAuto"> Seuraa automaattisesti kuultuja digejä</label>
+          <label><input type="checkbox" id="rxSms"> Lähetä hälytys myös radioon</label></div>
+        <div class="fld"><label for="rxSilence">Hiljaisuus (min)</label><input type="number" id="rxSilence" min="5" style="width:100px">
+          <div class="hint">kuinka pitkä tauko hälyttää</div></div>
+        <div class="fld"><label for="rxMinHeard">Digin vähimmäismäärä</label><input type="number" id="rxMinHeard" min="1" style="width:100px">
+          <div class="hint">välitettyä pakettia / 7 vrk</div></div>
+        <div class="fld" style="flex:1;min-width:240px"><label for="rxWatch">Seuraa lisäksi (esim. iGatet)</label><input type="text" id="rxWatch" placeholder="OH2RCH-10 OH2ABC-1" style="width:100%">
+          <div class="hint">Hälytys tulee vain, kun oma vastaanotto toimii: muuta liikennettä on kuultu hiljaisuuden aikana.</div></div>
+      </div>
+      <h3>Karttapohja</h3>
+      <div class="frow">
+        <div class="fld" style="flex:2;min-width:280px"><label for="rxTiles">Karttatiilten osoite</label><input type="text" id="rxTiles" style="width:100%">
+          <div class="hint">Oletus OpenStreetMap. Tiilet haetaan ohjelman kautta ja tallennetaan välimuistiin. Tyhjä = oletus.</div></div>
+        <div class="fld" style="flex:1;min-width:200px"><label for="rxTilesAttr">Lähdemerkintä</label><input type="text" id="rxTilesAttr" style="width:100%"></div>
+      </div>
+      <div class="frow svcsave"><button class="primary" id="btnRxSave">Tallenna</button><span class="err" id="rxErr"></span></div>
     </div>
   </section>
   <section class="msgp form" data-tab="aprs" data-fold="aprs-cfg">
@@ -1440,6 +1530,7 @@ function showTab(tab) {
   if (!S) return;
   if (tab === "asetukset") fillSettings();
   if (tab === "viestit" || tab === "aprs") fillMsg();
+  if (tab === "aprs") { fillRx(); covShow(); }
   if (tab === "kaverit") { fillWatch(); seenAlerts = maxAlertSeq(); updateAlertBadge(); }
   if (tab === "laitteet") fillDevices();
   if (tab === "tilastot") loadStats();
@@ -2411,6 +2502,124 @@ function drawSky() {
 // ---------------------------------------------------------------------------
 // Tietoja-rivi ja palaute ylläpidolle
 // ---------------------------------------------------------------------------
+// ---------------- APRS-kuuluvuus (Graywolf KISS) ----------------
+let covMap = null, covTiles = null, covCells = null, covMarks = null, covVia = null, covRes = 0, covTimer = null, covSum = null;
+const COV_COLORS = ["#16405a", "#1f5f86", "#2c82b6", "#4fb3ff", "#b3e0ff"];   // vähän → paljon (yksi sävy)
+function covHome() { const l = S.config.services && S.config.services.location; return l && l.lat != null ? [l.lat, l.lon] : null; }
+function covResFor(z) { return z >= 12 ? 1 : z >= 11 ? 2 : z >= 10 ? 3 : z >= 9 ? 5 : z >= 8 ? 8 : z >= 7 ? 15 : z >= 6 ? 30 : 60; }
+async function covInit() {
+  if (covMap || !window.L) return;
+  covMap = L.map("covMap", {zoomControl: true, worldCopyJump: true, attributionControl: true}).setView(covHome() || [60.2, 24.9], 8);
+  try {   // ilman verkkoa näkyy ainakin maailmankartta
+    const w = await (await fetch("/static/world.json")).json();
+    const polys = w.land.map(r => { const ll = []; for (let i = 0; i + 1 < r.length; i += 2) ll.push([r[i + 1], r[i]]); return ll; });
+    L.polygon(polys, {stroke: false, fillColor: "#1a2632", fillOpacity: 1, interactive: false}).addTo(covMap);
+  } catch (e) { /* ei pohjakarttaa */ }
+  covSetTiles();
+  covCells = L.layerGroup().addTo(covMap); covMarks = L.layerGroup().addTo(covMap);
+  covMap.on("zoomend", () => { if (covResFor(covMap.getZoom()) !== covRes) covLoadCells(); });
+}
+function covSetTiles() {
+  if (!covMap) return;
+  if (covTiles) covMap.removeLayer(covTiles);
+  const attr = S.config.map_tiles_attr || "";
+  covTiles = L.tileLayer("/tiles/{z}/{x}/{y}.png?u=" + encodeURIComponent((S.config.map_tiles || "").slice(-24)),
+    {maxZoom: 18, minZoom: 2, className: "darktiles", attribution: esc(attr)}).addTo(covMap);
+}
+function covShow() {
+  covInit().then(() => { setTimeout(() => covMap && covMap.invalidateSize(), 50); covRefresh(); });
+  clearInterval(covTimer); covTimer = setInterval(() => { if (TAB === "aprs") covRefresh(); }, 60000);
+}
+async function covRefresh() { await Promise.all([covLoadSummary(), covLoadCells()]); }
+async function covLoadSummary() {
+  let j; try { j = await (await fetch(`/api/aprsrx/summary?period=${$("covPeriod").value}`)).json(); } catch (e) { return; }
+  covSum = j; renderCov();
+}
+async function covLoadCells() {
+  if (!covMap) return;
+  covRes = covResFor(covMap.getZoom());
+  const q = new URLSearchParams({period: $("covPeriod").value, mode: $("covMode").value, res: covRes, via: covVia || ""});
+  let j; try { j = await (await fetch("/api/aprsrx/cells?" + q)).json(); } catch (e) { return; }
+  covCells.clearLayers();
+  const max = Math.max(1, ...j.cells.map(c => c[2]));
+  j.cells.forEach(([la, lo, n, st, d]) => {
+    const k = Math.min(4, Math.floor(Math.log(n) / Math.log(max + 1e-9) * 4.999));
+    L.rectangle([[la, lo], [la + j.dlat, lo + j.dlon]], {stroke: true, weight: 1, color: "#0f1419", fillColor: COV_COLORS[Math.max(0, k)], fillOpacity: .62})
+      .bindTooltip(T("{n} pakettia · {s} asemaa · suoraan {d}", {n, s: st, d}), {className: "covtip", sticky: true}).addTo(covCells);
+  });
+  $("covLegend").innerHTML = j.cells.length ? `<span>${esc(T("vähän"))}</span>` + COV_COLORS.map(c => `<i style="background:${c}"></i>`).join("")
+    + `<span>${esc(T("paljon"))} (${max})</span><span style="margin-left:auto">${esc(T("ruutu {r}", {r: D(covRes)}))}</span>` : "";
+}
+function covPick(call) { covVia = covVia === call ? null : call; covLoadCells(); renderCov(); }
+function renderCov() {
+  const j = covSum; if (!j) return;
+  const st = j.status, t = j.totals;
+  $("covStatus").innerHTML = !st.enabled ? esc(T("Vastaanotto pois päältä – ota se käyttöön alla Graywolf-yhteys-osiosta."))
+    : st.connected ? `<span class="st-ok">●</span> ${esc(T("Yhdistetty KISS-porttiin"))}${st.last ? " · " + esc(T("viimeisin paketti {a}", {a: ago(st.last)})) : ""}`
+    : `<span class="st-bad">●</span> ${esc(st.error || T("Ei yhteyttä"))}`;
+  $("covCount").textContent = t.packets ? T("{n} pakettia", {n: t.packets}) : "";
+  const pct = x => t.packets ? Math.round(100 * x / t.packets) + " %" : "–";
+  $("covTotals").innerHTML = [["Paketit", t.packets], ["Eri asemia", t.stations], ["Suoraan kuullut", `${t.direct} (${pct(t.direct)})`],
+    ["Digin kautta", `${t.via_digi} (${pct(t.via_digi)})`], ["Sijainnillisia", t.with_pos]]
+    .map(([k, v]) => `<span>${esc(T(k))}</span><b>${esc(v)}</b>`).join("");
+  $("covChip").innerHTML = covVia ? `<span class="covchip">${esc(T("Vain {c} kautta", {c: covVia}))}<button id="covClear" title="${esc(T("Näytä kaikki"))}">✕</button></span>` : "";
+  if (covVia) $("covClear").onclick = () => covPick(covVia);
+  $("covFar").innerHTML = j.far.length ? j.far.map(f => `<tr><td><span class="call clk" data-q="${esc(f.call)}">${esc(f.call)}</span></td><td class="num">${esc(D(f.km))}</td><td class="muted">${esc(ago(f.last))}</td></tr>`).join("")
+    : `<tr><td class="muted">${esc(T(j.home ? "Ei vielä." : "Aseta oma sijainti Palvelut-välilehdellä."))}</td></tr>`;
+  // digitaulukko
+  const vd = Math.max(1, t.via_digi);
+  $("digiCount").textContent = j.digis.length ? `(${j.digis.length})` : "";
+  $("digiEmpty").style.display = j.digis.length ? "none" : "";
+  $("digiBody").innerHTML = j.digis.map(d => {
+    const state = d.silent ? `<span class="st-bad">${esc(T("Hiljaa"))}</span>` : d.alias ? `<span class="muted">${esc(T("yleisnimi (välittäjä ei tiedossa)"))}</span>`
+      : d.watched ? `<span class="st-ok">${esc(T("Seurannassa"))}</span>` : "";
+    return `<tr class="clkrow${covVia === d.call ? " sel" : ""}" data-via="${esc(d.call)}"><td><b>${esc(d.call)}</b></td><td class="num">${d.packets}</td><td class="num">${d.stations}</td>
+      <td class="num">${d.packets ? Math.round(100 * d.packets / vd) + " %" : ""}</td><td class="muted">${esc(d.last ? ago(d.last) : T("ei kuultu"))}</td>
+      <td class="num">${esc(D(d.km))}</td><td>${state}</td></tr>`;
+  }).join("");
+  $("pathEmpty").style.display = j.paths.length ? "none" : "";
+  $("pathBody").innerHTML = j.paths.map(p => `<tr><td><code>${esc(p.path || T("(suoraan, ei polkua)"))}</code></td><td class="num">${p.count}</td></tr>`).join("");
+  // kartan merkit
+  if (!covMarks) return;
+  covMarks.clearLayers();
+  if (j.home) L.circleMarker(j.home, {radius: 7, color: "#0f1419", weight: 2, fillColor: "#3ddc84", fillOpacity: 1})
+    .bindTooltip(T("Oma asema"), {className: "covlbl"}).addTo(covMarks);
+  j.digis.filter(d => d.lat != null).forEach(d => {
+    const m = L.circleMarker([d.lat, d.lon], {radius: 6, color: "#0f1419", weight: 2, fillOpacity: 1,
+      fillColor: d.silent ? "#ff6b6b" : covVia === d.call ? "#ffffff" : "#ffb547"})
+      .bindTooltip(d.call, {permanent: true, direction: "right", offset: [6, 0], className: "covlbl"}).addTo(covMarks);
+    m.on("click", () => covPick(d.call));
+  });
+}
+$("covPeriod").onchange = covRefresh;
+$("covMode").onchange = covLoadCells;
+$("digiBody").addEventListener("click", e => { const r = e.target.closest("tr[data-via]"); if (r) covPick(r.dataset.via); });
+function fillRx() {
+  const c = S.config.aprsrx || {};
+  $("rxEnabled").checked = !!c.enabled; $("rxEnabledTxt").textContent = T(c.enabled ? "Päällä" : "Pois");
+  $("rxHost").value = c.host || ""; $("rxPort").value = c.port || 8001;
+  $("rxAlerts").checked = !!c.alerts; $("rxAuto").checked = !!c.auto_digis; $("rxSms").checked = !!c.sms;
+  $("rxSilence").value = c.silence_min; $("rxMinHeard").value = c.min_heard; $("rxWatch").value = (c.watch || []).join(" ");
+  $("rxTiles").value = S.config.map_tiles || ""; $("rxTilesAttr").value = S.config.map_tiles_attr || "";
+}
+function collectRx() {
+  return {aprsrx: {enabled: $("rxEnabled").checked, host: $("rxHost").value, port: $("rxPort").value, alerts: $("rxAlerts").checked,
+    auto_digis: $("rxAuto").checked, sms: $("rxSms").checked, silence_min: $("rxSilence").value, min_heard: $("rxMinHeard").value,
+    watch: $("rxWatch").value}, map_tiles: $("rxTiles").value, map_tiles_attr: $("rxTilesAttr").value};
+}
+async function saveRx() {
+  $("rxErr").textContent = "";
+  const old = S.config.map_tiles;
+  let j; try { j = await saveCfg(collectRx()); } catch (e) { $("rxErr").textContent = String(e); return false; }
+  if (!j.ok) { $("rxErr").textContent = j.error; unfold("aprs-rx"); return false; }
+  S.config = j.config; fillRx(); $("rxErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+  if (S.config.map_tiles !== old) covSetTiles();
+  setTimeout(covRefresh, 1500);
+  return true;
+}
+$("btnRxSave").onclick = saveRx;
+$("rxEnabled").onchange = async () => { $("rxEnabledTxt").textContent = T($("rxEnabled").checked ? "Päällä" : "Pois"); if (!await saveRx()) { $("rxEnabled").checked = !$("rxEnabled").checked; } };
+
 // ---------------- oma ikkuna (pywebview) ----------------
 function desk() { return (S && S.ui && S.ui.window && window.pywebview && window.pywebview.api) || null; }
 function fillUi() {

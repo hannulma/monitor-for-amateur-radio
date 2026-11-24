@@ -440,3 +440,59 @@ def test_ui_setting_and_desktop(tmp_path):
     with pytest.raises(ValueError):
         mon.update_config({"ui": "kiosk"})
     assert mon.snapshot()["ui"] == {"window": False, "available": desktop.available()}
+
+
+def test_aprs_positions():
+    from bmmonitor.aprsrx import parse_position
+    lat, lon = parse_position("APRS", b"!6012.34N/02456.78E-test")
+    assert abs(lat - (60 + 12.34 / 60)) < 1e-4 and abs(lon - (24 + 56.78 / 60)) < 1e-4
+    lat, lon = parse_position("APRS", b"@092345z4903.50S/07201.75W>")
+    assert lat < 0 and lon < 0 and abs(lat + 49.0583) < 1e-3
+    lat, lon = parse_position("APRS", b"!/5L!!<*e7>7P[")          # APRS 1.0.1 -spesifikaation esimerkki
+    assert abs(lat - 49.5) < 1e-3 and abs(lon + 72.75) < 1e-3
+    lat, lon = parse_position("S32U6T", bytes([0x60, 28 + 12, 28 + 7, 28 + 74]) + b"_fOj/")   # Mic-E
+    assert abs(lat - (33 + 25.64 / 60)) < 1e-4 and abs(lon + (12 + 7.74 / 60)) < 1e-4
+    assert parse_position("APRS", b";OBJEKTI  *092345z6012.34N/02456.78E-") is None
+    assert parse_position("APRS", b">status") is None
+
+
+def test_aprs_kiss_and_via(tmp_path):
+    from collections import deque
+    from types import SimpleNamespace
+    from bmmonitor.aprsrx import (DEFAULT_APRSRX, AprsRx, KissDecoder, encode_ax25, heard_via, is_alias,
+                                  kiss_frame, parse_ax25)
+    fr = encode_ax25("OH2ABC-9", "APRS", ["OH2RCH-1*", "WIDE2-1"], b"!6012.34N/02456.78E>\xc0\xdb")
+    dec = KissDecoder()
+    data = kiss_frame(fr) + kiss_frame(encode_ax25("OH2XYZ", "APRS", [], b">hei"))
+    got = dec.feed(data[:7]) + dec.feed(data[7:])
+    assert len(got) == 2 and got[0] == fr
+    p = parse_ax25(got[0])
+    assert p["src"] == "OH2ABC-9" and p["path"] == [("OH2RCH-1", True), ("WIDE2-1", False)]
+    assert heard_via(p["src"], p["path"]) == ("OH2RCH-1", False)
+    assert heard_via("OH2XYZ", []) == ("OH2XYZ", True)
+    assert is_alias("WIDE2-1") and is_alias("RELAY") and not is_alias("OH2RCH-1")
+
+    w = SimpleNamespace(seq=0, alerts=deque())
+    mon = SimpleNamespace(cfg={"aprsrx": {**DEFAULT_APRSRX, "enabled": True, "silence_min": 10, "min_heard": 2}},
+                          watcher=w, touch=lambda: None, hub=SimpleNamespace(announce=lambda *a, **k: None))
+    rx = AprsRx(mon, tmp_path / "rx.sqlite")
+    t0 = time.time() - 3600
+    for i in range(5):
+        rx.handle_frame(fr, now=t0 + i * 60)
+    rx.handle_frame(encode_ax25("OH2RCH-1", "APRS", [], b"!6011.00N/02445.00E#digi"), now=t0 + 400)
+    rx.handle_frame(encode_ax25("OH3QQ", "APRS", ["OH2RCH-1*", "OH3RAA*"], b"!6130.00N/02345.00E>"), now=t0 + 500)
+    rx._commit()
+    s = rx.summary("24h", (60.2, 24.9))
+    assert s["totals"]["packets"] == 7 and s["totals"]["direct"] == 1
+    calls = {d["call"]: d for d in s["digis"]}
+    assert calls["OH2RCH-1"]["packets"] == 5 and calls["OH2RCH-1"]["lat"] == 60.18333
+    assert calls["OH3RAA"]["packets"] == 1
+    c = rx.cells("24h", "digi", "OH2RCH-1", 5, (60.2, 24.9))
+    assert sum(x[2] for x in c["cells"]) == 5
+    # hiljaisuus: yhteys auki, jotain kuultu äskettäin, digiä ei ole kuultu 10 minuuttiin
+    rx.status.update(connected=True, since=time.time() - 3600, last=time.time() - 30)
+    assert rx.check_silence() == ["OH2RCH-1"]
+    assert w.alerts[0]["level"] == "bad" and rx.check_silence() == []
+    rx.handle_frame(fr)
+    assert "OH2RCH-1" not in rx.silent and w.alerts[0]["level"] == "ok"
+    rx.close()
