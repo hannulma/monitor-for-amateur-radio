@@ -26,6 +26,7 @@ SolidCompression=yes
 WizardStyle=modern
 LicenseFile=..\LICENSE
 UninstallDisplayIcon={app}\{#AppExe}
+SetupIconFile=icon.ico
 CloseApplications=force
 RestartApplications=no
 

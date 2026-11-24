@@ -30,7 +30,7 @@ from .i18n import set_lang, set_units, tr
 from .updater import Updater
 from .checkin import CheckIn
 from .sheetsync import SheetError
-from . import APP_ID, APP_NAME, __date__, __version__, feedback, secret_store
+from . import APP_ID, APP_NAME, __date__, __version__, desktop, feedback, secret_store
 from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
                         validate_passcode, ws_options)
 from .bmapi import BMApi, BMApiError
@@ -62,6 +62,7 @@ DEFAULT_CONFIG = {
     "language": "",             # "fi" / "en"; tyhjä = valitaan selaimen kielen mukaan
     "units": "metric",          # "metric" (km) / "imperial" (mailit); asetukset tallennetaan aina kilometreinä
     "update_check": True,       # tarkista uudet versiot GitHubista kerran päivässä
+    "ui": "window",             # "window" = oma ikkuna (Windows/macOS), "browser" = oletusselain
 }
 CALLS_LIMITS = (10, 25, 50, 100, 150)
 
@@ -162,6 +163,7 @@ class Monitor:
     def __init__(self, cfg_path: Path, demo: bool = False):
         self.cfg_path = cfg_path
         self.demo = demo
+        self.ui = None                  # desktop.Desktop, kun käyttöliittymä on omassa ikkunassa
         self.cfg = dict(DEFAULT_CONFIG)
         if cfg_path.exists():
             try:
@@ -317,6 +319,10 @@ class Monitor:
                 raise ValueError(tr("Virheellinen yksikkö"))
             self.cfg["units"] = new["units"]
             set_units(new["units"])
+        if "ui" in new:
+            if new["ui"] not in ("window", "browser"):
+                raise ValueError(tr("Virheellinen valinta"))
+            self.cfg["ui"] = new["ui"]
         if "update_check" in new:
             self.cfg["update_check"] = bool(new["update_check"])
             self.updater.wake.set()
@@ -598,6 +604,7 @@ class Monitor:
             "type": "snapshot",
             "now": time.time(),
             "version": __version__, "date": __date__,
+            "ui": {"window": self.ui is not None, "available": desktop.available()},
             "config": self.public_config(),
             "status": self.status,
             "started": self.started,
@@ -1127,6 +1134,12 @@ def make_app(mon: Monitor) -> web.Application:
     async def ping(_):
         return web.json_response({"app": APP_ID, "version": __version__})
 
+    async def ui_show(_):
+        if mon.ui is None:
+            return web.json_response({"ok": False})
+        await asyncio.get_running_loop().run_in_executor(None, mon.ui.show)
+        return web.json_response({"ok": True})
+
     async def shutdown(_):
         log.info("Sammutus käyttöliittymästä")
         asyncio.get_running_loop().call_later(0.3, mon.shutdown_event.set)
@@ -1138,6 +1151,7 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_get("/api/checkin/export", checkin_export)
     app.router.add_post("/api/update/install", update_install)
     app.router.add_post("/api/shutdown", shutdown)
+    app.router.add_post("/api/ui/show", ui_show)
     app.router.add_get("/api/station", station)
     app.router.add_get("/api/stats", stats)
     app.router.add_get("/api/stats/bm", stats_bm)
@@ -1151,7 +1165,7 @@ def make_app(mon: Monitor) -> web.Application:
             body = await request.json()
             m = mon.cfg["messaging"]
             if not m.get("login"):
-                raise ValueError(tr("Aseta oma APRS-IS-tunnus (Syötteet ja viestit)"))
+                raise ValueError(tr("Aseta oma APRS-IS-tunnus (APRS-välilehti)"))
             a = mon.hub.aprs
             if not a.connected:
                 raise ValueError(tr("APRS-IS-yhteys ei ole auki"))
@@ -1222,9 +1236,30 @@ def running_instance(port: int) -> bool:
         return False
 
 
-async def run(args):
+async def run(args, ui=None):
     cfg_path = Path(args.config) if args.config else config_dir() / "config.json"
     mon = Monitor(cfg_path, demo=args.demo)
+    try:
+        await _run(args, mon, cfg_path, ui)
+    finally:
+        if ui is not None:
+            ui.cancel()
+            ui.server_stopped()
+
+
+def show_running(port: int) -> bool:
+    """Pyydä jo käynnissä olevaa ohjelmaa näyttämään oma ikkunansa."""
+    import urllib.request
+    try:
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/api/ui/show", data=b"{}", method="POST",
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=3) as r:
+            return bool(json.loads(r.read().decode()).get("ok"))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+async def _run(args, mon, cfg_path, ui):
     if not cfg_path.exists():
         mon.save_config()
     preferred = args.port or int(mon.cfg.get("port", 8765))
@@ -1236,7 +1271,7 @@ async def run(args):
     if not args.demo and running_instance(preferred):
         url = f"http://127.0.0.1:{preferred}/"
         print(f"{APP_NAME} on jo käynnissä: {url}")
-        if not args.no_browser:
+        if not args.no_browser and not show_running(preferred):
             webbrowser.open(url)
         return
     port = free_port(preferred, wait=30 if args.wait_for_exit else 0)
@@ -1250,7 +1285,11 @@ async def run(args):
     print(f"Asetukset: {cfg_path}")
     print("Lopeta painamalla Ctrl+C tai Asetukset → Sulje ohjelma.")
     log.info("%s %s käynnissä: %s", APP_NAME, __version__, url)
-    if not args.no_browser:
+    if ui is not None:
+        mon.ui = ui
+        loop = asyncio.get_running_loop()
+        ui.server_started(url, lambda: loop.call_soon_threadsafe(mon.shutdown_event.set))
+    elif not args.no_browser:
         webbrowser.open(url)
 
     tasks = [asyncio.create_task(mon.broadcast_loop()), asyncio.create_task(mon.load_tg_names()),
@@ -1277,7 +1316,9 @@ async def run(args):
 def main():
     ap = argparse.ArgumentParser(prog="bmmonitor", description=f"{APP_NAME} – BrandMeister-puheryhmien seuranta")
     ap.add_argument("--port", type=int, default=0, help="paikallinen portti (oletus 8765)")
-    ap.add_argument("--no-browser", action="store_true", help="älä avaa selainta automaattisesti")
+    ap.add_argument("--no-browser", action="store_true",
+                    help="älä avaa selainta automaattisesti (omassa ikkunassa: käynnisty taustalle)")
+    ap.add_argument("--browser", action="store_true", help="käytä selainta, vaikka oma ikkuna on valittu")
     ap.add_argument("--config", help="asetustiedoston polku")
     ap.add_argument("--demo", action="store_true", help="keksitty testiliikenne, ei yhteyttä BM:ään")
     ap.add_argument("--wait-for-exit", action="store_true", help=argparse.SUPPRESS)
@@ -1312,10 +1353,61 @@ def main():
     feedback.install_memory_log()
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    if use_window(args):
+        run_windowed(args)
+        return
     try:
         asyncio.run(run(args))
     except KeyboardInterrupt:
         pass
+
+
+def use_window(args) -> bool:
+    """Oma ikkuna, jos se on valittu asetuksissa ja mahdollinen tällä koneella."""
+    if args.browser or args.diag:
+        return False
+    cfg_path = Path(args.config) if args.config else config_dir() / "config.json"
+    try:
+        ui = json.loads(cfg_path.read_text(encoding="utf-8")).get("ui", "window")
+    except Exception:  # noqa: BLE001
+        ui = "window"
+    return ui != "browser" and desktop.available()
+
+
+def run_windowed(args) -> None:
+    """Palvelin omassa säikeessään, ikkuna pääsäikeessä (macOS vaatii käyttöliittymän pääsäikeeseen)."""
+    import threading
+    # --no-browser ilman --wait-for-exit = käynnistys Windowsin mukana: ikkuna piiloon, kuvake näkyviin.
+    # Päivityksen jälkeen (--wait-for-exit) ikkuna avataan, koska vanhan version ikkuna sulkeutui.
+    ui = desktop.Desktop(start_hidden=args.no_browser and not args.wait_for_exit)
+    errors = []
+
+    def server():
+        try:
+            asyncio.run(run(args, ui))
+        except Exception as e:  # noqa: BLE001
+            errors.append(e)
+            log.exception("Palvelin pysähtyi virheeseen")
+    t = threading.Thread(target=server, name="server")
+    t.start()
+    ui.ready.wait()
+    if ui.url is None:            # ohjelma oli jo käynnissä (ikkuna näytettiin) tai käynnistys epäonnistui
+        t.join()
+        return
+    log.info("Käyttöliittymä omassa ikkunassa%s", " (piilossa, kuvake ilmaisinalueella)" if ui.start_hidden else "")
+    try:
+        ui.run(config_dir() / "webview")
+    except Exception:  # noqa: BLE001
+        log.exception("Omaa ikkunaa ei voitu avata – käytetään selainta")
+        if not ui.start_hidden:
+            webbrowser.open(ui.url)
+        ui.window = None
+        t.join()
+        return
+    # ikkuna suljettu: sammutetaan palvelin, jos se on vielä käynnissä
+    if t.is_alive() and ui.on_quit:
+        ui.on_quit()
+    t.join(30)
 
 
 if __name__ == "__main__":

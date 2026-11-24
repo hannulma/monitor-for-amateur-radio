@@ -67,7 +67,7 @@ DMR radio via APRS.
   `NOW`/`NYT`). FMI warnings and Digitraffic bulletins stay in Finnish, their source language.
 - **Automatic updates** – the app checks GitHub for a new version once a day (can be turned off). On Windows
   (installer), macOS and Linux, **Update now** downloads the new version, verifies it against the release's
-  `SHA256SUMS.txt`, installs it and restarts the app; the browser tab reconnects by itself. Beta users are
+  `SHA256SUMS.txt`, installs it and restarts the app; the window or browser tab comes back by itself. Beta users are
   offered new betas, stable users only stable releases.
 
 Several services use Finnish open data and are most useful in Finland; the BrandMeister features work worldwide.
@@ -85,9 +85,12 @@ Get the latest version from **[Releases](https://github.com/hannulma/monitor-for
 | Linux x86_64 | `MonitorForBrandMeister-<version>-linux-x86_64.tar.gz` |
 | Any OS with Python ≥ 3.9 | `pip install monitor_for_brandmeister-<version>-py3-none-any.whl` |
 
-The app runs a small local web server and opens its user interface in your browser at
-`http://127.0.0.1:8765/`. Nothing is exposed to your network. Starting the app again while it is running just
-opens the page; use **Asetukset → Sulje ohjelma** (Settings → Quit) to stop it.
+The app runs a small local web server (`http://127.0.0.1:8765/`, nothing is exposed to your network). On Windows
+and macOS the user interface opens in **its own window**. Closing the window keeps the app running in the
+background – monitoring and alerts continue, and the window comes back from the icon in the notification area
+(Windows) or menu bar (macOS). Quit from the icon's menu, **Settings → Quit**, or Cmd+Q on macOS. You can choose
+the browser instead in **Settings → Program → User interface**; on Linux the app always uses the browser.
+Starting the app again while it is running just shows the window or page.
 
 ### First launch (unsigned builds)
 
@@ -105,7 +108,8 @@ pip install monitor_for_brandmeister-<version>-py3-none-any.whl   # from Release
 monitor-for-brandmeister            # or: python -m bmmonitor
 ```
 
-Options: `--port 9000`, `--no-browser`, `--demo` (fake traffic, no network), `--diag` (show raw data from
+Options: `--port 9000`, `--no-browser` (in window mode: start in the background), `--browser` (browser
+instead of the app window), `--demo` (fake traffic, no network), `--diag` (show raw data from
 BrandMeister), `-v` (verbose).
 
 ## Quick start
@@ -115,7 +119,7 @@ BrandMeister), `-v` (verbose).
 2. **Listen:** click the speaker button next to a talkgroup.
 3. **Friends:** *Kaverit* → add callsigns or DMR IDs, allow desktop notifications.
 4. **Devices:** *Laitteet* → add your hotspot/repeater by ID or search by callsign.
-5. **Alerts on your radio (optional):** *Syötteet ja viestit* → set an APRS-IS login (your callsign with an
+5. **Alerts on your radio (optional):** *APRS* tab → set an APRS-IS login (your callsign with an
    unused SSID, e.g. `OH2ABC-13`) and the recipient = your radio's APRS SSID configured in
    BrandMeister SelfCare (e.g. `OH2ABC-7`), then *Send test message*.
 6. **Services:** *Palvelut* → set your location (coordinates or Maidenhead locator) and switch on the services you want. Weather warnings can come from the Finnish Meteorological Institute or MeteoAlarm (38 European countries), and the aurora alert from FMI magnetometers or the NOAA OVATION forecast (worldwide). Satellite passes lists upcoming passes of the ISS and active amateur radio satellites (CelesTrak orbits, SatNOGS DB frequencies, SGP4) with visible ISS passes and alerts before rise. The *Satelliitit* tab shows the satellites chosen for alerts on a world map (position, ground track, coverage circle, day/night, next in-range window in the name tag) and a sky plot of the next pass. Base map: Natural Earth (public domain).

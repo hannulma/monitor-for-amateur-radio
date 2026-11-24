@@ -4,6 +4,7 @@ import calendar
 import json
 import re
 import socket
+import sys
 import time
 import urllib.request
 from pathlib import Path
@@ -425,3 +426,17 @@ def test_feedback_scrub():
     line = "2026-11-24 INFO login OH2BEA-13 pass 19369 vers x api_key=SECRET token: eyJabcdefghijkl.eyJabcdefghijkl.abcdefg"
     s = scrub_text(line)
     assert "19369" not in s and "SECRET" not in s and "eyJabc" not in s and "OH2BEA-13" in s
+
+
+def test_ui_setting_and_desktop(tmp_path):
+    from bmmonitor import desktop
+    from bmmonitor.app import Monitor
+    if sys.platform.startswith("linux"):
+        assert desktop.available() is False      # Linuxissa aina selain
+    mon = Monitor(tmp_path / "c.json", demo=True)
+    assert mon.cfg["ui"] == "window"
+    mon.update_config({"ui": "browser"})
+    assert mon.cfg["ui"] == "browser"
+    with pytest.raises(ValueError):
+        mon.update_config({"ui": "kiosk"})
+    assert mon.snapshot()["ui"] == {"window": False, "available": desktop.available()}

@@ -80,6 +80,8 @@ jobs:
       - name: Build exe
         run: >
           pyinstaller --noconfirm --clean --onedir --noconsole --name MonitorForBrandMeister --collect-submodules win32ctypes
+          --icon installer\icon.ico --hidden-import pystray._win32
+          --hidden-import webview.platforms.winforms --hidden-import webview.platforms.edgechromium
           --add-data "bmmonitor/static;bmmonitor/static"
           --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4
           --hidden-import websocket --hidden-import certifi
@@ -166,8 +168,10 @@ jobs:
           set -e
           DEPS=$(venv/bin/python -c "import tomllib;print('\n'.join(tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']))")
           echo "$DEPS" > deps.txt
+          # puhtaat Python-paketit, joista PyPI:ssä on vain lähdekoodi (pywebview → proxy_tools)
+          venv/bin/pip wheel proxy_tools --no-deps -w wh_pure
           for A in x86_64 arm64; do
-            venv/bin/pip download -r deps.txt -d "wh_$A" --only-binary=:all: \
+            venv/bin/pip download -r deps.txt -d "wh_$A" --find-links wh_pure --only-binary=:all: \
               --platform "macosx_11_0_$A" --platform "macosx_10_9_universal2" --python-version 3.12 --implementation cp
           done
           mkdir -p wh_uni
@@ -183,12 +187,13 @@ jobs:
                   shutil.copy(f, "wh_uni")
           print("\n".join(sorted(os.listdir("wh_uni"))))
           PY
+          cp wh_pure/*.whl wh_uni/
           venv/bin/pip install --no-index --find-links wh_uni -r deps.txt
           venv/bin/pip install --no-deps .
       - name: Build app
         run: >
           venv/bin/pyinstaller --noconfirm --clean --windowed --target-arch universal2
-          --name "Monitor for BrandMeister"
+          --name "Monitor for BrandMeister" --icon installer/icon.icns --hidden-import webview.platforms.cocoa
           --osx-bundle-identifier io.github.hannulma.monitorforbrandmeister
           --add-data "bmmonitor/static:bmmonitor/static"
           --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4
@@ -217,6 +222,18 @@ jobs:
           [ "$ok" = 1 ] || { echo "::error::Sovellus ei saanut yhteyttä BrandMeisteriin"; exit 1; }
           "$BIN" --check-secrets "$RUNNER_TEMP/secrets.txt" || true
           cat "$RUNNER_TEMP/secrets.txt" || echo "::warning::Avainnippu-testiä ei saatu ajettua (CI-koneen avainnippu voi olla lukittu)"
+      - name: Smoke test (own window, quits cleanly)
+        continue-on-error: true
+        run: |
+          BIN="dist/Monitor for BrandMeister.app/Contents/MacOS/Monitor for BrandMeister"
+          "$BIN" --no-browser --port 8799 & P=$!
+          ok=0
+          for i in $(seq 60); do sleep 1; curl -fsS http://127.0.0.1:8799/api/ping && { ok=1; break; }; done
+          curl -fsS -X POST http://127.0.0.1:8799/api/shutdown || true
+          for i in $(seq 20); do kill -0 $P 2>/dev/null || break; sleep 1; done
+          if kill -0 $P 2>/dev/null; then echo "::warning::Ohjelma ei sulkeutunut ikkunatilassa"; kill $P; fi
+          tail -n 40 "$HOME/Library/Application Support/BMMonitor/monitor.log" 2>/dev/null || true
+          [ "$ok" = 1 ] || echo "::warning::Ikkunatilan käynnistystesti ei vastannut"
       - name: Build dmg
         run: |
           VERSION=$(python3 -c "import re;print(re.search(r'__version__ = \"([^\"]+)\"', open('bmmonitor/__init__.py').read()).group(1))")

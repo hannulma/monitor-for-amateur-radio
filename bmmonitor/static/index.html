@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monitor for Amateur Radio</title>
+<link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
 <style>
   :root {
     --bg: #0f1419; --panel: #171e26; --line: #26313d; --text: #d9e1e8; --muted: #7d8b99;
@@ -278,14 +279,15 @@
   <span id="aprsBadge" class="muted"></span>
 </header>
 <nav class="tabs" id="tabs">
-  <button data-tab="seuranta" class="active">Seuranta</button>
+  <button data-tab="seuranta" class="active">BrandMeister</button>
+  <button data-tab="aprs">APRS</button>
   <button data-tab="kaverit">Kaverit<span class="badge" id="alertBadge" style="display:none"></span></button>
   <button data-tab="laitteet">Laitteet</button>
   <button data-tab="tilastot">Tilastot</button>
   <button data-tab="checkin">Check-in</button>
   <button data-tab="palvelut">Palvelut</button>
   <button data-tab="satelliitit">Satelliitit</button>
-  <button data-tab="viestit">Syötteet ja viestit</button>
+  <button data-tab="viestit">Syötteet</button>
   <button data-tab="asetukset">Asetukset</button>
   <span class="foldall"><button id="foldOpen" title="Avaa kaikki tämän välilehden osiot">Avaa kaikki</button><button id="foldClose" title="Pienennä kaikki tämän välilehden osiot otsikoiksi">Pienennä kaikki</button></span>
 </nav>
@@ -396,9 +398,15 @@
       <button class="primary" id="btnFb">Lähetä palaute / lokit</button>
       <span class="hint" style="margin:0">Lähettää viestisi ja ohjelman lokin ylläpidolle vian selvittämistä varten.</span>
     </div>
+    <div class="frow" id="uiRow" style="display:none;margin:10px 0 4px">
+      <div class="fld"><label for="uiSel">Käyttöliittymä</label>
+        <select id="uiSel"><option value="window">Omassa ikkunassa</option><option value="browser">Selaimessa</option></select>
+        <div class="hint" id="uiHint">Muutos tulee voimaan, kun ohjelma käynnistetään seuraavan kerran.</div></div>
+      <div class="fld" id="uiBrowserFld" style="align-self:center"><button id="btnOpenBrowser">Avaa selaimessa</button></div>
+    </div>
     <div class="row"><div><button id="btnQuit">Sulje ohjelma</button></div>
-      <div class="hint" style="max-width:520px">Sulkee taustalla toimivan ohjelman. Ohjelman voi avata uudelleen käynnistämällä sen; jos se on jo käynnissä,
-        käynnistys avaa vain tämän sivun. <span id="verInfo"></span></div></div>
+      <div class="hint" style="max-width:520px"><span id="quitHint">Sulkee taustalla toimivan ohjelman. Ohjelman voi avata uudelleen käynnistämällä sen; jos se on jo käynnissä,
+        käynnistys avaa vain tämän sivun.</span> <span id="verInfo"></span></div></div>
     <div class="paths" id="paths"></div>
     </div>
   </section>
@@ -406,6 +414,39 @@
   <section id="msgPanel" class="msgp" data-tab="viestit" data-fold="msg-main">
     <h2>Syötteet → DMR-tekstiviestit
       <label class="switch" title="Lähetys päällä"><input type="checkbox" id="mEnabled"><span class="sl"></span><span class="swtxt" id="mEnabledTxt">Pois</span></label></h2>
+    <div class="inner form msgform">
+      <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. APRS-IS-tunnus, vastaanottajat ja viestiasetukset ovat <a href="#" id="toAprs">APRS-välilehdellä</a>.</div>
+      <h3>Syötteet (RSS, Atom tai JSON Feed)</h3>
+      <div class="feedrow feedhead"><span class="fen-h">Käytössä</span><span class="fname">Etuliite</span><span class="furl">Osoite</span><span class="fcmd">Komento</span><span class="fbtns"></span></div>
+      <div id="feedRows"></div>
+      <button id="btnAddFeed">+ Lisää syöte</button>
+      <div class="hint">Komento-kenttä (esim. SAA) tekee syötteen uusimmasta otsikosta radiosta kysyttävän. Uutta syötettä seurattaessa nykyiset uutiset ohitetaan, ja viesti lähtee vasta seuraavasta uudesta uutisesta. Etuliite näkyy viestin alussa, esim. <code>BM: otsikko</code>.</div>
+      <div class="frow" style="margin-top:14px; align-items:center">
+        <button class="primary" id="btnMsgSave">Tallenna</button>
+        <button id="btnFeedCheck">Tarkista syötteet nyt</button>
+        <span class="err" id="msgErr"></span>
+      </div>
+    </div>
+  </section>
+  <section class="wide" data-tab="aprs" data-fold="aprs-msgs">
+    <h2>APRS-viestit <span class="count" id="aprsWho"></span></h2>
+    <div class="scroll" style="max-height:340px">
+      <table><thead><tr><th>Aika</th><th>Keneltä → kenelle</th><th>Viesti</th><th>Tila</th></tr></thead><tbody id="aprsBody"></tbody></table>
+      <div class="empty" id="aprsEmpty"></div>
+    </div>
+    <div class="form" id="aprsReply" style="border-top:1px solid var(--line); padding:10px 14px">
+      <div class="row" style="align-items:flex-end">
+        <div><label for="rFrom">Lähettäjä</label><select id="rFrom" style="width:130px"></select></div>
+        <div><label for="rTo">Vastaanottaja</label><input type="text" id="rTo" placeholder="OH2ABC-7" style="width:120px"></div>
+        <div style="flex:1;min-width:200px"><label for="rText">Viesti <span class="muted" id="rCount"></span></label>
+          <input type="text" id="rText" maxlength="200" placeholder="Klikkaa viestiä vastataksesi tai kirjoita uusi" style="width:100%"></div>
+        <div><button class="primary" id="rSend">Lähetä</button></div>
+      </div>
+      <div class="hint" id="rMsg"></div>
+    </div>
+  </section>
+  <section class="msgp form" data-tab="aprs" data-fold="aprs-cfg">
+    <h2>APRS-IS-yhteys ja vastaanottajat</h2>
     <div class="inner form msgform">
       <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. Brandmeister välittää ne DMR-tekstiviesteinä
         sille radiolle, jonka DMR-ID:hen kutsu ja SSID on liitetty <b>BM SelfCaren APRS-asetuksissa</b>. Vastaanottajaksi
@@ -438,16 +479,7 @@
           <label><input type="checkbox" id="mNoAck"> Älä odota kuittausta</label>
           <div class="hint">Viesti lähetetään kerran eikä tule koskaan kahdesti, mutta perillemenoa ei voi seurata.</div></div>
       </div>
-      <h3>Syötteet (RSS, Atom tai JSON Feed)</h3>
-      <div class="feedrow feedhead"><span class="fen-h">Käytössä</span><span class="fname">Etuliite</span><span class="furl">Osoite</span><span class="fcmd">Komento</span><span class="fbtns"></span></div>
-      <div id="feedRows"></div>
-      <button id="btnAddFeed">+ Lisää syöte</button>
-      <div class="hint">Komento-kenttä (esim. SAA) tekee syötteen uusimmasta otsikosta radiosta kysyttävän. Uutta syötettä seurattaessa nykyiset uutiset ohitetaan, ja viesti lähtee vasta seuraavasta uudesta uutisesta. Etuliite näkyy viestin alussa, esim. <code>BM: otsikko</code>.</div>
-      <div class="frow" style="margin-top:14px; align-items:center">
-        <button class="primary" id="btnMsgSave">Tallenna</button>
-        <button id="btnFeedCheck">Tarkista syötteet nyt</button>
-        <span class="err" id="msgErr"></span>
-      </div>
+      <div class="frow svcsave"><button class="primary" id="btnAprsSave">Tallenna</button><span class="err" id="aprsErr"></span></div>
       <h3>Testiviesti</h3>
       <div class="frow" style="align-items:center">
         <input type="text" id="mTest" maxlength="134" placeholder="Monitor for BrandMeister: testiviesti" style="flex:1;min-width:240px" aria-label="Testiviesti">
@@ -456,7 +488,7 @@
       <div id="aprsStatus" style="margin-top:12px"></div>
     </div>
   </section>
-  <section class="msgp form" data-tab="viestit" data-fold="msg-cmd">
+  <section class="msgp form" data-tab="aprs" data-fold="msg-cmd">
     <h2>Komennot radiosta</h2>
     <div class="inner">
       <div class="note">Lähetä radiosta tekstiviesti Brandmeisterin APRS-palvelunumeroon <b>244999</b> (yksityisviesti) muodossa
@@ -521,23 +553,6 @@
     </div>
   </section>
 
-  <section data-tab="seuranta">
-    <h2>APRS-viestit <span class="count" id="aprsWho"></span></h2>
-    <div class="scroll" style="max-height:340px">
-      <table><thead><tr><th>Aika</th><th>Keneltä → kenelle</th><th>Viesti</th><th>Tila</th></tr></thead><tbody id="aprsBody"></tbody></table>
-      <div class="empty" id="aprsEmpty"></div>
-    </div>
-    <div class="form" id="aprsReply" style="border-top:1px solid var(--line); padding:10px 14px">
-      <div class="row" style="align-items:flex-end">
-        <div><label for="rFrom">Lähettäjä</label><select id="rFrom" style="width:130px"></select></div>
-        <div><label for="rTo">Vastaanottaja</label><input type="text" id="rTo" placeholder="OH2ABC-7" style="width:120px"></div>
-        <div style="flex:1;min-width:200px"><label for="rText">Viesti <span class="muted" id="rCount"></span></label>
-          <input type="text" id="rText" maxlength="200" placeholder="Klikkaa viestiä vastataksesi tai kirjoita uusi" style="width:100%"></div>
-        <div><button class="primary" id="rSend">Lähetä</button></div>
-      </div>
-      <div class="hint" id="rMsg"></div>
-    </div>
-  </section>
   <!-- ============ KAVERIT ============ -->
   <section data-tab="kaverit" class="form">
     <h2>Kaverilista</h2>
@@ -1095,7 +1110,7 @@ function fillSettings() {
   $("dataFilter").value = S.config.data_filter;
   $("minDur").value = S.config.min_duration;
   $("logCsv").checked = !!S.config.log_csv;
-  $("verInfo").textContent = ""; aboutLine();
+  $("verInfo").textContent = ""; aboutLine(); fillUi();
   $("langSel").value = LANG; $("unitSel").value = S.config.units || "metric"; $("updAuto").checked = S.config.update_check !== false;
   $("keyState").textContent = S.config.bm_api_key ? "Avain tallennettu" : "Ei avainta";
   $("apiKey").value = ""; $("myCall").value = S.config.devices.my_call || "";
@@ -1424,7 +1439,7 @@ function showTab(tab) {
   document.querySelectorAll("main > section, main > .svcgrid, main > .cigrid").forEach(s => { s.style.display = s.dataset.tab === tab ? "" : "none"; });
   if (!S) return;
   if (tab === "asetukset") fillSettings();
-  if (tab === "viestit") fillMsg();
+  if (tab === "viestit" || tab === "aprs") fillMsg();
   if (tab === "kaverit") { fillWatch(); seenAlerts = maxAlertSeq(); updateAlertBadge(); }
   if (tab === "laitteet") fillDevices();
   if (tab === "tilastot") loadStats();
@@ -1519,11 +1534,17 @@ $("mEnabled").onchange = async () => {   // kytkin tallentaa heti, kuten Palvelu
   if (!j.ok) { $("mEnabled").checked = !on; $("mEnabledTxt").textContent = T(!on ? "Päällä" : "Pois"); unfold("msg-main"); $("msgErr").textContent = j.error; }
   else if (j.config) S.config = j.config;
 };
+$("btnAprsSave").onclick = async () => {
+  $("aprsErr").textContent = "";
+  await $("btnMsgSave").onclick();
+  $("aprsErr").innerHTML = $("msgErr").innerHTML;
+};
+$("toAprs").onclick = e => { e.preventDefault(); showTab("aprs"); unfold("aprs-cfg"); };
 $("btnFeedCheck").onclick = () => fetch("/api/feeds/check", {method: "POST"});
 $("btnTest").onclick = async () => {
-  $("msgErr").textContent = "";
+  $("aprsErr").textContent = "";
   const r = await fetch("/api/test_message", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({text: $("mTest").value})});
-  const j = await r.json(); if (!j.ok) $("msgErr").textContent = j.error;
+  const j = await r.json(); if (!j.ok) $("aprsErr").textContent = j.error;
 };
 $("tgBody").addEventListener("pointerdown", e => { const b = e.target.closest(".listen"); if (b) listen(Number(b.dataset.tg)); });
 $("dockClose").onclick = () => listen(null);
@@ -1542,6 +1563,8 @@ $("unitSel").onchange = async e => {
   unitLabels(); render(); showTab(TAB);
 };
 $("updAuto").onchange = e => saveCfg({update_check: e.target.checked});
+$("uiSel").onchange = async e => { const j = await saveCfg({ui: e.target.value}); if (j.ok) S.config = j.config; fillUi(); };
+$("btnOpenBrowser").onclick = () => { const d = desk(); if (d) d.open_url(location.origin + "/"); };
 $("btnUpdCheck").onclick = async () => { $("btnUpdCheck").disabled = true; await api("/api/update/check", {}); $("btnUpdCheck").disabled = false; };
 $("updPill").onclick = () => { showTab("asetukset"); unfold("cfg-update"); };
 $("updBox").addEventListener("click", async e => {
@@ -1670,7 +1693,8 @@ function handleAlerts() {
     fresh.slice(-3).forEach(a => {
       toast(a);
       const [title, body] = alertText(a);
-      if ((w.desktop || a.kind === "palvelu") && "Notification" in window && Notification.permission === "granted") {
+      if ((w.desktop || a.kind === "palvelu") && desk()) desk().notify(title, body);
+      else if ((w.desktop || a.kind === "palvelu") && "Notification" in window && Notification.permission === "granted") {
         try { const n = new Notification(title, {body, tag: "bm-" + a.seq}); n.onclick = () => { window.focus(); openStation(a.call); }; } catch (e) { /* */ }
       }
     });
@@ -1680,12 +1704,13 @@ function handleAlerts() {
   updateAlertBadge();
 }
 function notifState() {
+  if (desk()) return "Ilmoitukset näytetään käyttöjärjestelmän ilmoituksina.";
   if (!("Notification" in window)) return "Selain ei tue työpöytäilmoituksia.";
   return {granted: "Työpöytäilmoitukset sallittu.", denied: "Työpöytäilmoitukset estetty selaimen asetuksissa.", default: "Työpöytäilmoituksia ei ole vielä sallittu."}[Notification.permission];
 }
 function showNotifState() {   // lupapainike näkyy vain, kun lupaa ei ole annettu
   $("notifState").textContent = T(notifState());
-  $("btnNotif").style.display = "Notification" in window && Notification.permission !== "granted" ? "" : "none";
+  $("btnNotif").style.display = !desk() && "Notification" in window && Notification.permission !== "granted" ? "" : "none";
 }
 function fillWatch() {
   const w = S.config.watch;
@@ -1903,7 +1928,7 @@ function renderAprs() {
   $("aprsWho").textContent = bases.length ? bases.map(b => b + "*").join(", ") : "";
   const msgs = M.aprs_msgs || [];
   let empty = "";
-  if (!S.config.messaging.login) empty = "Aseta oma APRS-IS-tunnus ja passcode välilehdellä Syötteet ja viestit, niin viestit näkyvät tässä.";
+  if (!S.config.messaging.login) empty = "Aseta oma APRS-IS-tunnus ja passcode APRS-välilehdellä, niin viestit näkyvät tässä.";
   else if (!a.connected) empty = esc(T("APRS-IS-yhteys ei ole auki")) + (a.error ? ": " + esc(a.error) : "") + ".";
   else if (!msgs.length) empty = esc(T("Ei viestejä vielä. Näytetään kutsujen {c} kaikki saapuvat ja lähtevät APRS-viestit.", {c: bases.map(b => b + "*").join(", ")}));
   $("aprsEmpty").innerHTML = empty; $("aprsEmpty").style.display = msgs.length ? "none" : "";
@@ -2386,6 +2411,24 @@ function drawSky() {
 // ---------------------------------------------------------------------------
 // Tietoja-rivi ja palaute ylläpidolle
 // ---------------------------------------------------------------------------
+// ---------------- oma ikkuna (pywebview) ----------------
+function desk() { return (S && S.ui && S.ui.window && window.pywebview && window.pywebview.api) || null; }
+function fillUi() {
+  const u = (S && S.ui) || {};
+  $("uiRow").style.display = u.available ? "" : "none";
+  $("uiSel").value = S.config.ui || "window";
+  $("uiBrowserFld").style.display = desk() ? "" : "none";
+  $("quitHint").textContent = T(u.window ? "Ikkunan sulkeminen jättää ohjelman taustalle (kuvake ilmaisinalueella tai valikkorivillä). Tämä painike sulkee ohjelman kokonaan."
+    : "Sulkee taustalla toimivan ohjelman. Ohjelman voi avata uudelleen käynnistämällä sen; jos se on jo käynnissä, käynnistys avaa vain tämän sivun.");
+}
+// Omassa ikkunassa: ulkoiset linkit oletusselaimeen ja paikallisen palvelimen latauslinkit tallennusikkunan kautta.
+document.addEventListener("click", e => {
+  const a = e.target.closest("a[href]"); const d = desk();
+  if (!a || !d) return;
+  const href = a.getAttribute("href") || "";
+  if (/^https?:\/\//i.test(href) && !href.startsWith(location.origin)) { e.preventDefault(); d.open_url(href); }
+  else if (href.startsWith("/api/") && /export|zip/.test(href)) { e.preventDefault(); d.save_file(href); }
+}, true);
 function aboutLine() {
   const y = (S.date || "").slice(0, 4) || new Date().getFullYear();
   $("aboutLine").innerHTML = `<b>Monitor for Amateur Radio</b> ${esc(S.version || "")}, ${esc(T("tekijä"))} OH2BEA (${esc(y)})`;
@@ -2417,7 +2460,7 @@ $("fbClose").onclick = fbClose; $("fbCancel").onclick = fbClose;
 $("fbBg").addEventListener("click", e => { if (e.target === $("fbBg")) fbClose(); });
 $("fbLogs").onchange = fbRefresh;
 $("fbCall").oninput = () => { $("fbZip").textContent = `monitor-support-${($("fbCall").value || "anon").toUpperCase()}.zip`; };
-$("fbZip").onclick = e => { e.preventDefault(); window.location.href = fbZipHref(); };
+$("fbZip").onclick = e => { e.preventDefault(); if (desk()) desk().save_file(fbZipHref()); else window.location.href = fbZipHref(); };
 $("fbSend").onclick = async () => {
   const msg = $("fbMsg").value.trim();
   if (!msg) { $("fbErr").textContent = T("Kirjoita viesti"); $("fbMsg").focus(); return; }

@@ -25,9 +25,12 @@ Lataa uusin versio **[Releases](https://github.com/hannulma/monitor-for-amateur-
 | Linux x86_64 | `MonitorForBrandMeister-<versio>-linux-x86_64.tar.gz` |
 | Python 3.9+ (mikä tahansa käyttöjärjestelmä) | `monitor_for_brandmeister-<versio>-py3-none-any.whl` |
 
-Ohjelma käynnistää koneellesi pienen paikallisen palvelimen ja avaa käyttöliittymän selaimeen osoitteeseen
-`http://127.0.0.1:8765/`. Mitään ei avata verkkoon. Jos ohjelma on jo käynnissä, uusi käynnistys vain avaa
-sivun. Ohjelma suljetaan kohdasta **Asetukset → Sulje ohjelma**.
+Ohjelma käynnistää koneellesi pienen paikallisen palvelimen (`http://127.0.0.1:8765/`, mitään ei avata verkkoon).
+Windowsissa ja macOS:ssä käyttöliittymä avautuu **omaan ikkunaansa**. Ikkunan sulkeminen jättää ohjelman taustalle:
+seuranta ja hälytykset jatkuvat, ja ikkunan saa takaisin kuvakkeesta (Windows: ilmaisinalue, macOS: valikkorivi).
+Kokonaan ohjelma suljetaan kuvakkeen valikosta, kohdasta **Asetukset → Sulje ohjelma** tai macOS:ssä Cmd+Q:lla.
+Selaimessa käyttämisen voi valita kohdassa **Asetukset → Ohjelma → Käyttöliittymä**; Linuxissa ohjelma avautuu
+aina selaimeen. Jos ohjelma on jo käynnissä, uusi käynnistys vain avaa ikkunan tai sivun.
 
 ### Ensimmäinen käynnistys
 
@@ -46,18 +49,24 @@ pip install monitor_for_brandmeister-<versio>-py3-none-any.whl
 monitor-for-brandmeister        (tai: python -m bmmonitor)
 ```
 
-Valitsimet: `--port 9000`, `--no-browser`, `--demo` (keksitty testiliikenne), `--diag` (näyttää mitä
+Valitsimet: `--port 9000`, `--no-browser` (omassa ikkunassa: käynnisty taustalle), `--browser` (selain oman
+ikkunan sijaan), `--demo` (keksitty testiliikenne), `--diag` (näyttää mitä
 BrandMeister lähettää), `-v` (enemmän lokia).
 
 ## Välilehdet
 
-### Seuranta
+### BrandMeister
 - **Puheryhmät:** lähetys juuri nyt (vihreä LÄHETYS), viimeisin yhteys, puhuja, kesto, toistin/hotspot,
   avausten määrä ja yhteenlaskettu puheaika. Kaiutinpainike aloittaa ryhmän **kuuntelun** (useita ryhmiä
   voi kuunnella yhtä aikaa; ryhmiä 1–90 ei voi kuunnella).
-- **Viimeisimmät puhelut:** 10, 15, 20 tai 25 viimeisintä, suodatettavissa puheryhmän mukaan.
+- **Viimeisimmät puhelut:** 10, 25, 50, 100 tai 150 viimeisintä, suodatettavissa puheryhmän mukaan.
+
+### APRS
 - **APRS-viestit:** kutsusi kaikkien SSID:iden saapuvat ja lähtevät APRS-viestit, myös BrandMeisterin kautta
   DMR-radiosta lähtevät. Viestiä klikkaamalla voit vastata suoraan (valittavissa millä SSID:llä).
+- **APRS-IS-yhteys ja vastaanottajat:** oma APRS-IS-tunnus, passcode, palvelin, radioiden kutsut,
+  viestiasetukset ja testiviesti.
+- **Komennot radiosta:** ks. alempana.
 
 ### Kaverit
 Kaverilistan kutsut tai DMR-ID:t. Hälytys (työpöytäilmoitus, äänimerkki, halutessa tekstiviesti radioon),
@@ -126,9 +135,9 @@ Viestit lyhennetään mahtumaan yhteen 67 merkin radioviestiin, esim.
 `Keltainen liikennesää: lumi/räntä, to 14–pe 12 (30 %)` ("nyt" = jo voimassa, "24" = keskiyöhön asti).
 Koko teksti aukeaa ohjelmassa otsikkoa klikkaamalla.
 
-### Syötteet ja viestit
+### Syötteet
 RSS-, Atom- ja JSON Feed -syötteet (esim. BrandMeisterin uutiset, SRAL): uuden uutisen otsikko lähetetään
-radioon. APRS-IS-yhteyden, vastaanottajien, komentojen ja kuittausten asetukset.
+radioon APRS-välilehdellä asetetuille vastaanottajille. Syötteiden tila ja viestiloki.
 
 ### Asetukset
 Seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, BrandMeister API-avain, **kieli**, **päivitykset** ja
@@ -144,7 +153,7 @@ Seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, BrandMeister API-av
 - **Päivitykset:** ohjelma tarkistaa GitHubista kerran päivässä, onko uusi versio saatavilla (voi kytkeä pois).
   Windowsissa (asennusohjelmalla asennettu), macOS:ssä ja Linuxissa **Päivitä nyt** lataa uuden version,
   tarkistaa sen julkaisun `SHA256SUMS.txt`-tarkistussummaa vasten, asentaa sen ja käynnistää ohjelman uudelleen –
-  selainvälilehti yhdistää itse. Beta-version käyttäjälle tarjotaan uudet betat, vakaan version käyttäjälle vain
+  ikkuna tai selainvälilehti avautuu uudelleen itse. Beta-version käyttäjälle tarjotaan uudet betat, vakaan version käyttäjälle vain
   vakaat versiot. Asennuksettomassa Windows-versiossa ja pip-asennuksessa näytetään latauslinkki tai komento.
 
 | Merkintä | Tarkoittaa |

@@ -12,7 +12,7 @@
     // ---- yläpalkki ja välilehdet ----
     "Yhdistetään…": "Connecting…",
     "Seuranta": "Monitor", "Kaverit": "Friends", "Laitteet": "Devices", "Tilastot": "Statistics",
-    "Palvelut": "Services", "Syötteet ja viestit": "Feeds & messages", "Asetukset": "Settings",
+    "Palvelut": "Services", "Syötteet": "Feeds", "BrandMeister": "BrandMeister", "APRS": "APRS", "Asetukset": "Settings",
     "Päivitys {v} saatavilla": "Update {v} available",
 
     // ---- asetukset ----
@@ -211,6 +211,10 @@
     "Monitor for BrandMeister: testiviesti": "Monitor for BrandMeister: test message",
     "Lähetä testiviesti": "Send test message",
     "Komennot radiosta": "Commands from your radio",
+    "APRS-IS-yhteys ja vastaanottajat": "APRS-IS connection and recipients",
+    "Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. APRS-IS-tunnus, vastaanottajat ja viestiasetukset ovat":
+      "New headlines are sent to your radio as APRS messages. The APRS-IS login, recipients and message settings are on the",
+    "APRS-välilehdellä": "APRS tab",
     "Lähetä radiosta tekstiviesti Brandmeisterin APRS-palvelunumeroon": "Send a text message from your radio to BrandMeister's APRS service number",
     "(yksityisviesti) muodossa": "(private message) in the form",
     ", esim.": ", e.g.",
@@ -264,8 +268,8 @@
     "Lähetä": "Send", "Lähetetään…": "Sending…",
     "Lähetetty": "Sent", " ({n} osaa)": " ({n} parts)", " – tila päivittyy listaan": " – status updates in the list",
     "{n} merkkiä": "{n} chars", " · {p} viestiä": " · {p} messages", "(ohjelma)": "(program)",
-    "Aseta oma APRS-IS-tunnus ja passcode välilehdellä Syötteet ja viestit, niin viestit näkyvät tässä.":
-      "Set your APRS-IS login and passcode on the Feeds & messages tab and messages will appear here.",
+    "Aseta oma APRS-IS-tunnus ja passcode APRS-välilehdellä, niin viestit näkyvät tässä.":
+      "Set your APRS-IS login and passcode on the APRS tab and messages will appear here.",
     "APRS-IS-yhteys ei ole auki": "The APRS-IS connection is not open",
     "Ei viestejä vielä. Näytetään kutsujen {c} kaikki saapuvat ja lähtevät APRS-viestit.":
       "No messages yet. All incoming and outgoing APRS messages for {c} are shown here.",
@@ -351,6 +355,12 @@
     "Laite {call} pois verkosta": "Device {call} went offline", "Laite {call} palasi verkkoon": "Device {call} is back online",
     "{who} aktiivinen": "{who} active",
     "Selain ei tue työpöytäilmoituksia.": "The browser does not support desktop notifications.",
+    "Ilmoitukset näytetään käyttöjärjestelmän ilmoituksina.": "Notifications are shown as system notifications.",
+    "Käyttöliittymä": "User interface", "Omassa ikkunassa": "In its own window", "Selaimessa": "In the browser",
+    "Muutos tulee voimaan, kun ohjelma käynnistetään seuraavan kerran.": "The change takes effect the next time the program starts.",
+    "Avaa selaimessa": "Open in browser",
+    "Ikkunan sulkeminen jättää ohjelman taustalle (kuvake ilmaisinalueella tai valikkorivillä). Tämä painike sulkee ohjelman kokonaan.":
+      "Closing the window leaves the program running in the background (icon in the notification area or menu bar). This button quits the program completely.",
     "Työpöytäilmoitukset sallittu.": "Desktop notifications allowed.",
     "Työpöytäilmoitukset estetty selaimen asetuksissa.": "Desktop notifications are blocked in the browser settings.",
     "Työpöytäilmoituksia ei ole vielä sallittu.": "Desktop notifications have not been allowed yet.",
