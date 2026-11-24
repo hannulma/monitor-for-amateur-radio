@@ -1351,6 +1351,11 @@ def main():
                         format="%(asctime)s %(levelname)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S",
                         stream=sys.stderr)
     feedback.install_memory_log()
+    try:
+        import faulthandler
+        faulthandler.enable(file=sys.stderr)
+    except Exception:  # noqa: BLE001
+        pass
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     if use_window(args):

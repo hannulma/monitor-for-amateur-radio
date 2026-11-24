@@ -114,6 +114,8 @@ class Desktop:
         if sys.platform == "darwin":
             self._mac_patch_delegate()
         storage.mkdir(parents=True, exist_ok=True)
+        if sys.platform == "win32":
+            _win_log_unhandled()
         webview.start(self._gui_started, private_mode=False, storage_path=str(storage),
                       icon=str(ICONS / "icon-256.png"))
 
@@ -303,6 +305,24 @@ class Desktop:
             menu.addItem_(mi)
         item.setMenu_(menu)
         self._mac_refs = [item, target, menu]
+
+
+def _win_log_unhandled():
+    """Käsittelemättömät .NET-poikkeukset lokiin ennen kuin prosessi kaatuu (vianetsintä)."""
+    try:
+        import clr  # noqa: F401
+        from System import AppDomain
+
+        def handler(_sender, e):
+            log.error("Käsittelemätön .NET-poikkeus: %s", e.ExceptionObject)
+            for h in logging.getLogger().handlers:
+                try:
+                    h.flush()
+                except Exception:  # noqa: BLE001
+                    pass
+        AppDomain.CurrentDomain.UnhandledException += handler
+    except Exception as e:  # noqa: BLE001
+        log.debug("UnhandledException-käsittelijä: %s", e)
 
 
 _MacTarget = None
