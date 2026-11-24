@@ -30,7 +30,7 @@ from .i18n import set_lang, set_units, tr
 from .updater import Updater
 from .checkin import CheckIn
 from .sheetsync import SheetError
-from . import APP_ID, APP_NAME, __version__, secret_store
+from . import APP_ID, APP_NAME, __date__, __version__, feedback, secret_store
 from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
                         validate_passcode, ws_options)
 from .bmapi import BMApi, BMApiError
@@ -597,7 +597,7 @@ class Monitor:
         return {
             "type": "snapshot",
             "now": time.time(),
-            "version": __version__,
+            "version": __version__, "date": __date__,
             "config": self.public_config(),
             "status": self.status,
             "started": self.started,
@@ -897,6 +897,40 @@ def make_app(mon: Monitor) -> web.Application:
         except Exception as e:  # noqa: BLE001
             return web.json_response({"ok": False, "error": friendly_error(e)}, status=400)
 
+    async def fb_bundle(request):
+        """Palautepaketti ladattavaksi (käyttäjä voi tarkistaa sisällön)."""
+        data, _names = await asyncio.get_running_loop().run_in_executor(
+            None, feedback.build_bundle, mon, request.query.get("message", ""), request.query.get("logs") == "1")
+        name = feedback.bundle_name(request.query.get("call", ""))
+        return web.Response(body=data, content_type="application/zip",
+                            headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    async def fb_info(request):
+        _data, names = await asyncio.get_running_loop().run_in_executor(
+            None, feedback.build_bundle, mon, "", request.query.get("logs") == "1")
+        call = mon.cfg["devices"].get("my_call") or (mon.cfg["messaging"].get("login") or "").split("-")[0]
+        return web.json_response({"files": names, "size": len(_data), "call": call,
+                                  "enabled": bool(mon.cfg.get("feedback_url") or feedback.FEEDBACK_URL)})
+
+    async def fb_send(request):
+        b = await request.json()
+        msg = str(b.get("message") or "").strip()
+        if not msg:
+            return web.json_response({"ok": False, "error": tr("Kirjoita viesti")}, status=400)
+        url = mon.cfg.get("feedback_url") or feedback.FEEDBACK_URL
+        if not url:
+            return web.json_response({"ok": False, "error": tr("Palautteen lähetys ei ole vielä käytössä – tallenna paketti ja lähetä se itse.")}, status=400)
+        call = str(b.get("call") or "").strip().upper()
+        data, names = await asyncio.get_running_loop().run_in_executor(
+            None, feedback.build_bundle, mon, msg, bool(b.get("logs")))
+        name = feedback.bundle_name(call)
+        try:
+            await feedback.send(url, feedback.payload(msg, call, str(b.get("email") or "").strip(), data, name))
+        except RuntimeError as e:
+            return web.json_response({"ok": False, "error": str(e)}, status=502)
+        log.info("Palaute lähetetty (%s, %d tavua, %s)", name, len(data), ", ".join(names))
+        return web.json_response({"ok": True, "name": name})
+
     async def sat_map(request):
         """Satelliitit-välilehden kartta: lasketaan pyydettäessä (sivu kysyy muutaman sekunnin välein)."""
         svc = mon.services.services["satellites"]
@@ -1143,6 +1177,9 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_get("/api/feeds/preview", preview_feed)
     app.router.add_get("/api/services/meteoalarm_areas", ma_area_list)
     app.router.add_get("/api/satellites/map", sat_map)
+    app.router.add_get("/api/feedback/bundle", fb_bundle)
+    app.router.add_get("/api/feedback/info", fb_info)
+    app.router.add_post("/api/feedback/send", fb_send)
     app.router.add_get("/", index)
     app.router.add_get("/ws", ws_handler)
     app.router.add_get("/api/config", get_config)
@@ -1272,6 +1309,7 @@ def main():
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(levelname)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S",
                         stream=sys.stderr)
+    feedback.install_memory_log()
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     try:

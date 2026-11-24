@@ -145,6 +145,15 @@
   .modal .mh { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
   .modal .mh h2 { margin: 0; font-size: 20px; }
   .modal .mb { padding: 6px 16px 16px; }
+  .about { font-size: 14px; color: var(--text); margin: 4px 0 6px; }
+  .about b { font-weight: 700; }
+  .fbform textarea, .fbform input[type=text], .fbform input[type=email] { background: var(--bg); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 7px 9px; font: inherit; box-sizing: border-box; }
+  .fbform textarea { width: 100%; resize: vertical; }
+  .fbform .fbchk { display: flex; gap: 6px; align-items: center; margin: 10px 0 6px; color: var(--text); font-size: 13px; }
+  .fbatt { display: inline-flex; gap: 6px; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; font-size: 13px; margin: 4px 0 10px; }
+  .fbprivacy { font-size: 12px; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; line-height: 1.5; }
+  .fbprivacy b { color: var(--text); }
   .toasts { position: fixed; right: 16px; top: 100px; display: flex; flex-direction: column; gap: 8px; z-index: 60; }
   .toast { background: #0b0f13; border: 1px solid var(--live); border-left: 4px solid var(--live); border-radius: 8px; padding: 10px 14px; min-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,.5); cursor: pointer; }
   .toast.bad { border-color: var(--bad); }
@@ -381,6 +390,12 @@
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-program">
     <h2>Ohjelma</h2>
     <div class="inner">
+    <div class="about" id="aboutLine"></div>
+    <div class="frow" style="margin:10px 0 4px;align-items:center">
+      <b style="min-width:90px">Palaute</b>
+      <button class="primary" id="btnFb">Lähetä palaute / lokit</button>
+      <span class="hint" style="margin:0">Lähettää viestisi ja ohjelman lokin ylläpidolle vian selvittämistä varten.</span>
+    </div>
     <div class="row"><div><button id="btnQuit">Sulje ohjelma</button></div>
       <div class="hint" style="max-width:520px">Sulkee taustalla toimivan ohjelman. Ohjelman voi avata uudelleen käynnistämällä sen; jos se on jo käynnissä,
         käynnistys avaa vain tämän sivun. <span id="verInfo"></span></div></div>
@@ -837,6 +852,31 @@
   </div>
 </main>
 <div class="toasts" id="toasts"></div>
+<div class="modal-bg" id="fbBg"><div class="modal" style="width:min(560px,100%)">
+  <div class="mh"><h2>Lähetä palaute / lokit</h2><span class="spacer"></span><button id="fbClose" aria-label="Sulje">✕</button></div>
+  <div class="mb form fbform">
+    <label for="fbMsg">Viestisi</label>
+    <textarea id="fbMsg" rows="5" placeholder="Kerro, mitä teit ja mitä tapahtui. Esim. ”Satelliittikartta ei päivity, kun…”"></textarea>
+    <div class="frow" style="margin-top:8px">
+      <div class="fld"><label for="fbCall">Kutsu</label><input id="fbCall" type="text" style="width:120px;text-transform:uppercase"></div>
+      <div class="fld" style="flex:1;min-width:200px"><label for="fbMail">Vastausosoite (vapaaehtoinen)</label><input id="fbMail" type="email" placeholder="nimi@esimerkki.fi" style="width:100%"></div>
+    </div>
+    <label class="fbchk"><input type="checkbox" id="fbLogs"> Liitä myös puhelu- ja SMS-lokit</label>
+    <div class="fbatt"><span>📎</span> <a href="#" id="fbZip"></a> <span class="muted" id="fbSize"></span></div>
+    <div class="fbprivacy">
+      <b>Mitä lähetetään:</b> viestisi, ohjelman loki, asetukset ja versiotiedot (ohjelma, käyttöjärjestelmä).<br>
+      <b>Mitä ei lähetetä:</b> Brandmeisterin API-avain, APRS-passcode, check-in-taulukon avain ja muut salaisuudet.
+      Ne poistetaan automaattisesti asetuksista ja lokista.<br>
+      <b>Sijainti</b> pyöristetään noin 100 km tarkkuuteen (lokaattori 4 merkkiä). Voit tarkistaa paketin ennen lähetystä
+      lataamalla sen yllä olevasta linkistä.
+    </div>
+    <div class="frow svcsave" style="justify-content:flex-end">
+      <span class="err" id="fbErr" style="margin-right:auto"></span>
+      <button class="primary" id="fbSend">Lähetä</button><button id="fbCancel">Peruuta</button>
+    </div>
+  </div>
+</div></div>
+
 <div class="modal-bg" id="modalBg"><div class="modal">
   <div class="mh"><h2 id="mTitle"></h2><span class="muted" id="mSub"></span><span class="spacer"></span><button id="mClose">Sulje</button></div>
   <div class="mb" id="mBody"></div>
@@ -1055,7 +1095,7 @@ function fillSettings() {
   $("dataFilter").value = S.config.data_filter;
   $("minDur").value = S.config.min_duration;
   $("logCsv").checked = !!S.config.log_csv;
-  $("verInfo").textContent = "";
+  $("verInfo").textContent = ""; aboutLine();
   $("langSel").value = LANG; $("unitSel").value = S.config.units || "metric"; $("updAuto").checked = S.config.update_check !== false;
   $("keyState").textContent = S.config.bm_api_key ? "Avain tallennettu" : "Ei avainta";
   $("apiKey").value = ""; $("myCall").value = S.config.devices.my_call || "";
@@ -2342,6 +2382,55 @@ function drawSky() {
     ${p ? `<div class="muted">${esc(p.aos <= SD.time ? T("Ylilento käynnissä") : T("Seuraava ylilento {d}", {d: satWindow(x)}))}</div>` : `<div class="muted">${esc(T("Ei ylilentoja seuraavan vuorokauden aikana."))}</div>`}
     <div class="kv">${rows.map(r => `<span>${esc(r[0])}</span><span>${esc(r[1])}</span>`).join("")}</div>`;
 }
+
+// ---------------------------------------------------------------------------
+// Tietoja-rivi ja palaute ylläpidolle
+// ---------------------------------------------------------------------------
+function aboutLine() {
+  const y = (S.date || "").slice(0, 4) || new Date().getFullYear();
+  $("aboutLine").innerHTML = `<b>Monitor for Amateur Radio</b> ${esc(S.version || "")}, ${esc(T("tekijä"))} OH2BEA (${esc(y)})`;
+}
+let fbInfo = null;
+function fbZipHref() {
+  const q = new URLSearchParams({logs: $("fbLogs").checked ? "1" : "0", call: $("fbCall").value, message: $("fbMsg").value.slice(0, 2000)});
+  return "/api/feedback/bundle?" + q.toString();
+}
+async function fbRefresh() {
+  try {
+    fbInfo = await (await fetch("/api/feedback/info?logs=" + ($("fbLogs").checked ? "1" : "0"))).json();
+    const kb = Math.max(1, Math.round(fbInfo.size / 1024));
+    $("fbZip").textContent = `monitor-support-${(($("fbCall").value || fbInfo.call || "anon").toUpperCase())}.zip`;
+    $("fbZip").title = T("Sisältö: {f}", {f: fbInfo.files.join(", ")});
+    $("fbSize").textContent = `${kb} kt · ${fbInfo.files.length} ${T("tiedostoa")}`;
+    if (!fbInfo.enabled) $("fbErr").textContent = T("Palautteen lähetys ei ole vielä käytössä – tallenna paketti ja lähetä se itse.");
+  } catch (e) { $("fbErr").textContent = String(e); }
+}
+$("btnFb").onclick = async () => {
+  $("fbErr").textContent = ""; $("fbSend").disabled = false;
+  $("fbBg").classList.add("open");
+  await fbRefresh();
+  if (!$("fbCall").value) $("fbCall").value = (fbInfo && fbInfo.call) || "";
+  $("fbMsg").focus();
+};
+const fbClose = () => $("fbBg").classList.remove("open");
+$("fbClose").onclick = fbClose; $("fbCancel").onclick = fbClose;
+$("fbBg").addEventListener("click", e => { if (e.target === $("fbBg")) fbClose(); });
+$("fbLogs").onchange = fbRefresh;
+$("fbCall").oninput = () => { $("fbZip").textContent = `monitor-support-${($("fbCall").value || "anon").toUpperCase()}.zip`; };
+$("fbZip").onclick = e => { e.preventDefault(); window.location.href = fbZipHref(); };
+$("fbSend").onclick = async () => {
+  const msg = $("fbMsg").value.trim();
+  if (!msg) { $("fbErr").textContent = T("Kirjoita viesti"); $("fbMsg").focus(); return; }
+  $("fbSend").disabled = true; $("fbErr").innerHTML = `<span class="muted">${esc(T("Lähetetään…"))}</span>`;
+  try {
+    const r = await fetch("/api/feedback/send", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({message: msg, call: $("fbCall").value, email: $("fbMail").value, logs: $("fbLogs").checked})});
+    const j = await r.json();
+    if (j.ok) { $("fbMsg").value = ""; fbClose(); { const d = document.createElement("div"); d.className = "toast"; d.innerHTML = `<b>${esc(T("Palaute lähetetty – kiitos!"))}</b>`;
+      d.onclick = () => d.remove(); $("toasts").appendChild(d); setTimeout(() => d.remove(), 6000); } }
+    else { $("fbErr").textContent = j.error; $("fbSend").disabled = false; }
+  } catch (e) { $("fbErr").textContent = String(e); $("fbSend").disabled = false; }
+};
 </script>
 </body>
 </html>

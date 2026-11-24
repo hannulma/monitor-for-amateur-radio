@@ -408,3 +408,20 @@ def test_satellite_subpoint_and_map():
     path = sky_path(orb, 1795354743.7, 1795355259.9, 60.17, 24.94)
     assert path[0][2] < 1 and max(p[2] for p in path) > 9
     assert short_name("RS-44 & BREEZE-KM R/B") == "RS-44" and short_name("SAUDISAT 1C (SO-50)") == "SO-50"
+
+
+def test_feedback_scrub():
+    from bmmonitor.feedback import locator4, scrub_config, scrub_text
+    cfg = {"bm_api_key": "eyJ0eXAiOiJKV1QiLCJhbGciOi.eyJzdWIiOiIxMjM0NTY3ODkw.abcdefgh", "language": "fi",
+           "messaging": {"login": "OH2BEA-13", "passcode": "19369", "feeds": [{"url": "https://x/?key=abc"}]},
+           "checkin": {"sheet": {"key": "deadbeef" * 8, "url": "https://script.google.com/macros/s/A/exec"}},
+           "services": {"location": {"lat": 60.17, "lon": 24.94, "label": "Kotikatu 1, Helsinki"}}}
+    out = scrub_config(cfg)
+    flat = json.dumps(out)
+    for secret in ("eyJ0eXAi", "19369", "deadbeef", "abc", "Kotikatu", "60.17", "24.94"):
+        assert secret not in flat, secret
+    assert out["services"]["location"]["locator"] == "KP20" == locator4(60.17, 24.94)
+    assert out["messaging"]["login"] == "OH2BEA-13"
+    line = "2026-11-24 INFO login OH2BEA-13 pass 19369 vers x api_key=SECRET token: eyJabcdefghijkl.eyJabcdefghijkl.abcdefg"
+    s = scrub_text(line)
+    assert "19369" not in s and "SECRET" not in s and "eyJabc" not in s and "OH2BEA-13" in s

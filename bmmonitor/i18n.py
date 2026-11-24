@@ -233,4 +233,10 @@ EN: dict[str, str] = {
     "{name} klo {t} max {el}° {az}": "{name} at {t} max {el}° {az}",
     "näkyy {a}–{b}": "visible {a}–{b}",
     "Virheellinen yksikkö": "Invalid unit",
+    "Palautteen lähetys ei ole vielä käytössä – tallenna paketti ja lähetä se itse.": "Sending feedback is not enabled yet – save the package and send it yourself.",
+    "Palautteen lähetys epäonnistui: {e}": "Sending feedback failed: {e}",
+    "Vastaanotin vastasi odottamattomasti (HTTP {s})": "The receiver answered unexpectedly (HTTP {s})",
+    "Palautteita on lähetetty liikaa – yritä myöhemmin uudelleen": "Too much feedback has been sent – try again later",
+    "Paketti on liian suuri – jätä puhelu- ja SMS-lokit pois": "The package is too large – leave out the call and SMS logs",
+    "Vastaanotin hylkäsi palautteen": "The receiver rejected the feedback",
 }
