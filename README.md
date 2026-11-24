@@ -1,7 +1,7 @@
 # Monitor for BrandMeister
 
-[![Release](https://img.shields.io/github/v/release/hannulma/monitor-for-brandmeister?include_prereleases&label=release)](https://github.com/hannulma/monitor-for-brandmeister/releases)
-[![CI](https://github.com/hannulma/monitor-for-brandmeister/actions/workflows/ci.yml/badge.svg)](https://github.com/hannulma/monitor-for-brandmeister/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/hannulma/monitor-for-amateur-radio?include_prereleases&label=release)](https://github.com/hannulma/monitor-for-amateur-radio/releases)
+[![CI](https://github.com/hannulma/monitor-for-amateur-radio/actions/workflows/ci.yml/badge.svg)](https://github.com/hannulma/monitor-for-amateur-radio/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **An unofficial desktop monitor for the [BrandMeister](https://brandmeister.network) DMR network** – follow
@@ -14,7 +14,7 @@ DMR radio via APRS.
 > [!NOTE]
 > **Beta.** The core features are tested against the live BrandMeister network, but some features have had
 > limited real-world testing. Bug reports and feedback are very welcome in
-> [Issues](https://github.com/hannulma/monitor-for-brandmeister/issues).
+> [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
 > The user interface is currently in **Finnish**; an English UI is planned.
 
 ![Monitor view](docs/screenshot-monitor.png)
@@ -76,7 +76,7 @@ Several services use Finnish open data and are most useful in Finland; the Brand
 
 ## Download
 
-Get the latest version from **[Releases](https://github.com/hannulma/monitor-for-brandmeister/releases)**:
+Get the latest version from **[Releases](https://github.com/hannulma/monitor-for-amateur-radio/releases)**:
 
 | OS | File |
 |---|---|
@@ -157,8 +157,8 @@ interfaces as the official web pages.
 ## Development
 
 ```bash
-git clone https://github.com/hannulma/monitor-for-brandmeister
-cd monitor-for-brandmeister
+git clone https://github.com/hannulma/monitor-for-amateur-radio
+cd monitor-for-amateur-radio
 pip install -e ".[test]"
 pytest
 python -m bmmonitor --demo        # UI with fake traffic

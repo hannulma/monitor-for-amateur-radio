@@ -167,8 +167,8 @@ def test_update_versions():
     assert sums == {"file.dmg": "a" * 64, "other.exe": "b" * 64}
     atom = """<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom">
       <entry><updated>2026-11-19T17:00:00Z</updated>
-        <link rel="alternate" href="https://github.com/hannulma/monitor-for-brandmeister/releases/tag/v0.9.0b1"/></entry>
-      <entry><link rel="alternate" href="https://github.com/hannulma/monitor-for-brandmeister/releases/tag/nightly"/></entry>
+        <link rel="alternate" href="https://github.com/hannulma/monitor-for-amateur-radio/releases/tag/v0.9.0b1"/></entry>
+      <entry><link rel="alternate" href="https://github.com/hannulma/monitor-for-amateur-radio/releases/tag/nightly"/></entry>
     </feed>"""
     rel = U.releases_from_atom(atom)
     assert [r["tag_name"] for r in rel] == ["v0.9.0b1"]

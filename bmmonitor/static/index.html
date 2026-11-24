@@ -168,6 +168,8 @@
   .frow .fld.checks { gap: 6px; }
   .frow.svcsave { margin-top: 12px; align-items: center; }
   .svc .hint { margin-top: 8px; }
+  .hdrlink { margin-left: auto; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--accent); text-decoration: none; }
+  .hdrlink:hover { text-decoration: underline; }
   .satwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 12px 14px; }
   @media (max-width: 980px) { .satwrap { grid-template-columns: 1fr; } }
   .satmapbox { position: relative; }
@@ -281,7 +283,8 @@
 
 <main>
   <section class="wide" data-tab="satelliitit" data-fold="sat-map">
-    <h2>Satelliitit kartalla <span class="count" id="satCount"></span></h2>
+    <h2>Satelliitit kartalla <span class="count" id="satCount"></span>
+      <a href="#" class="hdrlink" id="satPick">Valitse satelliitit: Palvelut → Satelliittien ylilennot (🔔)</a></h2>
     <div class="satwrap">
       <div class="satmapbox"><canvas id="satCanvas" aria-label="Maailmankartta: satelliittien paikat ja radat"></canvas>
         <div class="satnote" id="satNote"></div>
@@ -2293,6 +2296,12 @@ function satZoomAt(px, py, factor) {
   cv.addEventListener("dblclick", e => { const r = cv.getBoundingClientRect(); satZoomAt(e.clientX - r.left, e.clientY - r.top, 2); });
 }
 function setFollow(on) { satView.follow = on; $("satFollow").checked = on; }
+$("satPick").onclick = e => {   // Palvelut-välilehdelle satelliittiosioon, avataan jos pienennetty
+  e.preventDefault(); e.stopPropagation();
+  showTab("palvelut");
+  const sec = svcSec("satellites"); if (sec.classList.contains("folded")) setFold(sec, false);
+  sec.scrollIntoView({behavior: "smooth", block: "start"});
+};
 $("satZin").onclick = () => { const {W, H} = satGeom(); satZoomAt(W / 2, H / 2, 1.6); };
 $("satZout").onclick = () => { const {W, H} = satGeom(); satZoomAt(W / 2, H / 2, 1 / 1.6); };
 $("satWorld").onclick = () => { setFollow(false); Object.assign(satView, {z: 1, cx: 0, cy: 0}); satRedraw(); };

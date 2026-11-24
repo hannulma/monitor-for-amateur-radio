@@ -1,4 +1,4 @@
-**Beta-versio.** Ohjelma toimii, mutta osaa ominaisuuksista on testattu vain rajoitetusti. Palaute ja virheilmoitukset: [Issues](https://github.com/hannulma/monitor-for-brandmeister/issues).
+**Beta-versio.** Ohjelma toimii, mutta osaa ominaisuuksista on testattu vain rajoitetusti. Palaute ja virheilmoitukset: [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
 *Beta release. Feedback and bug reports are welcome in Issues.*
 
 ### Lataa / Download

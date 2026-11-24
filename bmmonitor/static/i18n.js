@@ -117,6 +117,7 @@
     "Koko maailma": "Whole world",
     "Seuraa valittua": "Follow selected",
     "Pidä valittu satelliitti kartan keskellä": "Keep the selected satellite in the centre of the map",
+    "Valitse satelliitit: Palvelut → Satelliittien ylilennot (🔔)": "Choose satellites: Services → Satellite passes (🔔)",
     "Kieli": "Language", "Käyttöliittymän kieli": "User interface language",
     "Kieli koskee myös ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia. Ilmatieteen laitoksen varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).":
       "The language also applies to the program's own alerts and to replies sent to your radio. Finnish Meteorological Institute warnings and Digitraffic bulletins stay in their source language (Finnish).",

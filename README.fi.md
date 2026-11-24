@@ -10,13 +10,13 @@ hälytyksiä suoraan DMR-radioosi APRS:n kautta.
 > [!NOTE]
 > **Beta-versio.** Ydinominaisuudet on testattu oikeaa BrandMeister-verkkoa vastaan, mutta osaa
 > ominaisuuksista on testattu vain rajoitetusti. Virheilmoitukset ja palaute:
-> [Issues](https://github.com/hannulma/monitor-for-brandmeister/issues).
+> [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
 
 ![Seuranta](docs/screenshot-monitor.png)
 
 ## Lataus ja asennus
 
-Lataa uusin versio **[Releases](https://github.com/hannulma/monitor-for-brandmeister/releases)**-sivulta:
+Lataa uusin versio **[Releases](https://github.com/hannulma/monitor-for-amateur-radio/releases)**-sivulta:
 
 | Käyttöjärjestelmä | Tiedosto |
 |---|---|
@@ -201,8 +201,8 @@ Asetukset, lokit ja tilastot tallentuvat vain omalle koneelle:
 ## Kehitys
 
 ```
-git clone https://github.com/hannulma/monitor-for-brandmeister
-cd monitor-for-brandmeister
+git clone https://github.com/hannulma/monitor-for-amateur-radio
+cd monitor-for-amateur-radio
 pip install -e ".[test]"
 pytest
 python -m bmmonitor --demo

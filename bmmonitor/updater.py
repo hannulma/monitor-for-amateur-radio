@@ -30,7 +30,7 @@ from .messaging import friendly_error, http_session
 
 log = logging.getLogger("bmmonitor.updater")
 
-REPO = "hannulma/monitor-for-brandmeister"
+REPO = "hannulma/monitor-for-amateur-radio"
 RELEASES_API = os.environ.get("BMM_RELEASES_API") or f"https://api.github.com/repos/{REPO}/releases?per_page=20"  # testejä varten
 RELEASES_PAGE = f"https://github.com/{REPO}/releases"
 RELEASES_ATOM = f"https://github.com/{REPO}/releases.atom"   # varareitti, jos API:n kyselyraja on täynnä

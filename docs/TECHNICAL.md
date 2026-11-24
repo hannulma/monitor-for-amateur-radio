@@ -87,7 +87,7 @@ placeholders match between the languages.
 
 ## Updates
 
-`bmmonitor/updater.py` checks `api.github.com/repos/hannulma/monitor-for-brandmeister/releases` once a day
+`bmmonitor/updater.py` checks `api.github.com/repos/hannulma/monitor-for-amateur-radio/releases` once a day
 (fallback: `releases.atom`, which has no API rate limit). Beta users get pre-releases, stable users only stable
 ones. Installation downloads the platform asset, verifies it against `SHA256SUMS.txt` and then:
 
