@@ -74,9 +74,14 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install
+        env:
+          # PyInstallerin käynnistysohjelma käännetään itse: valmiiksi käännetty bootloader on monen
+          # virustorjunnan koneoppimistunnistuksen (esim. Defenderin Wacatac!ml) yleinen väärä hälytys.
+          PYINSTALLER_COMPILE_BOOTLOADER: "1"
         run: |
-          python -m pip install --upgrade pip
-          pip install . pyinstaller
+          python -m pip install --upgrade pip wheel
+          pip install --no-binary pyinstaller pyinstaller
+          pip install .
       - name: Build exe
         run: >
           pyinstaller --noconfirm --clean --onedir --noconsole --name MonitorForBrandMeister --collect-submodules win32ctypes
