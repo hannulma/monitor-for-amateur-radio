@@ -100,10 +100,17 @@ jobs:
               try { $ping = Invoke-RestMethod http://127.0.0.1:8799/api/ping; Write-Host "ping: $($ping | ConvertTo-Json -Compress)"; $ok = $true; break } catch { }
             }
           }
+          if ($ok) {
+            Start-Sleep 5   # ikkuna ja kuvake ehtivät käynnistyä
+            try { $show = Invoke-RestMethod -Method Post http://127.0.0.1:8799/api/ui/show; Write-Host "ui/show: $($show | ConvertTo-Json -Compress)"; if (-not $show.ok) { $ok = $false } } catch { Write-Host "ui/show epäonnistui: $_"; $ok = $false }
+            Start-Sleep 3
+            if ($p.HasExited) { Write-Host "Ohjelma kaatui ikkunan avauksen jälkeen, exit code $($p.ExitCode)"; $ok = $false }
+          }
           try { Invoke-RestMethod -Method Post http://127.0.0.1:8799/api/shutdown | Out-Null } catch { }
           if (-not $p.WaitForExit(15000)) { Write-Host "Ei sulkeutunut, lopetetaan"; $p.Kill(); $ok = $false }
           Write-Host "--- monitor.log ---"
           if (Test-Path $log) { Get-Content $log } else { Write-Host "(ei lokia: $log)"; Get-ChildItem (Join-Path $env:APPDATA "BMMonitor") -ErrorAction SilentlyContinue }
+          if ((Test-Path $log) -and (Select-String -Path $log -Pattern "NET-poikkeus|Traceback|Fatal Python error" -Quiet)) { Write-Host "Lokissa virhe"; $ok = $false }
           if (-not $ok) { Write-Error "Käynnistystesti epäonnistui"; exit 1 }
           $st = Join-Path $env:RUNNER_TEMP "secrets.txt"
           $p = Start-Process -FilePath "dist\MonitorForBrandMeister\MonitorForBrandMeister.exe" -ArgumentList "--check-secrets",$st -PassThru

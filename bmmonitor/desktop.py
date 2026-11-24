@@ -116,8 +116,9 @@ class Desktop:
         storage.mkdir(parents=True, exist_ok=True)
         if sys.platform == "win32":
             _win_log_unhandled()
-        webview.start(self._gui_started, private_mode=False, storage_path=str(storage),
-                      icon=str(ICONS / "icon-256.png"))
+        # Windows ottaa ikkunan kuvakkeen .exe-tiedostosta (PNG ei kelpaa WinFormsin Iconiksi).
+        icon = None if sys.platform == "win32" else str(ICONS / "icon-256.png")
+        webview.start(self._gui_started, private_mode=False, storage_path=str(storage), icon=icon)
 
     def _gui_started(self):
         try:
@@ -275,10 +276,17 @@ class Desktop:
                 if _DESK is not None:
                     _DESK.show()
                 return True
-            objc.classAddMethods(BrowserView.AppDelegate, [
-                objc.selector(should_terminate, selector=b"applicationShouldTerminate:", signature=b"Q@:@"),
-                objc.selector(reopen, selector=b"applicationShouldHandleReopen:hasVisibleWindows:", signature=b"Z@:@Z"),
-            ])
+            cls = BrowserView.AppDelegate
+            try:
+                sig = cls.applicationShouldTerminate_.signature    # pyobjc:n oma tyyppi (I tai Q)
+            except AttributeError:
+                sig = b"Q@:@"
+            for fn, sel, sg in ((should_terminate, b"applicationShouldTerminate:", sig),
+                                (reopen, b"applicationShouldHandleReopen:hasVisibleWindows:", b"Z@:@Z")):
+                try:
+                    objc.classAddMethods(cls, [objc.selector(fn, selector=sel, signature=sg)])
+                except Exception as e:  # noqa: BLE001
+                    log.warning("macOS-käsittelijä %s: %s", sel.decode(), e)
         except Exception:  # noqa: BLE001
             log.exception("macOS-sovelluksen käsittelijöitä ei voitu asettaa")
 

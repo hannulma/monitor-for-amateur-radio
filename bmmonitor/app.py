@@ -668,7 +668,12 @@ def bm_thread(mon: Monitor, loop: asyncio.AbstractEventLoop):
     warned = {"parse": False}
 
     def call(fn, *a):
-        loop.call_soon_threadsafe(fn, *a)
+        if loop.is_closed():          # ohjelma sulkeutuu: myöhässä tulevat viestit ohitetaan
+            return
+        try:
+            loop.call_soon_threadsafe(fn, *a)
+        except RuntimeError:
+            pass
 
     def set_status(**kw):
         mon.status.update(**kw)
