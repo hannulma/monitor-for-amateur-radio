@@ -1776,7 +1776,9 @@ $("callLimit").onchange = async e => {
 };
 // ---------------- yhteiset ----------------
 async function api(path, body) {
-  const r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  let r;
+  try { r = await fetchT(path, 60000, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)}); }
+  catch (e) { return {ok: false, error: e.name === "AbortError" ? T("Ohjelma ei vastannut ajoissa – yritä uudelleen") : String(e)}; }
   let j = {}; try { j = await r.json(); } catch (e) { j = {ok: false, error: "HTTP " + r.status}; }
   return j;
 }
@@ -2040,7 +2042,11 @@ async function loadStats() {
   if (sel.dataset.opts !== opts) { sel.innerHTML = opts; sel.dataset.opts = opts; sel.value = cur; }
   if (!$("bmTg").value) { const ex = S.config.talkgroups.find(p => /^\d+$/.test(p)) || (S.config.talkgroups[0] || "").replace(/[*?]/g, ""); $("bmTg").value = ex; }
   const j = await api(`/api/stats?hours=${$("sHours").value}${sel.value ? "&tg=" + sel.value : ""}`);
-  if (!j.ok) return;
+  if (!j.ok) {   // ei jäädä tyhjän näkymän kanssa odottamaan: kerrotaan syy ja yritetään hetken päästä uudelleen
+    $("sNote").textContent = j.error || T("Tilastojen haku epäonnistui");
+    clearTimeout(statsTimer); statsTimer = setTimeout(() => { if (TAB === "tilastot") loadStats(); }, 15000);
+    return;
+  }
   STATS = j; renderStats();
   clearTimeout(statsTimer); statsTimer = setTimeout(() => { if (TAB === "tilastot") loadStats(); }, 60000);
 }
@@ -2613,7 +2619,7 @@ function netsShow() {
   netTimer = setInterval(() => { if (TAB !== "seuranta") return; if (++tick % 8 === 0) netsLoad(); else renderNets(); }, 15000);
 }
 async function netsLoad(refresh) {
-  try { NETS = await (await fetch("/api/nets" + (refresh ? "?refresh=1" : ""))).json(); } catch (e) { return; }
+  try { NETS = await (await fetchT("/api/nets" + (refresh ? "?refresh=1" : ""), 30000)).json(); } catch (e) { return; }
   renderNets();
 }
 function tgWatched(tg) {   // sama tulkinta kuin seurannassa: 244* = 244-alkuiset, 244? = yksi numero perään
@@ -2729,7 +2735,7 @@ async function covInit() {
   if (covMap || !window.L) return;
   covMap = L.map("covMap", {zoomControl: true, worldCopyJump: true, attributionControl: true}).setView(covHome() || [60.2, 24.9], 8);
   try {   // ilman verkkoa näkyy ainakin maailmankartta
-    const w = await (await fetch("/static/world.json")).json();
+    const w = await (await fetchT("/static/world.json", 20000)).json();
     const polys = w.land.map(r => { const ll = []; for (let i = 0; i + 1 < r.length; i += 2) ll.push([r[i + 1], r[i]]); return ll; });
     covMap.createPane("basePane").style.zIndex = 150;     // karttatiilten (200) alle: näkyy vain, jos tiilet puuttuvat
     covLand = L.polygon(polys, {pane: "basePane", stroke: false, fillColor: col("--covland"), fillOpacity: 1, interactive: false}).addTo(covMap);
@@ -2751,14 +2757,14 @@ function covShow() {
 }
 async function covRefresh() { await Promise.all([covLoadSummary(), covLoadCells()]); }
 async function covLoadSummary() {
-  let j; try { j = await (await fetch(`/api/aprsrx/summary?period=${$("covPeriod").value}`)).json(); } catch (e) { return; }
+  let j; try { j = await (await fetchT(`/api/aprsrx/summary?period=${$("covPeriod").value}`, 30000)).json(); } catch (e) { return; }
   covSum = j; renderCov();
 }
 async function covLoadCells() {
   if (!covMap) return;
   covRes = covResFor(covMap.getZoom());
   const q = new URLSearchParams({period: $("covPeriod").value, mode: $("covMode").value, res: covRes, via: covVia || ""});
-  let j; try { j = await (await fetch("/api/aprsrx/cells?" + q)).json(); } catch (e) { return; }
+  let j; try { j = await (await fetchT("/api/aprsrx/cells?" + q, 30000)).json(); } catch (e) { return; }
   covCells.clearLayers();
   const max = Math.max(1, ...j.cells.map(c => c[2]));
   j.cells.forEach(([la, lo, n, st, d]) => {

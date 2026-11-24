@@ -54,6 +54,21 @@ RAW_LOG_MAX_BYTES = 5_000_000
 
 log = logging.getLogger("bmmonitor")
 
+
+# Sivun pyyntöjen raskas työ omissa säikeissään ja aikakatkaisulla: jumiutunut laskenta tai ikkunakutsu
+# ei saa pitää selaimen (rajallisia) yhteyksiä paikalliseen palvelimeen varattuina.
+from concurrent.futures import ThreadPoolExecutor as _TPE
+_PAGE_POOL = _TPE(max_workers=6, thread_name_prefix="bmm-page")
+
+
+async def in_thread(fn, *args, timeout: float = 30):
+    fut = asyncio.get_running_loop().run_in_executor(_PAGE_POOL, fn, *args)
+    try:
+        return await asyncio.wait_for(asyncio.shield(fut), timeout)
+    except asyncio.TimeoutError:
+        log.warning("Pyyntö %s kesti yli %d s – keskeytetään", getattr(fn, "__qualname__", fn), timeout)
+        raise web.HTTPGatewayTimeout(text=tr("Toiminto kesti liian kauan – yritä uudelleen"))
+
 DEFAULT_CONFIG = {
     "talkgroups": ["244*", "91"],
     "data_filter": "all",       # "all" = koko verkon dataliikenne, "matched" = vain seuratut TG:t
@@ -941,15 +956,13 @@ def make_app(mon: Monitor) -> web.Application:
 
     async def fb_bundle(request):
         """Palautepaketti ladattavaksi (käyttäjä voi tarkistaa sisällön)."""
-        data, _names = await asyncio.get_running_loop().run_in_executor(
-            None, feedback.build_bundle, mon, request.query.get("message", ""), request.query.get("logs") == "1")
+        data, _names = await in_thread(feedback.build_bundle, mon, request.query.get("message", ""), request.query.get("logs") == "1")
         name = feedback.bundle_name(request.query.get("call", ""))
         return web.Response(body=data, content_type="application/zip",
                             headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
     async def fb_info(request):
-        _data, names = await asyncio.get_running_loop().run_in_executor(
-            None, feedback.build_bundle, mon, "", request.query.get("logs") == "1")
+        _data, names = await in_thread(feedback.build_bundle, mon, "", request.query.get("logs") == "1")
         call = mon.cfg["devices"].get("my_call") or (mon.cfg["messaging"].get("login") or "").split("-")[0]
         return web.json_response({"files": names, "size": len(_data), "call": call,
                                   "enabled": bool(mon.cfg.get("feedback_url") or feedback.FEEDBACK_URL)})
@@ -963,8 +976,7 @@ def make_app(mon: Monitor) -> web.Application:
         if not url:
             return web.json_response({"ok": False, "error": tr("Palautteen lähetys ei ole vielä käytössä – tallenna paketti ja lähetä se itse.")}, status=400)
         call = str(b.get("call") or "").strip().upper()
-        data, names = await asyncio.get_running_loop().run_in_executor(
-            None, feedback.build_bundle, mon, msg, bool(b.get("logs")))
+        data, names = await in_thread(feedback.build_bundle, mon, msg, bool(b.get("logs")))
         name = feedback.bundle_name(call)
         try:
             await feedback.send(url, feedback.payload(msg, call, str(b.get("email") or "").strip(), data, name))
@@ -976,7 +988,7 @@ def make_app(mon: Monitor) -> web.Application:
     async def sat_map(request):
         """Satelliitit-välilehden kartta: lasketaan pyydettäessä (sivu kysyy muutaman sekunnin välein)."""
         svc = mon.services.services["satellites"]
-        data = await asyncio.get_running_loop().run_in_executor(None, svc.map_data)
+        data = await in_thread(svc.map_data)
         return web.json_response(data)
 
     async def ma_area_list(request):
@@ -1050,7 +1062,7 @@ def make_app(mon: Monitor) -> web.Application:
             users = hit[1]
         else:
             try:
-                users = await asyncio.get_running_loop().run_in_executor(None, bm_user_history, [tg])
+                users = await in_thread(bm_user_history, [tg], timeout=45)
             except Exception as e:  # noqa: BLE001
                 return web.json_response({"ok": False, "error": friendly_error(e)}, status=502)
             mon.stats.bm_cache[str(tg)] = (time.time(), users)
@@ -1176,8 +1188,7 @@ def make_app(mon: Monitor) -> web.Application:
     async def aprsrx_summary(request):
         period = request.query.get("period", "24h")
         mon.aprsrx._commit()
-        return web.json_response(await asyncio.get_running_loop().run_in_executor(
-            None, mon.aprsrx.summary, period, home()))
+        return web.json_response(await in_thread(mon.aprsrx.summary, period, home()))
 
     async def aprsrx_cells(request):
         q = request.query
@@ -1188,8 +1199,7 @@ def make_app(mon: Monitor) -> web.Application:
         mode = q.get("mode", "all")
         via = (q.get("via") or "").upper() or None
         mon.aprsrx._commit()
-        return web.json_response(await asyncio.get_running_loop().run_in_executor(
-            None, mon.aprsrx.cells, q.get("period", "24h"), mode, via, res, home()))
+        return web.json_response(await in_thread(mon.aprsrx.cells, q.get("period", "24h"), mode, via, res, home()))
 
     async def tile(request):
         try:
@@ -1208,7 +1218,15 @@ def make_app(mon: Monitor) -> web.Application:
             # OpenStreetMapin käyttöehdot: sovellus tunnistaa itsensä omalla User-Agentilla.
             ua = f"MonitorForAmateurRadio/{__version__} (+https://github.com/hannulma/monitor-for-amateur-radio)"
             try:
-                async with mon.tile_sem, http_session(8) as s, s.get(url, headers={"User-Agent": ua}) as r:
+                # Selain avaa samaan osoitteeseen vain ~6 yhteyttä kerrallaan: tiilipyyntö ei saa jäädä jonoon
+                # pitkäksi aikaa, muuten muut sivun pyynnöt (tilastot, satelliitit) odottavat sen takana.
+                await asyncio.wait_for(mon.tile_sem.acquire(), 3)
+            except asyncio.TimeoutError:
+                if path.exists():
+                    return web.FileResponse(path, headers={"Cache-Control": "max-age=300"})
+                raise web.HTTPServiceUnavailable()
+            try:
+                async with http_session(8) as s, s.get(url, headers={"User-Agent": ua}) as r:
                     if r.status == 200:
                         data = await r.read()
                         path.parent.mkdir(parents=True, exist_ok=True)
@@ -1223,6 +1241,8 @@ def make_app(mon: Monitor) -> web.Application:
                 if mon.tile_fail >= 3:
                     mon.tile_down_until = time.time() + 60
                     log.info("Karttatiilipalvelin ei vastaa – tauko 60 s")
+            finally:
+                mon.tile_sem.release()
         if not path.exists():
             raise web.HTTPNotFound()
         return web.FileResponse(path, headers={"Cache-Control": "max-age=86400"})
@@ -1231,12 +1251,12 @@ def make_app(mon: Monitor) -> web.Application:
         if request.query.get("refresh"):
             await mon.nets.refresh(force=True)
         days = 2 if request.query.get("days") != "7" else 7
-        return web.json_response(await asyncio.get_running_loop().run_in_executor(None, mon.nets.snapshot, days))
+        return web.json_response(await in_thread(mon.nets.snapshot, days))
 
     async def ui_show(_):
         if mon.ui is None:
             return web.json_response({"ok": False})
-        await asyncio.get_running_loop().run_in_executor(None, mon.ui.show)
+        await in_thread(mon.ui.show, timeout=5)
         return web.json_response({"ok": True})
 
     async def shutdown(_):

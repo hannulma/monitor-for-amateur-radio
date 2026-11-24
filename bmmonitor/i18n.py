@@ -88,6 +88,7 @@ EN: dict[str, str] = {
     "Vastaanottajia ei ole määritetty": "No recipients configured",
     "Anna kutsu tai DMR-ID": "Enter a callsign or DMR ID",
     "Virheellinen parametri": "Invalid parameter",
+    "Toiminto kesti liian kauan – yritä uudelleen": "The operation took too long – please try again",
     "Anna puheryhmä": "Enter a talkgroup",
     "Laite ei ole seurattavien listalla": "The device is not on your watch list",
     "Tuntematon toiminto": "Unknown action",
