@@ -27,7 +27,7 @@ from . import __date__, __version__
 from .i18n import tr
 
 # Ylläpidon vastaanottimen osoite (Google Apps Script -verkkosovellus). Asetuksen "feedback_url" voi ohittaa.
-FEEDBACK_URL = ""
+FEEDBACK_URL = "https://script.google.com/macros/s/AKfycbwDVs0bXENS3lKkBXbu8_yNZlG9OuVY21S2bXV_PGOicjFoytpZgA-7j9--DK-8gtz4cw/exec"
 MAX_ZIP = 4_500_000          # vastaanotin hylkää yli 5 Mt (base64 kasvattaa noin kolmanneksella)
 MAX_LOG_TAIL = 400_000       # lokitiedostosta viimeiset 400 kt
 MAX_CSV_TAIL = 300_000

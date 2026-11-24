@@ -137,6 +137,8 @@ Seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, BrandMeister API-av
 - **Kieli (suomi / English)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
   Radiokomennot toimivat kummallakin kielellä (`APUA`/`HELP`, `KUKA`/`WHO`, `NYT`/`NOW`). Ilmatieteen laitoksen
   varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).
+- **Palaute / lokit** (Ohjelma-osio) lähettää viestin ja zip-paketin ylläpidolle. Salaisuudet (API-avain, passcode,
+  check-in-avain) poistetaan ja sijainti pyöristetään lokaattoriksi; paketin voi ladata ja tarkistaa ennen lähetystä.
 - **Mittayksiköt (km / mailit)** koskevat kaikkia näytettyjä etäisyyksiä ja nopeuksia sekä hälytyksiä. Asetukset
   tallennetaan aina kilometreinä, joten yksikön vaihto ei muuta säteitä.
 - **Päivitykset:** ohjelma tarkistaa GitHubista kerran päivässä, onko uusi versio saatavilla (voi kytkeä pois).
