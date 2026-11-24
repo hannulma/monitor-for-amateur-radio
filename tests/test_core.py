@@ -496,3 +496,36 @@ def test_aprs_kiss_and_via(tmp_path):
     rx.handle_frame(fr)
     assert "OH2RCH-1" not in rx.silent and w.alerts[0]["level"] == "ok"
     rx.close()
+
+
+def test_nets_calendar(tmp_path):
+    from collections import deque
+    from types import SimpleNamespace
+    from bmmonitor.app import Matcher
+    from bmmonitor.nets import DEFAULT_NETS, NetCalendar, find_tg, normalize_nets
+    assert find_tg("NEPA NET - NORTH EAST PA (31424)") == 31424
+    assert find_tg("FinDMR-kierros", "Brandmeister DMR · puheryhmä TG 244") == 244
+    assert find_tg("Kahvinetti") is None
+    ics = """BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VTIMEZONE\r\nTZID:Europe/Helsinki\r\nBEGIN:STANDARD\r\nTZOFFSETFROM:+0300\r\nTZOFFSETTO:+0200\r\nDTSTART:19701025T040000\r\nRRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU\r\nEND:STANDARD\r\nBEGIN:DAYLIGHT\r\nTZOFFSETFROM:+0200\r\nTZOFFSETTO:+0300\r\nDTSTART:19700329T030000\r\nRRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU\r\nEND:DAYLIGHT\r\nEND:VTIMEZONE\r\nBEGIN:VEVENT\r\nUID:k@x\r\nDTSTART;TZID=Europe/Helsinki:20260104T190000\r\nDTEND;TZID=Europe/Helsinki:20260104T203000\r\nRRULE:FREQ=WEEKLY;BYDAY=SU\r\nSUMMARY:FinDMR-kierros\r\nLOCATION:TG 244\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"""
+    cfg = normalize_nets({"sources": [{"name": "t", "url": "https://example.org/x.ics"}],
+                          "own": [{"name": "Oma", "tg": "2442", "day": 7, "time": "18.30", "minutes": 30}]}, DEFAULT_NETS)
+    assert cfg["own"][0]["time"] == "18:30"
+    w = SimpleNamespace(seq=0, alerts=deque())
+    mon = SimpleNamespace(cfg={"nets": cfg}, touch=lambda: None, watcher=w, matcher=Matcher(["244"]))
+    nc = NetCalendar(mon, tmp_path)
+    nc._parse("https://example.org/x.ics", ics)
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    hel = ZoneInfo("Europe/Helsinki")
+    start = dt.datetime(2026, 11, 29, 0, 0, tzinfo=hel).timestamp()        # sunnuntai, talviaika
+    occ = nc.occurrences(start, start + 86400)
+    k = [n for n in occ if n["tg"] == 244]
+    assert len(k) == 1 and dt.datetime.fromtimestamp(k[0]["start"], hel).hour == 19
+    summer = dt.datetime(2026, 7, 5, 0, 0, tzinfo=hel).timestamp()          # kesäaika: silti klo 19 Suomen aikaa
+    k = [n for n in nc.occurrences(summer, summer + 86400) if n["tg"] == 244]
+    assert dt.datetime.fromtimestamp(k[0]["start"], hel).hour == 19
+    assert any(n["name"] == "Oma" and n["tg"] == 2442 for n in occ)
+    assert nc.check_reminders(now=k[0]["start"] - 600) == ["FinDMR-kierros"]
+    assert nc.check_reminders(now=k[0]["start"] - 500) == []                # ei toista kertaa
+    with pytest.raises(ValueError):
+        normalize_nets({"own": [{"name": "x", "day": 1, "time": "25:00"}]}, DEFAULT_NETS)

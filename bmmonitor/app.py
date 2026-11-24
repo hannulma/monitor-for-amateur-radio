@@ -32,6 +32,7 @@ from .updater import Updater
 from .checkin import CheckIn
 from .sheetsync import SheetError
 from . import APP_ID, APP_NAME, __date__, __version__, desktop, feedback, secret_store
+from .nets import DEFAULT_NETS, NetCalendar, normalize_nets
 from .aprsrx import DEFAULT_APRSRX, DEFAULT_TILES, DEFAULT_TILES_ATTR, AprsRx, normalize_aprsrx
 from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
                         validate_passcode, ws_options)
@@ -64,6 +65,7 @@ DEFAULT_CONFIG = {
     "language": "",             # "fi" / "en"; tyhjä = valitaan selaimen kielen mukaan
     "units": "metric",          # "metric" (km) / "imperial" (mailit); asetukset tallennetaan aina kilometreinä
     "update_check": True,       # tarkista uudet versiot GitHubista kerran päivässä
+    "theme": "dark",            # "dark" / "light" / "auto" (käyttöjärjestelmän mukaan)
     "ui": "window",             # "window" = oma ikkuna (Windows/macOS), "browser" = oletusselain
     "map_tiles": DEFAULT_TILES,           # karttatiilten osoite (haetaan paikallisen palvelimen kautta)
     "map_tiles_attr": DEFAULT_TILES_ATTR,
@@ -182,6 +184,7 @@ class Monitor:
         self.cfg["services"] = {k: {**v, **(svc.get(k) or {})} for k, v in DEFAULT_SERVICES.items()}
         self.cfg["calls_limit"] = nearest_calls_limit(self.cfg.get("calls_limit"))
         self.cfg["aprsrx"] = {**DEFAULT_APRSRX, **(self.cfg.get("aprsrx") or {})}
+        self.cfg["nets"] = {**DEFAULT_NETS, **(self.cfg.get("nets") or {})}
         self.matcher = Matcher(self.cfg["talkgroups"])
         set_lang(self.cfg.get("language") or "fi")
         set_units(self.cfg.get("units"))
@@ -224,6 +227,7 @@ class Monitor:
         self.updater = Updater(self)
         self.checkin = CheckIn(self, self.api)
         self.aprsrx = AprsRx(self, cfg_path.parent / "aprs_rx.sqlite")
+        self.nets = NetCalendar(self, cfg_path.parent / "nets_cache")
         self.tile_sem = asyncio.Semaphore(4)
 
     def touch(self):
@@ -326,6 +330,9 @@ class Monitor:
                 raise ValueError(tr("Virheellinen yksikkö"))
             self.cfg["units"] = new["units"]
             set_units(new["units"])
+        if "nets" in new:
+            self.cfg["nets"] = normalize_nets(new["nets"] or {}, self.cfg["nets"])
+            self.nets.reconfigure()
         if "aprsrx" in new:
             self.cfg["aprsrx"] = normalize_aprsrx(new["aprsrx"] or {}, self.cfg["aprsrx"])
             self.aprsrx.reconfigure()
@@ -336,6 +343,10 @@ class Monitor:
             self.cfg["map_tiles"] = t
             self.cfg["map_tiles_attr"] = str(new.get("map_tiles_attr") or "").strip()[:200] or (
                 DEFAULT_TILES_ATTR if t == DEFAULT_TILES else "")
+        if "theme" in new:
+            if new["theme"] not in ("dark", "light", "auto"):
+                raise ValueError(tr("Virheellinen valinta"))
+            self.cfg["theme"] = new["theme"]
         if "ui" in new:
             if new["ui"] not in ("window", "browser"):
                 raise ValueError(tr("Virheellinen valinta"))
@@ -1209,6 +1220,12 @@ def make_app(mon: Monitor) -> web.Application:
             raise web.HTTPNotFound()
         return web.FileResponse(path, headers={"Cache-Control": "max-age=86400"})
 
+    async def nets_list(request):
+        if request.query.get("refresh"):
+            await mon.nets.refresh(force=True)
+        days = 2 if request.query.get("days") != "7" else 7
+        return web.json_response(await asyncio.get_running_loop().run_in_executor(None, mon.nets.snapshot, days))
+
     async def ui_show(_):
         if mon.ui is None:
             return web.json_response({"ok": False})
@@ -1228,6 +1245,7 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_post("/api/shutdown", shutdown)
     app.router.add_post("/api/ui/show", ui_show)
     app.router.add_get("/api/aprsrx/summary", aprsrx_summary)
+    app.router.add_get("/api/nets", nets_list)
     app.router.add_get("/api/aprsrx/cells", aprsrx_cells)
     app.router.add_get("/tiles/{z}/{x}/{y}.png", tile)
     app.router.add_get("/api/station", station)
@@ -1375,6 +1393,7 @@ async def _run(args, mon, cfg_path, ui):
              asyncio.create_task(mon.services.run())]
     tasks.append(asyncio.create_task(mon.checkin.run()))
     tasks.append(asyncio.create_task(mon.aprsrx.run()))
+    tasks.append(asyncio.create_task(mon.nets.run()))
     if not args.demo:
         tasks.append(asyncio.create_task(mon.updater.run()))
     tasks.append(asyncio.create_task(demo_loop(mon) if args.demo else bm_loop(mon)))
@@ -1464,7 +1483,12 @@ def run_windowed(args) -> None:
     import threading
     # --no-browser ilman --wait-for-exit = käynnistys Windowsin mukana: ikkuna piiloon, kuvake näkyviin.
     # Päivityksen jälkeen (--wait-for-exit) ikkuna avataan, koska vanhan version ikkuna sulkeutui.
-    ui = desktop.Desktop(start_hidden=args.no_browser and not args.wait_for_exit)
+    cfg_path = Path(args.config) if args.config else config_dir() / "config.json"
+    try:
+        light = json.loads(cfg_path.read_text(encoding="utf-8")).get("theme") == "light"
+    except Exception:  # noqa: BLE001
+        light = False
+    ui = desktop.Desktop(start_hidden=args.no_browser and not args.wait_for_exit, light=light)
     errors = []
 
     def server():

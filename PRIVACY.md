@@ -24,6 +24,7 @@ tavallisesti tapaan IP-osoitteesi ja sen, mitä pyydetään; palveluiden omat ti
 | GitHub (api.github.com, github.com) | päivitystarkistus kerran päivässä ja päivitys | versiotarkistus, julkaisun lataus | Asetukset → Versio ja päivitykset → automaattinen tarkistus pois |
 | Ilmatieteen laitos (opendata.fmi.fi, alerts.fmi.fi), MeteoAlarm, NOAA SWPC, STUK (IL:n avoin data), Fintraffic Digitraffic, Open-Meteo, CelesTrak, SatNOGS DB | kun kyseinen palvelu on päällä Palvelut-välilehdellä | haut sijaintisi lähialueelta (koordinaatit tai alue) | Palvelut-välilehden kytkimet |
 | OpenStreetMap-karttatiilet (tile.openstreetmap.org tai itse valittu) | kun katsot APRS-kuuluvuuskarttaa | katsotut karttatiilet; ohjelman nimi ja versio User-Agentissa | älä avaa karttaa; tiilipalvelimen voi vaihtaa |
+| Net-kalenterit: FinDMR-kierros (6kw.fi), W0WC:n BM DMR Nets (Google-kalenteri) ja itse lisäämäsi | kun Netit-osio on päällä (BrandMeister-välilehti), noin 6 tunnin välein | kalenterin haku | Netit-kytkin pois tai poista kalenteri |
 | Uutis- ja kalenterisyötteet, jotka itse lisäät | kun syötteet ovat käytössä | syötteen haku | poista syöte |
 | Google Apps Script: check-in-taulukko | vain jos yhdistät check-in-taulukon | kirjatut check-in-rivit omaan taulukkoosi | irrota taulukko |
 | Google Apps Script: palaute (script.google.com) | **vain kun itse lähetät palautteen** | viestisi ja halutessasi lokit; salaisuudet poistetaan ja sijainti pyöristetään 4-merkkiseksi lokaattoriksi; paketin voi tarkistaa ennen lähetystä | älä lähetä palautetta |
@@ -51,6 +52,8 @@ and what is requested, as with any internet connection; their own privacy polici
 - **Open data services** (FMI, MeteoAlarm, NOAA SWPC, STUK via FMI, Fintraffic Digitraffic, Open-Meteo, CelesTrak,
   SatNOGS DB) – only for services you switch on; requests concern your area.
 - **OpenStreetMap tiles** – only when you view the APRS coverage map; the tile server can be changed.
+- **Net calendars** (FinDMR round at 6kw.fi, W0WC's BM DMR Nets on Google Calendar, and any you add) – fetched about
+  every 6 hours while the Nets section is switched on.
 - **Feeds and calendars you add** – fetched while enabled.
 - **Google Apps Script** – only if you connect a check-in sheet (rows go to your own sheet), and **only when you send
   feedback yourself** (your message and, if you choose, logs with secrets removed and location rounded to a

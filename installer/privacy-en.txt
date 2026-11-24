@@ -8,6 +8,7 @@ The program contacts external services only while the corresponding feature is i
 - GitHub: update check once a day (can be switched off in Settings)
 - open data services (e.g. FMI, MeteoAlarm, NOAA, Digitraffic, CelesTrak), only those switched on in Services
 - OpenStreetMap tiles while viewing the APRS coverage map
+- net calendars (6kw.fi, Google Calendar) while the Nets section is on
 - feeds and calendars you add yourself, and a check-in sheet if you connect one
 - feedback to the maintainer only when you send it yourself (secrets are removed)
 

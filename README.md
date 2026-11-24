@@ -50,6 +50,10 @@ DMR radio via APRS.
   common paths, and an alert when a known digipeater or a station you choose (e.g. an iGate) goes silent –
   only while your own reception works. Base map © OpenStreetMap contributors (tiles fetched through the app
   with its own User-Agent and cached; the tile URL can be changed).
+- **Nets today and tomorrow** – the FinDMR round ([6kw.fi](https://6kw.fi/findmr/)), W0WC's BrandMeister net
+  calendar, your own ICS calendars and a list of your own; shown in your local time, marked when the net's talkgroup
+  has traffic, with listen / check-in buttons and a reminder for nets in monitored talkgroups.
+- **Light, dark or automatic theme** (follows the operating system).
 - **Radio commands** – send `TG244`, `WHO`-style queries (`KUKA OH2ABC`), `NYT` (now active) or feed commands
   from your DMR radio and get the answer back as a text message.
 - **News feeds → DMR SMS** – new RSS/Atom/JSON Feed items sent to your radio as short text messages.

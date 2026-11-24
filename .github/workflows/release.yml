@@ -110,7 +110,7 @@ jobs:
           --icon installer\icon.ico --hidden-import pystray._win32
           --hidden-import webview.platforms.winforms --hidden-import webview.platforms.edgechromium
           --add-data "bmmonitor/static;bmmonitor/static"
-          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4
+          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4 --collect-data tzdata --collect-data icalendar --collect-submodules icalendar
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
       - name: Check exe version info
@@ -290,7 +290,7 @@ jobs:
           --name "Monitor for BrandMeister" --icon installer/icon.icns --hidden-import webview.platforms.cocoa
           --osx-bundle-identifier io.github.hannulma.monitorforbrandmeister
           --add-data "bmmonitor/static:bmmonitor/static"
-          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4
+          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4 --collect-data tzdata --collect-data icalendar --collect-submodules icalendar
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
       - name: Verify architectures and smoke test
@@ -358,7 +358,7 @@ jobs:
         run: >
           pyinstaller --noconfirm --clean --onefile --name monitor-for-brandmeister
           --add-data "bmmonitor/static:bmmonitor/static"
-          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4
+          --collect-submodules engineio --collect-submodules socketio --collect-submodules truststore --collect-submodules keyring --collect-submodules sgp4 --collect-data tzdata --collect-data icalendar --collect-submodules icalendar
           --hidden-import websocket --hidden-import certifi
           run_bmmonitor.py
       - name: Package

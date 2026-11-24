@@ -61,6 +61,9 @@ BrandMeister lähettää), `-v` (enemmän lokia).
   avausten määrä ja yhteenlaskettu puheaika. Kaiutinpainike aloittaa ryhmän **kuuntelun** (useita ryhmiä
   voi kuunnella yhtä aikaa; ryhmiä 1–90 ei voi kuunnella).
 - **Viimeisimmät puhelut:** 10, 25, 50, 100 tai 150 viimeisintä, suodatettavissa puheryhmän mukaan.
+- **Netit tänään ja huomenna:** FinDMR-kierros ([6kw.fi](https://6kw.fi/findmr/)), W0WC:n BrandMeister-nettikalenteri
+  ja omat ICS-kalenterit sekä oma lista. Ajat omassa ajassa, "käynnissä – liikennettä" kun netin puheryhmässä
+  puhutaan, kuuntelu- ja check-in-painikkeet, muistutus ennen seurattujen puheryhmien nettejä.
 
 ### APRS
 - **APRS-viestit:** kutsusi kaikkien SSID:iden saapuvat ja lähtevät APRS-viestit, myös BrandMeisterin kautta
@@ -148,7 +151,8 @@ RSS-, Atom- ja JSON Feed -syötteet (esim. BrandMeisterin uutiset, SRAL): uuden 
 radioon APRS-välilehdellä asetetuille vastaanottajille. Syötteiden tila ja viestiloki.
 
 ### Asetukset
-Seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, BrandMeister API-avain, **kieli**, **päivitykset** ja
+Seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, BrandMeister API-avain, **kieli**, **teema** (vaalea, tumma
+tai käyttöjärjestelmän mukaan), **päivitykset** ja
 **Sulje ohjelma**.
 
 - **Kieli (suomi / English)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.

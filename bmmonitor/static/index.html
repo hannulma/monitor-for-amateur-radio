@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monitor for Amateur Radio</title>
+<script>/* teema heti, ettei sivu välähdä väärän värisenä */
+try { var t = localStorage.getItem("bmm.theme") || "dark";
+  if (t === "auto") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  document.documentElement.dataset.theme = t; } catch (e) { document.documentElement.dataset.theme = "dark"; }</script>
 <link rel="icon" type="image/png" href="/static/icons/favicon-32.png">
 <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
 <script src="/static/vendor/leaflet/leaflet.js"></script>
@@ -11,6 +15,20 @@
   :root {
     --bg: #0f1419; --panel: #171e26; --line: #26313d; --text: #d9e1e8; --muted: #7d8b99;
     --accent: #4fb3ff; --live: #3ddc84; --warn: #ffb547; --bad: #ff6b6b;
+    --btn: #22303d; --btn2: #33404d; --knob: #d9e1e8; --tip: #0b0f13; --onaccent: #04121e; --strong: #ffffff;
+    --rowline: #1f2933; --overlay: rgba(15,20,25,.85); --shadow: rgba(0,0,0,.45); --bar: #3987e5;
+    --map: #0b1a26; --land: #1f2d3a; --landline: #33465a; --mapgrid: rgba(255,255,255,.06); --night: rgba(0,0,0,.38);
+    --covmap: #0c1116; --covland: #1a2632; --axis: #3a4754;
+    color-scheme: dark;
+  }
+  html[data-theme="light"] {
+    --bg: #f3f5f7; --panel: #ffffff; --line: #d6dde4; --text: #1c2630; --muted: #5b6875;
+    --accent: #0b6bb5; --live: #17803d; --warn: #9a5b00; --bad: #c0392b;
+    --btn: #e8edf2; --btn2: #c3ccd5; --knob: #ffffff; --tip: #ffffff; --onaccent: #ffffff; --strong: #0b1620;
+    --rowline: #e3e8ed; --overlay: rgba(255,255,255,.9); --shadow: rgba(20,30,40,.18); --bar: #2a73c9;
+    --map: #cfe3f2; --land: #eef1ea; --landline: #b9c4b3; --mapgrid: rgba(0,0,0,.07); --night: rgba(10,20,40,.18);
+    --covmap: #dfe9f1; --covland: #eef1ea; --axis: #b8c2cc;
+    color-scheme: light;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
   * { box-sizing: border-box; }
@@ -21,9 +39,9 @@
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); display: inline-block; }
   .dot.ok { background: var(--live); }
   .spacer { flex: 1; }
-  button { background: #22303d; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  button { background: var(--btn); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
   button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); color: #04121e; border-color: var(--accent); font-weight: 600; }
+  button.primary { background: var(--accent); color: var(--onaccent); border-color: var(--accent); font-weight: 600; }
   main { padding: 16px 18px; display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
   section.wide { grid-column: 1 / -1; }
@@ -56,7 +74,7 @@
   .tg { font-weight: 600; color: var(--accent); }
   .muted { color: var(--muted); }
   .call { font-weight: 600; }
-  .pill { font-size: 11px; padding: 1px 6px; border-radius: 10px; background: #22303d; color: var(--muted); }
+  .pill { font-size: 11px; padding: 1px 6px; border-radius: 10px; background: var(--btn); color: var(--muted); }
   .empty { padding: 18px; color: var(--muted); text-align: center; }
   .cfg { grid-column: 1 / -1; }
   .cfg > .inner { padding: 4px 14px 14px; }
@@ -70,19 +88,19 @@
   .filter { margin-left: auto; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; text-transform: none; letter-spacing: 0; }
   .listen { background: none; border: 1px solid var(--line); border-radius: 50%; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
   .listen:hover { color: var(--accent); border-color: var(--accent); }
-  .listen.on { background: var(--live); border-color: var(--live); color: #04121e; }
+  .listen.on { background: var(--live); border-color: var(--live); color: var(--onaccent); }
   .listen svg { width: 14px; height: 14px; fill: currentColor; }
-  #dock { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 2px solid var(--live); display: none; align-items: center; gap: 14px; padding: 10px 16px; z-index: 20; box-shadow: 0 -8px 24px rgba(0,0,0,.4); flex-wrap: wrap; }
+  #dock { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 2px solid var(--live); display: none; align-items: center; gap: 14px; padding: 10px 16px; z-index: 20; box-shadow: 0 -8px 24px var(--shadow); flex-wrap: wrap; }
   #dock.open { display: flex; }
   body.docked main { padding-bottom: 90px; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; background: #22303d; border: 1px solid var(--line); border-radius: 14px; padding: 3px 4px 3px 10px; font-size: 13px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--btn); border: 1px solid var(--line); border-radius: 14px; padding: 3px 4px 3px 10px; font-size: 13px; }
   .chip b { color: var(--accent); }
   .chip button { border: 0; background: none; color: var(--muted); padding: 0 6px; font-size: 15px; line-height: 1; }
   .chip button:hover { color: var(--bad); }
   #pNow { min-width: 260px; flex: 1; }
   #pNow .who { font-weight: 600; font-size: 15px; }
   #pNow.talking .who { color: var(--live); }
-  .vu { width: 140px; height: 8px; background: #22303d; border-radius: 4px; overflow: hidden; }
+  .vu { width: 140px; height: 8px; background: var(--btn); border-radius: 4px; overflow: hidden; }
   .vu div { height: 100%; width: 0; background: linear-gradient(90deg, var(--live), var(--warn) 75%, var(--bad)); transition: width 90ms linear; }
   #pVol { width: 110px; }
   a { color: var(--accent); }
@@ -98,7 +116,7 @@
   nav.tabs button:hover { color: var(--text); }
   nav.tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
   nav.tabs .badge { background: var(--bad); color: #fff; border-radius: 9px; padding: 0 6px; font-size: 11px; margin-left: 5px; }
-  .clk { cursor: pointer; text-decoration: underline dotted rgba(217,225,232,.35); text-underline-offset: 3px; }
+  .clk { cursor: pointer; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
   .clk:hover { color: var(--accent); }
   .tiles { display: flex; gap: 12px; flex-wrap: wrap; padding: 14px 14px 0; }
   .tile { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; min-width: 150px; }
@@ -106,9 +124,9 @@
   .tile .val { font-size: 22px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
   .chart { position: relative; padding: 8px 14px 4px; }
   .chart svg { display: block; width: 100%; height: 190px; }
-  .chart .tip { position: absolute; pointer-events: none; background: #0b0f13; border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-size: 12px; white-space: nowrap; display: none; z-index: 3; }
-  .hbar { position: relative; height: 8px; background: #22303d; border-radius: 4px; min-width: 80px; }
-  .hbar div { position: absolute; left: 0; top: 0; bottom: 0; background: #3987e5; border-radius: 0 4px 4px 0; }
+  .chart .tip { position: absolute; pointer-events: none; background: var(--tip); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-size: 12px; white-space: nowrap; display: none; z-index: 3; }
+  .hbar { position: relative; height: 8px; background: var(--btn); border-radius: 4px; min-width: 80px; }
+  .hbar div { position: absolute; left: 0; top: 0; bottom: 0; background: var(--bar); border-radius: 0 4px 4px 0; }
   .devcard { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 10px 14px; background: var(--bg); }
   .devcard .top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   .devcard .top .call { font-size: 16px; }
@@ -118,7 +136,7 @@
   .devcard.folded .devmore { display: none; }
   .devcard .ownsw { display: inline-flex; gap: 6px; align-items: center; margin: 0; color: var(--muted); font-size: 13px; cursor: pointer; }
   .devcard.folded .devinfo { margin-bottom: 0 !important; }
-  .tgchip { display: inline-flex; align-items: center; gap: 4px; background: #22303d; border: 1px solid var(--line); border-radius: 12px; padding: 2px 4px 2px 9px; margin: 2px 4px 2px 0; font-size: 12px; }
+  .tgchip { display: inline-flex; align-items: center; gap: 4px; background: var(--btn); border: 1px solid var(--line); border-radius: 12px; padding: 2px 4px 2px 9px; margin: 2px 4px 2px 0; font-size: 12px; }
   .tgchip.dyn { border-style: dashed; }
   .tgchip button { border: 0; background: none; color: var(--muted); padding: 0 5px; font-size: 14px; line-height: 1; }
   .tgchip button:hover { color: var(--bad); }
@@ -128,8 +146,8 @@
   .form label.switch, .switch { margin: 0 0 0 auto; }
   .switch { position: relative; display: inline-flex !important; align-items: center; gap: 8px; margin-left: auto; cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--text); }
   .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
-  .switch .sl { width: 38px; height: 22px; border-radius: 11px; background: #33404d; position: relative; transition: background .15s; }
-  .switch .sl::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #d9e1e8; transition: left .15s; }
+  .switch .sl { width: 38px; height: 22px; border-radius: 11px; background: var(--btn2); position: relative; transition: background .15s; }
+  .switch .sl::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--knob); box-shadow: 0 1px 2px var(--shadow); transition: left .15s; }
   .switch input:checked + .sl { background: var(--live); }
   .switch input:checked + .sl::after { left: 19px; }
   .switch input:focus-visible + .sl { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -144,7 +162,7 @@
   .svcstatus { font-size: 12px; color: var(--muted); padding: 8px 14px; border-top: 1px solid var(--line); }
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: flex-start; justify-content: center; z-index: 50; padding: 60px 16px; overflow: auto; }
   .modal-bg.open { display: flex; }
-  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(720px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(720px, 100%); box-shadow: 0 20px 60px var(--shadow); }
   .modal .mh { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
   .modal .mh h2 { margin: 0; font-size: 20px; }
   .modal .mb { padding: 6px 16px 16px; }
@@ -158,7 +176,7 @@
   .fbprivacy { font-size: 12px; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; line-height: 1.5; }
   .fbprivacy b { color: var(--text); }
   .toasts { position: fixed; right: 16px; top: 100px; display: flex; flex-direction: column; gap: 8px; z-index: 60; }
-  .toast { background: #0b0f13; border: 1px solid var(--live); border-left: 4px solid var(--live); border-radius: 8px; padding: 10px 14px; min-width: 260px; box-shadow: 0 8px 24px rgba(0,0,0,.5); cursor: pointer; }
+  .toast { background: var(--tip); border: 1px solid var(--live); border-left: 4px solid var(--live); border-radius: 8px; padding: 10px 14px; min-width: 260px; box-shadow: 0 8px 24px var(--shadow); cursor: pointer; }
   .toast.bad { border-color: var(--bad); }
   .msgp label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
   .msgp input[type=text], .msgp input[type=number], .msgp input[type=password] { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; }
@@ -182,14 +200,25 @@
   .svc .hint { margin-top: 8px; }
   .hdrlink { margin-left: auto; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--accent); text-decoration: none; }
   .hdrlink:hover { text-decoration: underline; }
+  .netrow td { vertical-align: top; }
+  .netrow.past td { opacity: .5; }
+  .netrow.now td { background: rgba(61,220,132,.09); }
+  .netrow.mine .nname { font-weight: 600; }
+  .netday td { background: var(--bg); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding-top: 8px; }
+  .netcfg { border-top: 1px solid var(--line); padding: 10px 14px; }
+  .netcfg summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .netsrc, .netown { display: grid; gap: 6px; align-items: center; margin: 4px 0; }
+  .netsrc { grid-template-columns: 22px minmax(120px, 1fr) minmax(200px, 2.4fr) auto; }
+  .netown { grid-template-columns: minmax(120px, 1.6fr) 80px 120px 80px 70px auto; }
   .covwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 12px 14px; }
   @media (max-width: 980px) { .covwrap { grid-template-columns: 1fr; } }
-  #covMap { height: 540px; border-radius: 8px; background: #0c1116; border: 1px solid var(--line); }
-  #covMap .leaflet-control-attribution { background: rgba(15,20,25,.8); color: var(--muted); }
+  #covMap { height: 540px; border-radius: 8px; background: var(--covmap); border: 1px solid var(--line); }
+  #covMap .leaflet-control-attribution { background: var(--overlay); color: var(--muted); }
   #covMap .leaflet-control-attribution a { color: var(--accent); }
   #covMap .leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
+  html[data-theme="light"] .darktiles { filter: saturate(.85); }
   .darktiles { filter: invert(1) hue-rotate(180deg) brightness(.95) contrast(.9) saturate(.6); }
-  .leaflet-tooltip.covlbl { background: rgba(15,20,25,.85); color: var(--text); border: 1px solid var(--line); box-shadow: none; font-size: 11px; padding: 1px 5px; }
+  .leaflet-tooltip.covlbl { background: var(--overlay); color: var(--text); border: 1px solid var(--line); box-shadow: none; font-size: 11px; padding: 1px 5px; }
   .leaflet-tooltip.covlbl::before { display: none; }
   .leaflet-tooltip.covtip { background: var(--panel); color: var(--text); border: 1px solid var(--line); font-size: 12px; }
   .covside h3 { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 6px; }
@@ -207,18 +236,18 @@
   @media (max-width: 980px) { .satwrap { grid-template-columns: 1fr; } }
   .satmapbox { position: relative; }
   #satCanvas { width: 100%; display: block; border-radius: 8px; cursor: grab; touch-action: none; }
-  .satctl { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; align-items: center; background: rgba(15,20,25,.8);
+  .satctl { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; align-items: center; background: var(--overlay);
             border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; }
   .satctl button { min-width: 28px; padding: 2px 6px; font-size: 15px; line-height: 1.2; }
   .satctl label { margin: 0 0 0 6px; display: inline-flex; gap: 5px; align-items: center; color: var(--text); font-size: 12px; cursor: pointer; }
   .satctl #satZoom { font-size: 12px; min-width: 0; }
-  .satnote { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(15,20,25,.85);
+  .satnote { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: var(--overlay);
              border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; color: var(--text); text-align: center; max-width: 80%; }
   .satnote:empty { display: none; }
   #skySvg { width: 100%; max-width: 300px; display: block; margin: 0 auto; }
   #satInfo { font-size: 13px; margin-top: 6px; }
   #skySvg .skyl { fill: var(--muted); font-size: 11px; text-anchor: middle; }
-  #skySvg .skyd { fill: #4a5a6a; font-size: 9px; }
+  #skySvg .skyd { fill: var(--muted); font-size: 9px; }
   #satInfo .kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin-top: 6px; }
   #satInfo .kv span:nth-child(odd) { color: var(--muted); }
   .sattab td { padding: 5px 8px; white-space: nowrap; }
@@ -250,9 +279,9 @@
   @media (max-width: 1250px) { .cigrid { grid-template-columns: minmax(0, 1fr); } }
   .citool { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); }
   .citool input { width: 150px; background: var(--bg); color: var(--text); border: 1px solid var(--accent); border-radius: 6px; padding: 7px 9px; font: 14px ui-monospace, Menlo, Consolas, monospace; text-transform: uppercase; }
-  .cirow { display: grid; grid-template-columns: 34px 92px minmax(0, 1.4fr) minmax(0, 1.3fr) minmax(0, .9fr) 44px 128px; gap: 0 10px; align-items: center; padding: 4px 14px; min-height: 46px; border-top: 1px solid #1f2933; }
+  .cirow { display: grid; grid-template-columns: 34px 92px minmax(0, 1.4fr) minmax(0, 1.3fr) minmax(0, .9fr) 44px 128px; gap: 0 10px; align-items: center; padding: 4px 14px; min-height: 46px; border-top: 1px solid var(--rowline); }
   .cirow.head { min-height: 0; padding: 7px 14px; color: var(--muted); font-size: 11px; border-top: 0; border-bottom: 1px solid var(--line); }
-  .cirow .ccall { font: 700 17px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .5px; color: #fff; cursor: pointer; }
+  .cirow .ccall { font: 700 17px ui-monospace, Menlo, Consolas, monospace; letter-spacing: .5px; color: var(--strong); cursor: pointer; }
   .cirow .cname { color: var(--muted); margin-left: 8px; }
   .cirow .cvia, .cirow .ckunta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cirow.live { background: rgba(61,220,132,.10); box-shadow: inset 3px 0 0 var(--live); }
@@ -260,11 +289,11 @@
   .cirow.done:not(.match) { opacity: .6; }
   .cirow.done .ccall { color: var(--muted); }
   .cibadge { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-right: 3px; }
-  .cibadge.air { background: var(--live); color: #04121e; }
+  .cibadge.air { background: var(--live); color: var(--onaccent); }
   .cibadge.ovl { border: 1px solid var(--warn); color: var(--warn); }
   .cibadge.new { border: 1px solid var(--accent); color: var(--accent); }
   .cibtn { min-height: 36px; width: 100%; font-weight: 600; }
-  .cibtn.log { background: var(--accent); color: #04121e; border-color: var(--accent); }
+  .cibtn.log { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
   .cibtn.logged { background: rgba(61,220,132,.12); color: var(--live); border-color: rgba(61,220,132,.45); }
   .cilist { max-height: 62vh; overflow-y: auto; }
   .cifoot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); }
@@ -286,7 +315,7 @@
   #ciLog input { width: 100%; min-width: 70px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; font: inherit; }
   #ciLog td { padding: 4px 5px; }
   .updpill { background: rgba(61,220,132,.15); color: var(--live); border: 1px solid rgba(61,220,132,.4); }
-  .prog { height: 6px; background: #22303d; border-radius: 3px; overflow: hidden; max-width: 320px; margin-top: 6px; }
+  .prog { height: 6px; background: var(--btn); border-radius: 3px; overflow: hidden; max-width: 320px; margin-top: 6px; }
   .prog div { height: 100%; background: var(--live); transition: width .3s; }
   .note { background: rgba(79,179,255,.08); border: 1px solid rgba(79,179,255,.25); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 13px; line-height: 1.5; margin-bottom: 6px; }
   @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
@@ -420,6 +449,11 @@
       <b style="min-width:90px">Palaute</b>
       <button class="primary" id="btnFb">Lähetä palaute / lokit</button>
       <span class="hint" style="margin:0">Lähettää viestisi ja ohjelman lokin ylläpidolle vian selvittämistä varten.</span>
+    </div>
+    <div class="frow" style="margin:10px 0 4px">
+      <div class="fld"><label for="themeSel">Teema</label>
+        <select id="themeSel"><option value="auto">Automaattinen (käyttöjärjestelmän mukaan)</option><option value="light">Vaalea</option><option value="dark">Tumma</option></select>
+        <div class="hint">Automaattinen vaihtuu, kun käyttöjärjestelmän teema vaihtuu.</div></div>
     </div>
     <div class="frow" id="uiRow" style="display:none;margin:10px 0 4px">
       <div class="fld"><label for="uiSel">Käyttöliittymä</label>
@@ -641,6 +675,34 @@
       <div class="note" id="callSkipNote" style="display:none; margin:8px"></div>
       <div class="empty" id="callEmpty">Ei puheluita.</div>
     </div>
+  </section>
+  <section class="wide" data-tab="seuranta" data-fold="bm-nets">
+    <h2>Netit tänään ja huomenna <span class="count" id="netCount"></span>
+      <select class="filter" id="netFilter" title="Näytettävät netit">
+        <option value="all">Kaikki netit</option><option value="watched">Vain seuratut puheryhmät</option></select>
+      <label class="switch" title="Netit käytössä"><input type="checkbox" id="netEnabled"><span class="sl"></span><span class="swtxt" id="netEnabledTxt">Pois</span></label></h2>
+    <div class="scroll" style="max-height:420px">
+      <table><thead><tr><th>Aika</th><th>Netti</th><th>TG</th><th>Lähde</th><th>Tila</th><th></th></tr></thead><tbody id="netBody"></tbody></table>
+      <div class="empty" id="netEmpty">Ei nettejä tänään tai huomenna.</div>
+    </div>
+    <details class="netcfg form" id="netCfg">
+      <summary>Kalenterit, omat netit ja muistutus</summary>
+      <h3>Kalenterit (ICS)</h3>
+      <div id="netSrcRows"></div>
+      <button id="btnNetAddSrc">+ Lisää kalenteri</button>
+      <div class="hint">Esim. kerhon Google-kalenterin julkinen iCal-osoite. Puheryhmä luetaan tapahtuman tekstistä (esim. "TG 244" tai "(31424)").</div>
+      <h3>Omat netit</h3>
+      <div class="netown netownhead hint" style="margin:0"><span>Nimi</span><span>TG</span><span>Päivä</span><span>Klo</span><span>Min</span><span></span></div>
+      <div id="netOwnRows"></div>
+      <button id="btnNetAddOwn">+ Lisää netti</button>
+      <h3>Muistutus</h3>
+      <div class="frow">
+        <div class="fld checks"><label><input type="checkbox" id="netRemind"> Muistuta ennen nettiä seuratuissa puheryhmissä</label></div>
+        <div class="fld"><label for="netRemindMin">Minuuttia ennen</label><input type="number" id="netRemindMin" min="1" max="180" style="width:90px"></div>
+      </div>
+      <div class="frow svcsave"><button class="primary" id="btnNetSave">Tallenna</button><button id="btnNetRefresh">Päivitä kalenterit nyt</button><span class="err" id="netErr"></span></div>
+      <div class="hint" id="netSrcStatus"></div>
+    </details>
   </section>
 
   <!-- ============ KAVERIT ============ -->
@@ -1038,6 +1100,28 @@ function listen(tg) { if (tg == null) player.stop(); else player.toggle(tg); }
 let S = null;          // viimeisin tila palvelimelta
 let offset = 0;        // palvelimen ja selaimen kellon ero
 const $ = id => document.getElementById(id);
+const col = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+// ---------------- teema ----------------
+const themeMQ = window.matchMedia("(prefers-color-scheme: dark)");
+let THEME = "dark";
+function isLight() { return document.documentElement.dataset.theme === "light"; }
+function applyTheme(t) {
+  THEME = ["auto", "light", "dark"].includes(t) ? t : "dark";
+  const eff = THEME === "auto" ? (themeMQ.matches ? "dark" : "light") : THEME;
+  try { localStorage.setItem("bmm.theme", THEME); } catch (e) { /* ei tallennusta */ }
+  if (document.documentElement.dataset.theme === eff) return;
+  document.documentElement.dataset.theme = eff;
+  try { window.pywebview && window.pywebview.api && window.pywebview.api.set_theme(eff); } catch (e) { /* */ }
+  setTimeout(themeChanged, 0);
+}
+function themeChanged() {   // canvas- ja SVG-piirrokset lukevat värit muuttujista: piirretään uudelleen
+  if (typeof TAB === "undefined") return;
+  if (TAB === "satelliitit") { try { drawSatMap(); drawSky(); } catch (e) { /* */ } }
+  if (TAB === "tilastot" && typeof STATS !== "undefined" && STATS) { try { drawColumns(STATS); } catch (e) { /* */ } }
+  if (typeof covLand !== "undefined" && covLand) covLand.setStyle({fillColor: col("--covland")});
+  if (TAB === "aprs" && typeof covMap !== "undefined" && covMap) { renderCov(); covLoadCells(); }
+}
+themeMQ.addEventListener("change", () => { if (THEME === "auto") applyTheme("auto"); });
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const now = () => Date.now() / 1000 + offset;
 
@@ -1200,7 +1284,7 @@ function fillSettings() {
   $("dataFilter").value = S.config.data_filter;
   $("minDur").value = S.config.min_duration;
   $("logCsv").checked = !!S.config.log_csv;
-  $("verInfo").textContent = ""; aboutLine(); fillUi();
+  $("verInfo").textContent = ""; aboutLine(); fillUi(); $("themeSel").value = S.config.theme || "dark";
   $("langSel").value = LANG; $("unitSel").value = S.config.units || "metric"; $("updAuto").checked = S.config.update_check !== false;
   $("keyState").textContent = S.config.bm_api_key ? "Avain tallennettu" : "Ei avainta";
   $("apiKey").value = ""; $("myCall").value = S.config.devices.my_call || "";
@@ -1509,7 +1593,7 @@ function connect() {
     offset = S.now - Date.now() / 1000;
     if (bootVersion && S.version !== bootVersion) { location.reload(); return; }   // päivitetty versio -> uusi sivu
     bootVersion = bootVersion || S.version;
-    if (firstSnapshot) { firstSnapshot = false; initLang(); seenAlerts = lastNotified = maxAlertSeq(); showTab(TAB); }
+    if (firstSnapshot) { firstSnapshot = false; applyTheme(S.config.theme); initLang(); seenAlerts = lastNotified = maxAlertSeq(); showTab(TAB); }
     handleAlerts();
     render();
   };
@@ -1531,6 +1615,7 @@ function showTab(tab) {
   if (tab === "asetukset") fillSettings();
   if (tab === "viestit" || tab === "aprs") fillMsg();
   if (tab === "aprs") { fillRx(); covShow(); }
+  if (tab === "seuranta") netsShow();
   if (tab === "kaverit") { fillWatch(); seenAlerts = maxAlertSeq(); updateAlertBadge(); }
   if (tab === "laitteet") fillDevices();
   if (tab === "tilastot") loadStats();
@@ -1654,6 +1739,7 @@ $("unitSel").onchange = async e => {
   unitLabels(); render(); showTab(TAB);
 };
 $("updAuto").onchange = e => saveCfg({update_check: e.target.checked});
+$("themeSel").onchange = async e => { applyTheme(e.target.value); const j = await saveCfg({theme: e.target.value}); if (j.ok) S.config = j.config; };
 $("uiSel").onchange = async e => { const j = await saveCfg({ui: e.target.value}); if (j.ok) S.config = j.config; fillUi(); };
 $("btnOpenBrowser").onclick = () => { const d = desk(); if (d) d.open_url(location.origin + "/"); };
 $("btnUpdCheck").onclick = async () => { $("btnUpdCheck").disabled = true; await api("/api/update/check", {}); $("btnUpdCheck").disabled = false; };
@@ -1974,16 +2060,16 @@ function drawColumns(j) {
   const y = v => T + (H - T - B) * (1 - v / maxV);
   let g = "";
   for (let i = 0; i <= 4; i++) { const v = maxV * i / 4, yy = y(v);
-    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="#26313d" stroke-width="1"/><text x="${L - 6}" y="${yy + 4}" text-anchor="end" fill="#7d8b99" font-size="11">${Math.round(v)}</text>`; }
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${col("--line")}" stroke-width="1"/><text x="${L - 6}" y="${yy + 4}" text-anchor="end" fill="${col("--muted")}" font-size="11">${Math.round(v)}</text>`; }
   const every = n > 30 ? Math.ceil(n / 12) : (n > 12 ? 3 : 1);
   bins.forEach((b, i) => {
     const x = L + i * band + (band - bw) / 2, h = Math.max(0, y(0) - y(b.calls)), r = Math.min(4, bw / 2, h);
-    if (b.calls > 0) g += `<path d="M${x},${y(0)} V${y(0) - h + r} Q${x},${y(0) - h} ${x + r},${y(0) - h} H${x + bw - r} Q${x + bw},${y(0) - h} ${x + bw},${y(0) - h + r} V${y(0)} Z" fill="#3987e5"/>`;
+    if (b.calls > 0) g += `<path d="M${x},${y(0)} V${y(0) - h + r} Q${x},${y(0) - h} ${x + r},${y(0) - h} H${x + bw - r} Q${x + bw},${y(0) - h} ${x + bw},${y(0) - h + r} V${y(0)} Z" fill="${col("--bar")}"/>`;
     g += `<rect x="${L + i * band}" y="${T}" width="${band}" height="${H - T - B}" fill="transparent" data-i="${i}"/>`;
     if (i % every === 0) { const d = new Date(b.t * 1000);
-      g += `<text x="${L + i * band + band / 2}" y="${H - 6}" text-anchor="middle" fill="#7d8b99" font-size="11">${j.bucket === 3600 ? String(d.getHours()).padStart(2, "0") : d.getDate() + "." + (d.getMonth() + 1) + "."}</text>`; }
+      g += `<text x="${L + i * band + band / 2}" y="${H - 6}" text-anchor="middle" fill="${col("--muted")}" font-size="11">${j.bucket === 3600 ? String(d.getHours()).padStart(2, "0") : d.getDate() + "." + (d.getMonth() + 1) + "."}</text>`; }
   });
-  g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="#3a4754" stroke-width="1"/>`;
+  g += `<line x1="${L}" x2="${W - R}" y1="${y(0)}" y2="${y(0)}" stroke="${col("--axis")}" stroke-width="1"/>`;
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = g;
 }
 $("sSvg").addEventListener("mousemove", e => {
@@ -2349,10 +2435,10 @@ function drawSatMap() {
   const css = getComputedStyle(document.body), col = n => css.getPropertyValue(n).trim();
   const X2 = (lon, off) => W / 2 + (lon + off - satView.cx) * k;
   const offs = [-360, 0, 360].filter(o => X2(180, o) >= 0 && X2(-180, o) <= W);   // näkyvät maailmankopiot
-  g.fillStyle = "#0b1a26"; g.fillRect(0, 0, W, H);
+  g.fillStyle = col("--map"); g.fillRect(0, 0, W, H);
   // ruudukko
   const step = satView.z >= 4 ? 10 : 30;
-  g.strokeStyle = "rgba(255,255,255,.06)"; g.lineWidth = 1; g.beginPath();
+  g.strokeStyle = col("--mapgrid"); g.lineWidth = 1; g.beginPath();
   for (const o of offs) for (let lo = -180; lo < 180; lo += step) { g.moveTo(X2(lo, o), 0); g.lineTo(X2(lo, o), H); }
   for (let la = -90 + step; la < 90; la += step) { g.moveTo(0, Y(la)); g.lineTo(W, Y(la)); }
   g.stroke();
@@ -2360,9 +2446,9 @@ function drawSatMap() {
     if (!satPaths) satPathsBuild();
     for (const o of offs) {
       g.save(); g.setTransform(dpr * k, 0, 0, -dpr * k, dpr * X2(0, o), dpr * Y(0));
-      g.fillStyle = "#1f2d3a"; g.fill(satPaths.land);
-      g.strokeStyle = "#33465a"; g.lineWidth = .6 / k; g.stroke(satPaths.land);
-      g.strokeStyle = "rgba(125,139,153,.35)"; g.lineWidth = .5 / k; g.stroke(satPaths.bor);
+      g.fillStyle = col("--land"); g.fill(satPaths.land);
+      g.strokeStyle = col("--landline"); g.lineWidth = .6 / k; g.stroke(satPaths.land);
+      g.strokeStyle = col("--axis"); g.lineWidth = .5 / k; g.stroke(satPaths.bor);
       g.restore();
     }
   }
@@ -2377,7 +2463,7 @@ function drawSatMap() {
     cb(); } };
   // yö
   { const [dec0, slon] = D.sun, dc = Math.abs(dec0) < .1 ? .1 : dec0, rad = Math.PI / 180;
-    g.fillStyle = "rgba(0,0,0,.38)";
+    g.fillStyle = col("--night");
     for (const o of offs) { g.beginPath();
       for (let lo = -180; lo <= 180; lo += 2) { const la = Math.atan(-Math.cos((lo - slon) * rad) / Math.tan(dc * rad)) / rad; (lo === -180 ? g.moveTo : g.lineTo).call(g, X2(lo, o), Y(la)); }
       if (dc > 0) { g.lineTo(X2(180, o), Y(-90)); g.lineTo(X2(-180, o), Y(-90)); } else { g.lineTo(X2(180, o), Y(90)); g.lineTo(X2(-180, o), Y(90)); }
@@ -2406,7 +2492,7 @@ function drawSatMap() {
     g.fillStyle = c; g.strokeStyle = "#fff"; g.lineWidth = sel ? 2.5 : 1.5; g.beginPath(); g.arc(px, py, sel ? 7 : 5.5, 0, 7); g.fill(); g.stroke();
     const win = satWindow(x), txt = win ? `${x.name} · ${win}` : x.name, tw = g.measureText(txt).width + 12;
     let tx = px + 10, ty = py - 14; if (tx + tw > W - 2) tx = px - 10 - tw; if (ty < 10) ty = py + 14;
-    g.fillStyle = "rgba(15,20,25,.88)"; g.strokeStyle = c; g.lineWidth = 1;
+    g.fillStyle = col("--overlay"); g.strokeStyle = c; g.lineWidth = 1;
     g.beginPath(); g.roundRect ? g.roundRect(tx, ty - 10, tw, 20, 5) : g.rect(tx, ty - 10, tw, 20); g.fill(); g.stroke();
     g.fillStyle = x.pass && x.pass.aos <= D.time ? col("--live") : col("--text"); g.fillText(txt, tx + 6, ty + 1);
     satHit.push({norad: x.norad, x: px, y: py, box: [tx, ty - 10, tw, 20]});
@@ -2472,8 +2558,8 @@ function drawSky() {
   const i = SD.sats.indexOf(x), c = satColor(i), p = x.pass;
   const R = el => (90 - el) / 90 * 100, P = (az, el) => [R(el) * Math.sin(az * Math.PI / 180), -R(el) * Math.cos(az * Math.PI / 180)];
   const DIR = LANG === "fi" ? ["P", "I", "E", "L"] : ["N", "E", "S", "W"];
-  let h = `<circle r="100" fill="#0b1a26" stroke="#33465a"/><circle r="66.7" fill="none" stroke="#26313d"/><circle r="33.3" fill="none" stroke="#26313d"/>
-    <line x1="-100" y1="0" x2="100" y2="0" stroke="#26313d"/><line x1="0" y1="-100" x2="0" y2="100" stroke="#26313d"/>
+  let h = `<circle r="100" fill="${col("--map")}" stroke="${col("--landline")}"/><circle r="66.7" fill="none" stroke="${col("--line")}"/><circle r="33.3" fill="none" stroke="${col("--line")}"/>
+    <line x1="-100" y1="0" x2="100" y2="0" stroke="${col("--line")}"/><line x1="0" y1="-100" x2="0" y2="100" stroke="${col("--line")}"/>
     <text x="0" y="-105" class="skyl">${DIR[0]}</text><text x="109" y="4" class="skyl">${DIR[1]}</text><text x="0" y="114" class="skyl">${DIR[2]}</text><text x="-109" y="4" class="skyl">${DIR[3]}</text>
     <text x="3" y="-62" class="skyd">30°</text><text x="3" y="-29" class="skyd">60°</text>`;
   if (p && p.path && p.path.length) {
@@ -2502,9 +2588,125 @@ function drawSky() {
 // ---------------------------------------------------------------------------
 // Tietoja-rivi ja palaute ylläpidolle
 // ---------------------------------------------------------------------------
+// ---------------- päivän netit ----------------
+let NETS = null, netTimer = null, netFilled = false;
+const WEEKDAYS = ["Ma", "Ti", "Ke", "To", "Pe", "La", "Su", "Joka päivä"];
+try { $("netFilter").value = localStorage.getItem("bmm.netFilter") || "all"; } catch (e) { /* */ }
+function netsShow() {
+  if (!netFilled) { fillNets(); netFilled = true; }
+  netsLoad(); clearInterval(netTimer);
+  let tick = 0;   // tila (käynnissä / liikennettä) päivittyy 15 s välein, lista haetaan 2 min välein
+  netTimer = setInterval(() => { if (TAB !== "seuranta") return; if (++tick % 8 === 0) netsLoad(); else renderNets(); }, 15000);
+}
+async function netsLoad(refresh) {
+  try { NETS = await (await fetch("/api/nets" + (refresh ? "?refresh=1" : ""))).json(); } catch (e) { return; }
+  renderNets();
+}
+function tgWatched(tg) {   // sama tulkinta kuin seurannassa: 244* = 244-alkuiset, 244? = yksi numero perään
+  if (tg == null) return false;
+  return (S.config.talkgroups || []).some(p => new RegExp("^" + String(p).replace(/[^0-9*?]/g, "").replace(/\*/g, "\\d*").replace(/\?/g, "\\d") + "$").test(String(tg)));
+}
+function tgActive(tg) { return tg != null && (S.talkgroups || []).some(r => r.tg === tg && r.active); }
+function renderNets() {
+  if (!NETS || !S) return;
+  const t = now(), only = $("netFilter").value === "watched";
+  // päättyneet näkyvät vielä tunnin, ettei lista täyty yön aikana pidetyistä neteistä
+  const list = NETS.nets.filter(n => (!only || tgWatched(n.tg)) && n.end > t - 3600);
+  $("netCount").textContent = list.length ? `(${list.length})` : "";
+  $("netEmpty").style.display = list.length ? "none" : "";
+  $("netEmpty").textContent = T(S.config.nets && !S.config.nets.enabled ? "Netit eivät ole käytössä." : "Ei nettejä tänään tai huomenna.");
+  let day = "", h = "";
+  const today = new Date().toDateString();
+  list.forEach(n => {
+    const d = new Date(n.start * 1000), ds = d.toDateString();
+    if (ds !== day) { day = ds; h += `<tr class="netday"><td colspan="6">${esc(ds === today ? T("Tänään") : T("Huomenna"))} · ${esc(d.toLocaleDateString(LOC(), {weekday: "long", day: "numeric", month: "numeric"}))}</td></tr>`; }
+    const running = t >= n.start && t < n.end, past = t >= n.end, act = tgActive(n.tg);
+    const hm = x => new Date(x * 1000).toLocaleTimeString(LOC(), {hour: "2-digit", minute: "2-digit"});
+    const st = running ? (act ? `<span class="st-ok">● ${esc(T("käynnissä – liikennettä"))}</span>` : `<span class="st-ok">${esc(T("käynnissä"))}</span>`)
+      : past ? `<span class="muted">${esc(T("päättynyt"))}</span>` : `<span class="muted">${esc(T("alkaa {a}", {a: inTime(n.start - t)}))}</span>`;
+    const info = [n.where, n.info].filter(x => x && !/^\s*\d+\s*$/.test(x) && !/^\s*\d*\s*https?:\/\/\S+\s*$/.test(x) && !(n.tg != null && x.trim() === `TG ${n.tg}`)).join(" · ");
+    h += `<tr class="netrow${running ? " now" : ""}${past ? " past" : ""}${tgWatched(n.tg) ? " mine" : ""}">
+      <td style="white-space:nowrap">${esc(hm(n.start))}–${esc(hm(n.end))}</td>
+      <td class="wrap"><span class="nname">${esc(n.name)}</span>${info ? `<div class="muted" style="font-size:12px">${esc(info.slice(0, 160))}</div>` : ""}</td>
+      <td>${n.tg != null ? `<span class="tg">${n.tg}</span>` : ""}</td><td class="muted">${esc(n.source)}</td><td>${st}</td>
+      <td style="white-space:nowrap">${n.tg != null && n.tg > 90 ? `<button class="netlisten" data-tg="${n.tg}" title="${esc(T("Kuuntele"))}">▶</button> <button class="netci" data-tg="${n.tg}" title="${esc(T("Aloita check-in-kierros tässä puheryhmässä"))}">${esc(T("Check-in"))}</button>` : ""}</td></tr>`;
+  });
+  $("netBody").innerHTML = h;
+  $("netSrcStatus").innerHTML = (NETS.sources || []).map(x => `${esc(x.name)}: ${!x.enabled ? esc(T("pois käytöstä"))
+    : x.error ? `<span class="err">${esc(x.error)}</span>` : x.fetched ? esc(T("{n} tapahtumaa, haettu {a}", {n: x.events || 0, a: ago(x.fetched)})) : esc(T("ei vielä haettu"))}`).join("<br>");
+}
+function inTime(sec) {
+  sec = Math.max(0, Math.round(sec));
+  if (sec < 3600) return T("{n} min päästä", {n: Math.ceil(sec / 60)});
+  return T("{h} h {m} min päästä", {h: Math.floor(sec / 3600), m: Math.floor((sec % 3600) / 60)});
+}
+$("netBody").addEventListener("click", e => {
+  const l = e.target.closest(".netlisten"); if (l) { listen(Number(l.dataset.tg)); return; }
+  const c = e.target.closest(".netci"); if (c) ciUseTg(Number(c.dataset.tg));
+});
+function ciUseTg(tg) {
+  showTab("checkin");
+  if (S.checkin && S.checkin.active) return;            // käynnissä olevaa kierrosta ei vaihdeta
+  const sel = $("ciTg");
+  if ([...sel.options].some(o => o.value === String(tg))) { sel.value = String(tg); $("ciTgOther").style.display = "none"; }
+  else { sel.value = "other"; $("ciTgOther").style.display = ""; $("ciTgOther").value = String(tg); }
+}
+$("netFilter").onchange = () => { try { localStorage.setItem("bmm.netFilter", $("netFilter").value); } catch (e) { /* */ } renderNets(); };
+function netSrcRow(x) {
+  const d = document.createElement("div"); d.className = "netsrc";
+  d.innerHTML = `<input type="checkbox" class="nsen" ${x.enabled !== false ? "checked" : ""} title="${esc(T("Käytössä"))}">
+    <input type="text" class="nsname" placeholder="${esc(T("Nimi"))}" value="${esc(x.name || "")}">
+    <input type="text" class="nsurl" placeholder="https://…/calendar.ics" value="${esc(x.url || "")}">
+    <button class="nsdel">${esc(T("Poista"))}</button>`;
+  d.querySelector(".nsdel").onclick = () => d.remove();
+  return d;
+}
+function netOwnRow(x) {
+  const d = document.createElement("div"); d.className = "netown";
+  d.innerHTML = `<input type="text" class="noname" placeholder="${esc(T("Nimi"))}" value="${esc(x.name || "")}">
+    <input type="text" class="notg" placeholder="TG" value="${esc(x.tg ?? "")}">
+    <select class="noday">${WEEKDAYS.map((w, i) => `<option value="${i}"${(x.day ?? 6) === i ? " selected" : ""}>${esc(T(w))}</option>`).join("")}</select>
+    <input type="text" class="notime" placeholder="19:00" value="${esc(x.time || "")}">
+    <input type="number" class="nomin" min="5" max="600" value="${esc(x.minutes || 60)}">
+    <button class="nodel">${esc(T("Poista"))}</button>`;
+  d.querySelector(".nodel").onclick = () => d.remove();
+  return d;
+}
+function fillNets() {
+  const c = S.config.nets || {};
+  $("netEnabled").checked = !!c.enabled; $("netEnabledTxt").textContent = T(c.enabled ? "Päällä" : "Pois");
+  $("netSrcRows").innerHTML = ""; (c.sources || []).forEach(x => $("netSrcRows").append(netSrcRow(x)));
+  $("netOwnRows").innerHTML = ""; (c.own || []).forEach(x => $("netOwnRows").append(netOwnRow(x)));
+  $("netRemind").checked = !!c.remind; $("netRemindMin").value = c.remind_min || 15;
+}
+function collectNets() {
+  return {nets: {enabled: $("netEnabled").checked, remind: $("netRemind").checked, remind_min: $("netRemindMin").value,
+    sources: [...document.querySelectorAll("#netSrcRows .netsrc")].map(d => ({enabled: d.querySelector(".nsen").checked,
+      name: d.querySelector(".nsname").value, url: d.querySelector(".nsurl").value})),
+    own: [...document.querySelectorAll("#netOwnRows .netown")].map(d => ({name: d.querySelector(".noname").value,
+      tg: d.querySelector(".notg").value, day: d.querySelector(".noday").value, time: d.querySelector(".notime").value,
+      minutes: d.querySelector(".nomin").value}))}};
+}
+async function saveNets() {
+  $("netErr").textContent = "";
+  let j; try { j = await saveCfg(collectNets()); } catch (e) { $("netErr").textContent = String(e); return false; }
+  if (!j.ok) { $("netErr").textContent = j.error; $("netCfg").open = true; return false; }
+  S.config = j.config; fillNets(); $("netErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+  setTimeout(() => netsLoad(), 2500);
+  return true;
+}
+$("btnNetSave").onclick = saveNets;
+$("btnNetAddSrc").onclick = () => $("netSrcRows").append(netSrcRow({enabled: true}));
+$("btnNetAddOwn").onclick = () => $("netOwnRows").append(netOwnRow({}));
+$("btnNetRefresh").onclick = async () => { $("btnNetRefresh").disabled = true; await netsLoad(true); $("btnNetRefresh").disabled = false; };
+$("netEnabled").onchange = async () => { $("netEnabledTxt").textContent = T($("netEnabled").checked ? "Päällä" : "Pois"); if (!await saveNets()) $("netEnabled").checked = !$("netEnabled").checked; };
+
 // ---------------- APRS-kuuluvuus (Graywolf KISS) ----------------
 let covMap = null, covTiles = null, covCells = null, covMarks = null, covVia = null, covRes = 0, covTimer = null, covSum = null;
-const COV_COLORS = ["#16405a", "#1f5f86", "#2c82b6", "#4fb3ff", "#b3e0ff"];   // vähän → paljon (yksi sävy)
+const COV_DARK = ["#16405a", "#1f5f86", "#2c82b6", "#4fb3ff", "#b3e0ff"];    // vähän → paljon (yksi sävy, tumma pohja)
+const COV_LIGHT = ["#c6e0f4", "#8fc2ea", "#4f9cd9", "#1f6fb5", "#0b3f75"];   // vaalea pohja: vähän = vaalea
+const covColors = () => isLight() ? COV_LIGHT : COV_DARK;
+let covLand = null;
 function covHome() { const l = S.config.services && S.config.services.location; return l && l.lat != null ? [l.lat, l.lon] : null; }
 function covResFor(z) { return z >= 12 ? 1 : z >= 11 ? 2 : z >= 10 ? 3 : z >= 9 ? 5 : z >= 8 ? 8 : z >= 7 ? 15 : z >= 6 ? 30 : 60; }
 async function covInit() {
@@ -2514,7 +2716,7 @@ async function covInit() {
     const w = await (await fetch("/static/world.json")).json();
     const polys = w.land.map(r => { const ll = []; for (let i = 0; i + 1 < r.length; i += 2) ll.push([r[i + 1], r[i]]); return ll; });
     covMap.createPane("basePane").style.zIndex = 150;     // karttatiilten (200) alle: näkyy vain, jos tiilet puuttuvat
-    L.polygon(polys, {pane: "basePane", stroke: false, fillColor: "#1a2632", fillOpacity: 1, interactive: false}).addTo(covMap);
+    covLand = L.polygon(polys, {pane: "basePane", stroke: false, fillColor: col("--covland"), fillOpacity: 1, interactive: false}).addTo(covMap);
   } catch (e) { /* ei pohjakarttaa */ }
   covSetTiles();
   covCells = L.layerGroup().addTo(covMap); covMarks = L.layerGroup().addTo(covMap);
@@ -2545,10 +2747,10 @@ async function covLoadCells() {
   const max = Math.max(1, ...j.cells.map(c => c[2]));
   j.cells.forEach(([la, lo, n, st, d]) => {
     const k = Math.min(4, Math.floor(Math.log(n) / Math.log(max + 1e-9) * 4.999));
-    L.rectangle([[la, lo], [la + j.dlat, lo + j.dlon]], {stroke: true, weight: 1, color: "#0f1419", fillColor: COV_COLORS[Math.max(0, k)], fillOpacity: .62})
+    L.rectangle([[la, lo], [la + j.dlat, lo + j.dlon]], {stroke: true, weight: 1, color: col("--bg"), fillColor: covColors()[Math.max(0, k)], fillOpacity: .62})
       .bindTooltip(T("{n} pakettia · {s} asemaa · suoraan {d}", {n, s: st, d}), {className: "covtip", sticky: true}).addTo(covCells);
   });
-  $("covLegend").innerHTML = j.cells.length ? `<span>${esc(T("vähän"))}</span>` + COV_COLORS.map(c => `<i style="background:${c}"></i>`).join("")
+  $("covLegend").innerHTML = j.cells.length ? `<span>${esc(T("vähän"))}</span>` + covColors().map(c => `<i style="background:${c}"></i>`).join("")
     + `<span>${esc(T("paljon"))} (${max})</span><span style="margin-left:auto">${esc(T("ruutu {r}", {r: D(covRes)}))}</span>` : "";
 }
 function covPick(call) { covVia = covVia === call ? null : call; covLoadCells(); renderCov(); }
@@ -2583,11 +2785,11 @@ function renderCov() {
   // kartan merkit
   if (!covMarks) return;
   covMarks.clearLayers();
-  if (j.home) L.circleMarker(j.home, {radius: 7, color: "#0f1419", weight: 2, fillColor: "#3ddc84", fillOpacity: 1})
+  if (j.home) L.circleMarker(j.home, {radius: 7, color: col("--bg"), weight: 2, fillColor: col("--live"), fillOpacity: 1})
     .bindTooltip(T("Oma asema"), {className: "covlbl"}).addTo(covMarks);
   j.digis.filter(d => d.lat != null).forEach(d => {
-    const m = L.circleMarker([d.lat, d.lon], {radius: 6, color: "#0f1419", weight: 2, fillOpacity: 1,
-      fillColor: d.silent ? "#ff6b6b" : covVia === d.call ? "#ffffff" : "#ffb547"})
+    const m = L.circleMarker([d.lat, d.lon], {radius: 6, color: col("--bg"), weight: 2, fillOpacity: 1,
+      fillColor: d.silent ? col("--bad") : covVia === d.call ? col("--strong") : col("--warn")})
       .bindTooltip(d.call, {permanent: true, direction: "right", offset: [6, 0], className: "covlbl"}).addTo(covMarks);
     m.on("click", () => covPick(d.call));
   });

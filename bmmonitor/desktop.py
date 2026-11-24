@@ -62,14 +62,20 @@ class Api:
         self._desk.notify(str(title or "")[:120], str(body or "")[:300])
         return True
 
+    def set_theme(self, theme):
+        """Teema vaihtui: muistetaan ikkunan taustaväriksi seuraavaa käynnistystä varten."""
+        self._desk.bg = "#f3f5f7" if theme == "light" else "#0f1419"
+        return True
+
     def save_file(self, path):
         """Lataa paikallisen palvelimen tiedoston (esim. check-in-CSV) ja tallentaa sen käyttäjän valitsemaan paikkaan."""
         return self._desk.save_file(str(path or ""))
 
 
 class Desktop:
-    def __init__(self, start_hidden: bool = False):
+    def __init__(self, start_hidden: bool = False, light: bool = False):
         self.start_hidden = start_hidden
+        self.bg = "#f3f5f7" if light else "#0f1419"     # ikkunan väri ennen kuin sivu on piirretty
         self.url: str | None = None
         self.window = None
         self.quitting = False
@@ -107,7 +113,7 @@ class Desktop:
         webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True
         self.window = webview.create_window(
             TITLE, self.url, js_api=Api(self), width=1380, height=900, min_size=(760, 520),
-            hidden=self.start_hidden, background_color="#0f1419", text_select=True, zoomable=True)
+            hidden=self.start_hidden, background_color=self.bg, text_select=True, zoomable=True)
         self.window.events.closing += self._on_closing
         if self.quitting:          # palvelin ehti jo sammua
             return
