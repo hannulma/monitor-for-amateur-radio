@@ -229,6 +229,7 @@ class Monitor:
         self.aprsrx = AprsRx(self, cfg_path.parent / "aprs_rx.sqlite")
         self.nets = NetCalendar(self, cfg_path.parent / "nets_cache")
         self.tile_sem = asyncio.Semaphore(4)
+        self.tile_fail, self.tile_down_until = 0, 0.0
 
     def touch(self):
         self.dirty = True
@@ -1201,21 +1202,27 @@ def make_app(mon: Monitor) -> web.Application:
         key = hashlib.sha1(tmpl.encode()).hexdigest()[:10]
         path = mon.cfg_path.parent / "tiles" / key / str(z) / str(x) / f"{y}.png"
         fresh = path.exists() and time.time() - path.stat().st_mtime < 7 * 86400
-        if not fresh:
+        down = mon.tile_down_until > time.time()      # tiilipalvelin ei vastaa: ei jonoteta pyyntöjä turhaan
+        if not fresh and not down:
             url = tmpl.replace("{s}", "abc"[(x + y) % 3]).replace("{z}", str(z)).replace("{x}", str(x)).replace("{y}", str(y))
             # OpenStreetMapin käyttöehdot: sovellus tunnistaa itsensä omalla User-Agentilla.
             ua = f"MonitorForAmateurRadio/{__version__} (+https://github.com/hannulma/monitor-for-amateur-radio)"
             try:
-                async with mon.tile_sem, http_session(20) as s, s.get(url, headers={"User-Agent": ua}) as r:
+                async with mon.tile_sem, http_session(8) as s, s.get(url, headers={"User-Agent": ua}) as r:
                     if r.status == 200:
                         data = await r.read()
                         path.parent.mkdir(parents=True, exist_ok=True)
                         path.write_bytes(data)
                         fresh = True
+                        mon.tile_fail = 0
                     else:
                         log.debug("Karttatiili %s: HTTP %s", url, r.status)
             except Exception as e:  # noqa: BLE001
                 log.debug("Karttatiili %s: %s", url, e)
+                mon.tile_fail += 1
+                if mon.tile_fail >= 3:
+                    mon.tile_down_until = time.time() + 60
+                    log.info("Karttatiilipalvelin ei vastaa – tauko 60 s")
         if not path.exists():
             raise web.HTTPNotFound()
         return web.FileResponse(path, headers={"Cache-Control": "max-age=86400"})
@@ -1343,6 +1350,33 @@ async def run(args, ui=None):
             ui.server_stopped()
 
 
+def start_loop_watchdog(loop, limit: float = 10.0) -> None:
+    """Vianetsintä: jos tapahtumasilmukka on jumissa yli `limit` s, kaikkien säikeiden pinot lokiin."""
+    import faulthandler
+    import threading
+    state = {"beat": time.monotonic(), "dumped": 0.0}
+
+    def beat():
+        state["beat"] = time.monotonic()
+        loop.call_later(1.0, beat)
+    loop.call_soon(beat)
+
+    def watch():
+        while not loop.is_closed():
+            time.sleep(2)
+            lag = time.monotonic() - state["beat"]
+            if lag > limit and time.monotonic() - state["dumped"] > 300:
+                state["dumped"] = time.monotonic()
+                log.warning("Ohjelman pääsilmukka jumissa %.0f s – säikeiden tila:", lag)
+                try:
+                    for h in logging.getLogger().handlers:
+                        h.flush()
+                    faulthandler.dump_traceback(file=sys.stderr, all_threads=True)
+                except Exception:  # noqa: BLE001
+                    pass
+    threading.Thread(target=watch, name="loop-watchdog", daemon=True).start()
+
+
 def show_running(port: int) -> bool:
     """Pyydä jo käynnissä olevaa ohjelmaa näyttämään oma ikkunansa."""
     import urllib.request
@@ -1394,6 +1428,7 @@ async def _run(args, mon, cfg_path, ui):
     tasks.append(asyncio.create_task(mon.checkin.run()))
     tasks.append(asyncio.create_task(mon.aprsrx.run()))
     tasks.append(asyncio.create_task(mon.nets.run()))
+    start_loop_watchdog(asyncio.get_running_loop())
     if not args.demo:
         tasks.append(asyncio.create_task(mon.updater.run()))
     tasks.append(asyncio.create_task(demo_loop(mon) if args.demo else bm_loop(mon)))

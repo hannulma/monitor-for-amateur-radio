@@ -1107,6 +1107,10 @@ function listen(tg) { if (tg == null) player.stop(); else player.toggle(tg); }
 let S = null;          // viimeisin tila palvelimelta
 let offset = 0;        // palvelimen ja selaimen kellon ero
 const $ = id => document.getElementById(id);
+function fetchT(url, ms, opts) {   // fetch aikakatkaisulla, ettei jumittunut pyyntö pysäytä näkymää
+  const c = new AbortController(), t = setTimeout(() => c.abort(), ms || 15000);
+  return fetch(url, {...(opts || {}), signal: c.signal}).finally(() => clearTimeout(t));
+}
 const col = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 // ---------------- teema ----------------
 const themeMQ = window.matchMedia("(prefers-color-scheme: dark)");
@@ -2400,10 +2404,13 @@ async function satPoll() {
   clearTimeout(satTimer);
   if (TAB !== "satelliitit") return;
   try {
-    if (!satWorld) satWorld = await (await fetch("/static/world.json")).json();
-    satData = await (await fetch("/api/satellites/map")).json();
+    if (!satWorld) satWorld = await (await fetchT("/static/world.json", 20000)).json();
+    satData = await (await fetchT("/api/satellites/map", 20000)).json();
     drawSatMap(); drawSky();
-  } catch (e) { $("satNote").textContent = String(e); }
+  } catch (e) {
+    $("satNote").textContent = e && e.name === "AbortError" ? T("Ohjelma ei vastannut ajoissa – yritetään uudelleen…") : String(e);
+    if (!satData) drawSatMap();
+  }
   satTimer = setTimeout(satPoll, 3000);
 }
 window.addEventListener("resize", () => { if (TAB === "satelliitit") { drawSatMap(); } });

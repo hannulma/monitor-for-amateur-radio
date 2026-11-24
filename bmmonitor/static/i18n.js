@@ -426,6 +426,7 @@
     "Käyttöliittymä": "User interface", "Omassa ikkunassa": "In its own window", "Selaimessa": "In the browser",
     "Muutos tulee voimaan, kun ohjelma käynnistetään seuraavan kerran.": "The change takes effect the next time the program starts.",
     "Avaa selaimessa": "Open in browser",
+    "Ohjelma ei vastannut ajoissa – yritetään uudelleen…": "The program did not answer in time – retrying…",
     "Näytettävien nettien määrä": "Number of nets to show", "10 seuraavaa": "Next 10", "25 seuraavaa": "Next 25",
     "Viestit radioon": "Messages to your radio",
     "Netit tänään ja huomenna": "Nets today and tomorrow",
