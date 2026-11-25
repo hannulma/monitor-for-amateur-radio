@@ -30,8 +30,8 @@
     "Tallenna": "Save", "Tyhjennä historia": "Clear history", "Tallennettu": "Saved",
     "Brandmeister API-avain (vapaaehtoinen)": "BrandMeister API key (optional)",
     "API-avain laitteen hallintaan": "API key for device management",
-    "Luo avain: brandmeister.network → SelfCare → Security / API Keys. Avainta tarvitaan vain Laitteet-välilehden hallintapainikkeisiin, ja Brandmeister sallii ne vain omille laitteillesi. Avain tallentuu vain tämän koneen asetustiedostoon.":
-      "Create a key: brandmeister.network → SelfCare → Security / API Keys. The key is only needed for the management buttons on the Devices tab, and BrandMeister only allows them for your own devices. The key is stored only in this computer's settings file.",
+    "Luo avain: brandmeister.network → SelfCare → Security / API Keys. Avainta tarvitaan vain Laitteet-välilehden hallintapainikkeisiin, ja Brandmeister sallii ne vain omille laitteillesi. Avain tallentuu käyttöjärjestelmän salasanavarastoon.":
+      "Create a key: brandmeister.network → SelfCare → Security / API Keys. The key is only needed for the management buttons on the Devices tab, and BrandMeister only allows them for your own devices. The key is stored in the operating system's password store.",
     "Tallenna avain": "Save key", "Poista avain": "Delete key",
     "Avain tallennettu": "Key saved", "Ei avainta": "No key",
     "Seuranta ja historia": "Monitoring and history", "Avaa kaikki": "Expand all", "Pienennä kaikki": "Collapse all",
@@ -129,6 +129,7 @@
     "viestisi, ohjelman loki, asetukset ja versiotiedot (ohjelma, käyttöjärjestelmä).": "your message, the program log, settings and version details (program, operating system).",
     "Mitä ei lähetetä:": "What is not sent:",
     "Brandmeisterin API-avain, APRS-passcode, check-in-taulukon avain ja muut salaisuudet.": "the BrandMeister API key, APRS passcode, check-in sheet key and other secrets.",
+    "Brandmeisterin API-avain, APRS-passcode, check-in-taulukon avain ja muut salaisuudet. Ne poistetaan automaattisesti asetuksista ja lokista.": "the BrandMeister API key, APRS passcode, check-in sheet key and other secrets. They are removed automatically from the settings and the log.",
     "Ne poistetaan automaattisesti asetuksista ja lokista.": "They are removed automatically from the settings and the log.",
     "pyöristetään noin 100 km tarkkuuteen (lokaattori 4 merkkiä). Voit tarkistaa paketin ennen lähetystä lataamalla sen yllä olevasta linkistä.": "is rounded to about 100 km (4-character locator). You can check the package before sending by downloading it from the link above.",
     "Peruuta": "Cancel",
@@ -268,8 +269,8 @@
     "Lähetä": "Send", "Lähetetään…": "Sending…",
     "Lähetetty": "Sent", " ({n} osaa)": " ({n} parts)", " – tila päivittyy listaan": " – status updates in the list",
     "{n} merkkiä": "{n} chars", " · {p} viestiä": " · {p} messages", "(ohjelma)": "(program)",
-    "Aseta oma APRS-IS-tunnus ja passcode APRS-välilehdellä, niin viestit näkyvät tässä.":
-      "Set your APRS-IS login and passcode on the APRS tab and messages will appear here.",
+    "Aseta oma APRS-IS-tunnus ja passcode kohdassa APRS → Asetukset → APRS-IS-yhteys ja vastaanottajat, niin viestit näkyvät tässä.":
+      "Set your APRS-IS login and passcode under APRS → Settings → APRS-IS connection and recipients and messages will appear here.",
     "APRS-IS-yhteys ei ole auki": "The APRS-IS connection is not open",
     "Ei viestejä vielä. Näytetään kutsujen {c} kaikki saapuvat ja lähtevät APRS-viestit.":
       "No messages yet. All incoming and outgoing APRS messages for {c} are shown here.",

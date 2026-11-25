@@ -2846,7 +2846,7 @@ function renderAprs() {
   $("aprsWho").textContent = bases.length ? bases.map(b => b + "*").join(", ") : "";
   const msgs = M.aprs_msgs || [];
   let empty = "";
-  if (!S.config.messaging.login) empty = "Aseta oma APRS-IS-tunnus ja passcode APRS-välilehdellä, niin viestit näkyvät tässä.";
+  if (!S.config.messaging.login) empty = "Aseta oma APRS-IS-tunnus ja passcode kohdassa APRS → Asetukset → APRS-IS-yhteys ja vastaanottajat, niin viestit näkyvät tässä.";
   else if (!a.connected) empty = esc(T("APRS-IS-yhteys ei ole auki")) + (a.error ? ": " + esc(a.error) : "") + ".";
   else if (!msgs.length) empty = esc(T("Ei viestejä vielä. Näytetään kutsujen {c} kaikki saapuvat ja lähtevät APRS-viestit.", {c: bases.map(b => b + "*").join(", ")}));
   $("aprsEmpty").innerHTML = empty; $("aprsEmpty").style.display = msgs.length ? "none" : "";

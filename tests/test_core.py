@@ -810,3 +810,44 @@ def test_hidden_tabs_config():
     html = (Path(app.__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
     tabs = set(re.findall(r'<button data-tab="([a-z]+)"', html))
     assert tabs - {"asetukset"} == set(app.HIDEABLE_TABS)
+
+
+def test_html_texts_have_english_translation():
+    """Jokaisella suomenkielisellä index.html:n tekstisolmulla ja ohjetekstillä on englanninkielinen käännös."""
+    from html.parser import HTMLParser
+    root = Path(__file__).resolve().parent.parent / "bmmonitor" / "static"
+    html = (root / "index.html").read_text(encoding="utf-8")
+    js = (root / "i18n.js").read_text(encoding="utf-8")
+    keys = {json.loads('"' + k + '"') for k in re.findall(r'"((?:[^"\\]|\\.)*)"\s*:', js)}
+    body = re.sub(r"<script[\s\S]*?</script>|<style[\s\S]*?</style>", "", html)
+    void = {"input", "br", "img", "meta", "link", "hr", "source"}
+
+    class P(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.stack, self.out = [], []
+
+        def handle_starttag(self, t, a):
+            a = dict(a)
+            skip = (t == "code" or "data-noi18n" in a or (a.get("lang") == "fi" and t != "html")
+                    or bool(self.stack and self.stack[-1][1]))
+            if not skip:
+                self.out += [a[k] for k in ("placeholder", "title", "aria-label") if a.get(k)]
+            if t not in void:
+                self.stack.append((t, skip))
+
+        def handle_endtag(self, t):
+            while self.stack and self.stack.pop()[0] != t:
+                pass
+
+        def handle_data(self, d):
+            d = re.sub(r"\s+", " ", d).strip()
+            if d and not (self.stack and self.stack[-1][1]):
+                self.out.append(d)
+
+    p = P()
+    p.feed(body)
+    fi = re.compile(r"[äöÄÖ]|\b(ja|tai|ei|kun|jos|on|osio|ohje|Tallenna|Poista|Lisää|Avaa|Kutsu|Nimi|Aika)\b")
+    allowed = {"KUNTA", "Lisätietoja"}   # taulukon sarakenimet
+    missing = sorted({t for t in p.out if fi.search(t) and t not in keys and t not in allowed})
+    assert not missing, missing[:10]
