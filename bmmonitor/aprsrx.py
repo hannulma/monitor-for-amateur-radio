@@ -1,7 +1,8 @@
-"""APRS-kuuluvuusanalyysi: Graywolfin (tai Dire Wolfin) KISS TCP -portin vastaanottamat paketit.
+"""APRS-kuuluvuusanalyysi: radioiden (Graywolf / Dire Wolf KISS TCP, KISS-TNC sarjaportissa, AGWPE,
+simuloitu radio – ks. radios.py) vastaanottamat paketit.
 
-Ohjelma kuuntelee porttia; radiolla lähetetään vain, jos käyttäjä on sallinut APRS-viestien lähetyksen
-radiolla (messaging.rf_tx) – silloin viestit ja kuittaukset kirjoitetaan samaan KISS-yhteyteen. Jokaisesta paketista tallennetaan, keneltä se
+Ohjelma kuuntelee radioita; radiolla lähetetään vain, jos käyttäjä on sallinut APRS-viestien lähetyksen
+radiolla (messaging.rf_tx) – silloin viestit ja kuittaukset lähetetään radiolla, jolle lähetys on sallittu. Jokaisesta paketista tallennetaan, keneltä se
 kuultiin radiotiellä (lähettäjä itse = suoraan, tai viimeinen digipiitteri, jonka H-bitti on asetettu),
 koko polku ja lähettäjän sijainti, jos paketissa on sellainen. Näistä lasketaan lämpökartta,
 digipiitterien osuudet, yleisimmät polut ja hälytys, kun tuttu digi tai iGate hiljenee.
@@ -17,6 +18,7 @@ import time
 from pathlib import Path
 
 from .i18n import tr
+from .radios import FEND, FESC, TFEND, TFESC, LINKS, KissDecoder, default_radios, describe, kiss_frame, normalize_radios  # noqa: F401
 
 log = logging.getLogger("bmmonitor.aprsrx")
 
@@ -30,6 +32,7 @@ DEFAULT_APRSRX = {
     "min_heard": 5,            # digin pitää olla välittänyt vähintään näin monta pakettia (7 vrk) ennen seurantaa
     "watch": [],               # lisäksi seurattavat kutsut (esim. iGatet, majakat)
     "sms": False,
+    # "radios": radiolista (radios.normalize_radios); puuttuessa tehdään host/port-asetuksesta (ennen 0.16)
 }
 DEFAULT_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 DEFAULT_TILES_ATTR = "© OpenStreetMap contributors"
@@ -43,52 +46,10 @@ CALL_RE = re.compile(r"^[A-Z0-9]{1,6}(-\d{1,2})?$")
 # --------------------------------------------------------------------------
 # KISS ja AX.25
 # --------------------------------------------------------------------------
-FEND, FESC, TFEND, TFESC = 0xC0, 0xDB, 0xDC, 0xDD
-
-
-class KissDecoder:
-    """Pilkkoo TCP-virran KISS-kehyksiksi ja palauttaa datakehysten sisällön (AX.25)."""
-
-    def __init__(self):
-        self.buf = bytearray()
-        self.in_frame = False
-        self.esc = False
-
-    def feed(self, data: bytes) -> list[bytes]:
-        out = []
-        for b in data:
-            if b == FEND:
-                if self.in_frame and self.buf:
-                    frame = bytes(self.buf)
-                    if frame and (frame[0] & 0x0F) == 0:      # komento 0 = data (portti ylänibblessä)
-                        out.append(frame[1:])
-                self.buf.clear()
-                self.in_frame = True
-                self.esc = False
-                continue
-            if not self.in_frame:
-                continue
-            if self.esc:
-                self.buf.append(FEND if b == TFEND else FESC if b == TFESC else b)
-                self.esc = False
-            elif b == FESC:
-                self.esc = True
-            else:
-                self.buf.append(b)
-            if len(self.buf) > 2048:          # rikkinäinen virta: aloitetaan alusta
-                self.buf.clear()
-                self.in_frame = False
-        return out
+# KISS-kehystys on radios-moduulissa (yhteinen kaikille radioyhteyksille)
 
 
 AX25_CALL = re.compile(r"^[A-Z0-9]{1,6}(-([0-9]|1[0-5]))?$")
-
-
-def kiss_frame(ax25: bytes, port: int = 0) -> bytes:
-    """AX.25-kehys KISS-muotoon (datakehys, portti ylänibblessä)."""
-    body = bytes([port << 4]) + ax25
-    body = body.replace(bytes([FESC]), bytes([FESC, TFESC])).replace(bytes([FEND]), bytes([FESC, TFEND]))
-    return bytes([FEND]) + body + bytes([FEND])
 
 
 def _addr(b: bytes) -> tuple[str, bool, bool]:
@@ -295,6 +256,10 @@ def normalize_aprsrx(new: dict, old: dict) -> dict:
             if not lo <= v <= hi:
                 raise ValueError(tr("Arvon pitää olla {a}–{b}", a=lo, b=hi))
             out[k] = v
+    if "radios" in new:
+        out["radios"] = normalize_radios(new["radios"], out.get("radios"))
+    elif not isinstance(out.get("radios"), list):
+        out["radios"] = default_radios(out)
     if "watch" in new:
         w = new["watch"]
         items = w.split() if isinstance(w, str) else list(w or [])
@@ -331,7 +296,9 @@ class AprsRx:
         self.pending = 0
         self.last_heard: dict[str, float] = {}     # kutsu → viimeksi kuultu radiotiellä (suoraan tai välittäjänä)
         self.heard_src: dict[str, float] = {}      # kutsu → viimeksi kuultu sen oma paketti (mitä reittiä tahansa)
-        self.writer: asyncio.StreamWriter | None = None
+        self.links: dict = {}                     # radio-id → RadioLink
+        self.tasks: dict[str, asyncio.Task] = {}
+        self.recent: dict[bytes, float] = {}       # sama kehys toiselta radiolta → ei tallenneta kahdesti
         self.silent: set[str] = set()              # hälytetty hiljaisuudesta, odottaa paluuta
         self._load_last_heard()
 
@@ -351,57 +318,95 @@ class AprsRx:
     def heard_recently(self, call: str, secs: float) -> bool:
         return time.time() - self.heard_src.get(call.upper(), 0) < secs
 
+    def tx_link(self):
+        """Radio, jolla lähetetään: ensimmäinen yhdistetty radio, jolle lähetys on sallittu."""
+        for r in self.cfg.get("radios") or []:
+            ln = self.links.get(r["id"])
+            if ln is not None and ln.can_tx():
+                return ln
+        return None
+
+    def can_transmit(self) -> bool:
+        return self.tx_link() is not None
+
     def transmit(self, src: str, dest: str, path: list[str], info: bytes):
-        """Lähettää APRS-paketin radiolla Graywolfin kautta (vain viestien lähetys, ks. messaging)."""
-        if self.writer is None or not self.status.get("connected"):
-            raise ConnectionError(tr("Ei yhteyttä Graywolfiin"))
-        self.writer.write(kiss_frame(encode_ax25(src.upper(), dest, path, info)))
+        """Lähettää APRS-paketin radiolla (vain viestien lähetys, ks. messaging)."""
+        ln = self.tx_link()
+        if ln is None:
+            raise ConnectionError(tr("Ei radiota, jolla voi lähettää"))
+        ln.transmit(encode_ax25(src.upper(), dest, path, info))
 
     def reconfigure(self):
         self.wake.set()
 
     # ---------------- vastaanotto ----------------
+    def _make_link(self, rcfg: dict):
+        cls = LINKS[rcfg["type"]]
+        kw = {"home": self._home} if rcfg["type"] == "sim" else {}
+        return cls(rcfg, self._on_frame, self._update_status, **kw)
+
+    def _home(self):
+        try:
+            loc = self.mon.cfg["services"]["location"]
+            return (loc["lat"], loc["lon"]) if loc.get("lat") is not None else None
+        except Exception:  # noqa: BLE001
+            return None
+
+    def _sync_links(self):
+        """Käynnistää, pysäyttää ja päivittää radioyhteydet asetusten mukaan."""
+        want = {}
+        if self.cfg.get("enabled"):
+            want = {r["id"]: r for r in self.cfg.get("radios") or [] if r.get("enabled")}
+        for rid in list(self.links):
+            ln = self.links[rid]
+            r = want.get(rid)
+            if r is None or ln.signature() != self._make_link(r).signature():
+                t = self.tasks.pop(rid, None)
+                if t:
+                    t.cancel()
+                ln.close()
+                del self.links[rid]
+            else:
+                ln.cfg = dict(r)            # nimi ja lähetysvalinta päivittyvät katkaisematta
+        for rid, r in want.items():
+            if rid not in self.links:
+                ln = self._make_link(r)
+                self.links[rid] = ln
+                self.tasks[rid] = asyncio.create_task(ln.run())
+        self._update_status()
+
+    def _update_status(self):
+        on = [ln for ln in self.links.values() if ln.status["connected"]]
+        errs = [f"{ln.name}: {ln.status['error']}" for ln in self.links.values() if ln.status.get("error")]
+        since = min((ln.status["since"] for ln in on if ln.status.get("since")), default=None)
+        if not self.cfg.get("enabled"):
+            errs = []
+        elif not self.links:
+            errs = [tr("Yhtään radiota ei ole käytössä")]
+        self._set_status(connected=bool(on), since=since if on else None, error="; ".join(errs) or None)
+
+    def _on_frame(self, frame: bytes, link):
+        now = time.time()
+        if len(self.links) > 1:
+            t = self.recent.get(frame)
+            self.recent[frame] = now
+            if len(self.recent) > 500:
+                self.recent = {k: v for k, v in self.recent.items() if now - v < 10}
+            if t is not None and now - t < 10:
+                return                      # sama kehys kuultiin jo toisella radiolla
+        self.handle_frame(frame, now)
+
     async def run(self):
         dec_tasks = [asyncio.create_task(self._watchdog()), asyncio.create_task(self._housekeeping())]
         try:
             while True:
-                if not self.cfg.get("enabled"):
-                    self._set_status(connected=False, error=None, since=None)
-                    await self._sleep(5)
-                    continue
-                host, port = self.cfg["host"], int(self.cfg["port"])
-                try:
-                    reader, writer = await asyncio.wait_for(asyncio.open_connection(host, port), 10)
-                except Exception as e:  # noqa: BLE001
-                    self._set_status(connected=False, error=tr("Ei yhteyttä KISS-porttiin {h}:{p} ({e})",
-                                                               h=host, p=port, e=e.__class__.__name__ if not str(e) else e))
-                    await self._sleep(15)
-                    continue
-                log.info("KISS-yhteys %s:%s", host, port)
-                self.writer = writer
-                self._set_status(connected=True, error=None, since=time.time())
-                dec = KissDecoder()
-                try:
-                    while self.cfg.get("enabled") and (self.cfg["host"], int(self.cfg["port"])) == (host, port):
-                        try:
-                            data = await asyncio.wait_for(reader.read(4096), 30)
-                        except asyncio.TimeoutError:
-                            continue
-                        if not data:
-                            raise ConnectionError(tr("KISS-portti sulki yhteyden"))
-                        for fr in dec.feed(data):
-                            self.handle_frame(fr)
-                except Exception as e:  # noqa: BLE001
-                    self._set_status(connected=False, error=str(e) or e.__class__.__name__)
-                    log.warning("KISS: %s", e)
-                finally:
-                    self.writer = None
-                    writer.close()
-                    self._set_status(connected=False, since=None)
+                self._sync_links()
                 await self._sleep(5)
         finally:
-            for t in dec_tasks:
+            for t in [*dec_tasks, *self.tasks.values()]:
                 t.cancel()
+            for ln in self.links.values():
+                ln.close()
             self._commit()
 
     async def _sleep(self, s):
@@ -527,8 +532,17 @@ class AprsRx:
     # ---------------- raportit ----------------
     def snapshot(self) -> dict:
         s = self.status
+        radios = []
+        for r in self.cfg.get("radios") or []:
+            ln = self.links.get(r["id"])
+            st = ln.status if ln else {}
+            radios.append({"id": r["id"], "name": r.get("name") or describe(r), "type": r["type"],
+                           "connected": bool(st.get("connected")), "error": st.get("error"),
+                           "count": st.get("count", 0), "last": st.get("last"), "tx": st.get("tx", 0),
+                           "active": ln is not None})
         return {"enabled": bool(self.cfg.get("enabled")), "connected": s["connected"], "error": s["error"],
-                "last": s["last"], "count": s["count"], "silent": sorted(self.silent)}
+                "last": s["last"], "count": s["count"], "silent": sorted(self.silent), "radios": radios,
+                "can_tx": self.can_transmit()}
 
     def _since(self, period: str) -> float:
         return time.time() - PERIODS.get(period, PERIODS["24h"])

@@ -553,11 +553,16 @@ def test_aprs_rf_messages(tmp_path, monkeypatch):
     cfg = {**DEFAULT_MESSAGING, "login": "OH2BEA-3", "rf_tx": True, "route": "auto"}
     hub = MessagingHub(cfg, tmp_path, lambda: None)
     hub.command_handler = lambda src, txt: "PONG" if txt.strip().upper() == "PING" else None
-    mon = SimpleNamespace(cfg={"aprsrx": {**DEFAULT_APRSRX, "enabled": True}}, touch=lambda: None, hub=hub,
-                          watcher=SimpleNamespace(seq=0, alerts=[]))
+    from bmmonitor.aprsrx import normalize_aprsrx
+    from bmmonitor.radios import KissTcpLink
+    mon = SimpleNamespace(cfg={"aprsrx": normalize_aprsrx({}, {**DEFAULT_APRSRX, "enabled": True})}, touch=lambda: None,
+                          hub=hub, watcher=SimpleNamespace(seq=0, alerts=[]))
     rx = AprsRx(mon, tmp_path / "rx.sqlite")
     hub.rf = rx
-    rx.writer, rx.status["connected"] = W(), True
+    assert [r["id"] for r in mon.cfg["aprsrx"]["radios"]] == ["graywolf"]     # vanha host/port → ensimmäinen radio
+    link = KissTcpLink(mon.cfg["aprsrx"]["radios"][0], rx._on_frame, lambda: None)
+    link.writer, link.status["connected"] = W(), True
+    rx.links[link.id] = link
 
     # automaattireitti: radiolla äskettäin kuultu → RF, muut → APRS-IS; lähetys pois → aina IS
     rx.handle_frame(encode_ax25("OH2ABC-9", "APRS", ["OH2RCH-1*"], b"!6012.34N/02456.78E>"))
@@ -588,7 +593,7 @@ def test_aprs_rf_messages(tmp_path, monkeypatch):
         incoming = [m for m in hub.aprs_msgs if m["dir"] == "in"]
         assert len(incoming) == 1 and incoming[0]["route"] == "rf+is"
         await drain()
-        frames = [parse_ax25(f) for f in KissDecoder().feed(rx.writer.data)]
+        frames = [parse_ax25(f) for f in KissDecoder().feed(link.writer.data)]
         assert [f["info"] for f in frames] == [b":OH2ABC-9 :ack12", b":OH2ABC-9 :PONG{" + hub.aprs_msgs[0]["msgid"].encode()]
         assert frames[0]["src"] == "OH2BEA-3" and frames[0]["dest"] == "APZBMM"
         assert [c for c, _ in frames[0]["path"]] == ["WIDE1-1", "WIDE2-1"]
@@ -603,19 +608,19 @@ def test_aprs_rf_messages(tmp_path, monkeypatch):
         rx.handle_frame(encode_ax25("OH2ABC-9", "APZXXX", ["OH2RCH-1*"], f":OH2BEA-3 :ack{out['msgid']}".encode()))
         assert out["status"] == "kuitattu" and out["ack_route"] == "rf"
         # radio + APRS-IS: sama viestinumero molempiin, tila ja kuittaus yhteiset
-        rx.writer.data = b""
+        link.writer.data = b""
         e2 = hub.aprs.send("OH9ZZZ-7", "molemmat", route="both")
         assert e2["route"] == "both"
         kind, item = hub.aprs.queue.get_nowait()
         assert kind == "msg" and item is e2
         await drain()
-        f = parse_ax25(KissDecoder().feed(rx.writer.data)[0])
+        f = parse_ax25(KissDecoder().feed(link.writer.data)[0])
         assert f["info"] == f":OH9ZZZ-7 :molemmat{{{e2['msgid']}".encode()
         hub.aprs.connected = False
         assert hub.pick_route("OH9ZZZ-7", "both") == "rf"
         hub.aprs.connected = True
-        # ilman Graywolf-yhteyttä radioviesti ei lähde
-        rx.status["connected"] = False
+        # ilman radioyhteyttä radioviesti ei lähde
+        link.status["connected"] = False
         e = hub.aprs.send("OH2ABC-9", "testi", route="rf")
         hub.rf_sent.clear()
         await drain()
@@ -850,3 +855,102 @@ def test_html_texts_have_english_translation():
     allowed = {"KUNTA", "Lisätietoja"}   # taulukon sarakenimet
     missing = sorted({t for t in p.out if fi.search(t) and t not in keys and t not in allowed})
     assert not missing, missing[:10]
+
+
+def test_radio_config_and_protocols():
+    from bmmonitor.radios import (AgwDecoder, KissDecoder, agw_frame, default_radios, kiss_frame, normalize_radios,
+                                  SimLink, new_radio)
+    from bmmonitor.aprsrx import encode_ax25, parse_ax25, parse_position
+    # vanha yksi yhteys → radiolista
+    old = default_radios({"host": "10.0.0.5", "port": 8101})
+    assert old[0]["type"] == "kiss_tcp" and old[0]["host"] == "10.0.0.5" and old[0]["port"] == 8101
+    rs = normalize_radios([{"id": "graywolf", "type": "kiss_tcp", "host": "127.0.0.1", "port": 8001, "name": "GW"},
+                           {"type": "agwpe", "host": "localhost"},
+                           {"type": "kiss_serial", "serial": "COM5", "baud": 9600, "tx": False},
+                           {"type": "sim"}], old)
+    assert [r["type"] for r in rs] == ["kiss_tcp", "agwpe", "kiss_serial", "sim"]
+    assert rs[1]["port"] == 8000 and rs[2]["tx"] is False and rs[3]["tx"] is False and len({r["id"] for r in rs}) == 4
+    for bad in ([{"type": "soundcard"}], [{"type": "kiss_tcp", "host": "a b"}], [{"type": "kiss_serial", "baud": 123}],
+                [{"type": "kiss_tcp", "port": 70000}], [{"type": "sim"}] * 9):
+        with pytest.raises(ValueError):
+            normalize_radios(bad)
+    # KISS ja AGWPE: kehys säilyy, myös pätkittynä ja erikoistavuin
+    fr = encode_ax25("OH2ABC-9", "APRS", ["WIDE1-1"], b"!6012.34N/02456.78E>\xc0\xdb")
+    data = kiss_frame(fr) + kiss_frame(fr)
+    dec = KissDecoder()
+    assert [x for i in range(0, len(data), 5) for x in dec.feed(data[i:i + 5])] == [fr, fr]
+    agw = agw_frame(b"R") + agw_frame(b"K", b"\x00" + fr) + agw_frame(b"K", b"\x00" + fr)
+    dec = AgwDecoder()
+    assert [x for i in range(0, len(agw), 7) for x in dec.feed(agw[i:i + 7])] == [fr, fr]
+    # simuloitu radio tuottaa jäsentyviä sijaintipaketteja kodin ympärille
+    sim = SimLink(new_radio("sim"), lambda f, ln: None, lambda: None, home=lambda: (61.0, 25.0))
+    for n in range(10):
+        p = parse_ax25(sim.frame(n))
+        lat, lon = parse_position(p["dest"], p["info"])
+        assert abs(lat - 61.0) < 1 and abs(lon - 25.0) < 2
+
+
+def test_multiple_radios_tcp(tmp_path):
+    """Kaksi radiota (KISS TCP ja AGWPE) yhtä aikaa: vastaanotto, kaksoiskappaleiden poisto ja lähetys."""
+    from types import SimpleNamespace
+    from bmmonitor.aprsrx import DEFAULT_APRSRX, AprsRx, encode_ax25, normalize_aprsrx
+    from bmmonitor.radios import AgwDecoder, KissDecoder, agw_frame, kiss_frame
+
+    async def scenario():
+        got = {"kiss": b"", "agw": b""}
+        writers = {}
+
+        async def kiss_srv(r, w):
+            writers["kiss"] = w
+            while data := await r.read(4096):
+                got["kiss"] += data
+
+        async def agw_srv(r, w):
+            writers["agw"] = w
+            while data := await r.read(4096):
+                got["agw"] += data
+
+        s1 = await asyncio.start_server(kiss_srv, "127.0.0.1", 0)
+        s2 = await asyncio.start_server(agw_srv, "127.0.0.1", 0)
+        p1, p2 = s1.sockets[0].getsockname()[1], s2.sockets[0].getsockname()[1]
+        cfg = normalize_aprsrx({"enabled": True, "radios": [
+            {"id": "a", "type": "kiss_tcp", "host": "127.0.0.1", "port": p1, "tx": False},
+            {"id": "b", "type": "agwpe", "host": "127.0.0.1", "port": p2, "tx": True}]}, DEFAULT_APRSRX)
+        mon = SimpleNamespace(cfg={"aprsrx": cfg, "services": {"location": {}}}, touch=lambda: None, hub=None,
+                              watcher=SimpleNamespace(seq=0, alerts=[]))
+        rx = AprsRx(mon, tmp_path / "rx.sqlite")
+        task = asyncio.create_task(rx.run())
+        for _ in range(100):
+            await asyncio.sleep(0.02)
+            if len(writers) == 2 and all(ln.status["connected"] for ln in rx.links.values()):
+                break
+        assert rx.status["connected"] and rx.can_transmit()
+        assert got["agw"][:36] == agw_frame(b"k")              # AGWPE: raakakehykset pyydetty
+        fr = encode_ax25("OH2ABC-9", "APRS", ["OH2RCH-1*"], b"!6012.34N/02456.78E>")
+        writers["kiss"].write(kiss_frame(fr))
+        writers["agw"].write(agw_frame(b"K", b"\x00" + fr))   # sama paketti toiselta radiolta
+        await asyncio.sleep(0.2)
+        assert rx.status["count"] == 1
+        snap = rx.snapshot()
+        assert [(r["id"], r["connected"], r["count"]) for r in snap["radios"]] == [("a", True, 1), ("b", True, 1)]
+        # lähetys menee radiolle, jolle lähetys on sallittu (b = AGWPE)
+        rx.transmit("OH2BEA-3", "APZBMM", ["WIDE1-1"], b":OH2ABC-9 :hei{1")
+        await asyncio.sleep(0.2)
+        from bmmonitor.aprsrx import parse_ax25
+        sent = AgwDecoder().feed(got["agw"][36:])
+        assert len(sent) == 1 and parse_ax25(sent[0])["info"] == b":OH2ABC-9 :hei{1"
+        assert KissDecoder().feed(got["kiss"]) == []
+        # radio pois käytöstä → yhteys suljetaan
+        cfg["radios"][1]["enabled"] = False
+        rx.reconfigure()
+        await asyncio.sleep(0.2)
+        assert set(rx.links) == {"a"} and not rx.can_transmit()
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        s1.close()
+        s2.close()
+
+    asyncio.run(scenario())

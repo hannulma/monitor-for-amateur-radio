@@ -49,9 +49,13 @@ DMR radio via APRS.
   user history.
 - **APRS messaging** – see all APRS messages to and from every SSID of your callsign (including DMR ↔ APRS
   messages through the BrandMeister APRS gateway) and reply directly from the app.
-  Optionally messages, acks and command replies are also transmitted on the radio through Graywolf
+  Optionally messages, acks and command replies are also transmitted on the radio
   (APRS → Settings → APRS messages on the radio; route automatic / APRS-IS / radio / radio and APRS-IS, off by default).
-- **APRS map** – listens to the KISS TCP port of Graywolf or Dire Wolf (default `127.0.0.1:8001`).
+- **Radios and TNCs** – one or more radios at the same time (APRS → Settings → Radios and TNCs): **KISS TCP** (Graywolf,
+  Dire Wolf; default `127.0.0.1:8001`), **KISS TNC on a serial port** (USB or Bluetooth, e.g. Mobilinkd, Kenwood TH-D74/D75
+  in KISS mode), **AGWPE** (Dire Wolf, soundmodem) and a **simulated radio** for testing. For a radio on a sound card use
+  Graywolf or Dire Wolf. Transmitting uses the first connected radio that is allowed to transmit.
+- **APRS map** – built from the packets your radios hear.
   Map layers (24 h / 7 days / 30 days): **RF coverage** – a heat map of where your station hears packets
   directly and via digipeaters; **APRS stations** – the latest position of stations heard on the radio;
   **Digipeaters** – click one to see the area heard through it. Tables of digipeater shares and the most

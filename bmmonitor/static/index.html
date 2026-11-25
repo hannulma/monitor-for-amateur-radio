@@ -100,6 +100,9 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .rfstate { font-size: 12px; padding: 2px 10px; border-radius: 10px; border: 1px solid var(--line); }
   .hintlist { margin: 10px 0 0; padding-left: 18px; }
   .hintlist li { margin: 4px 0; }
+  #radioList .radio { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px 10px; margin: 8px 0; background: var(--bg); }
+  #radioList .radio .frow { margin: 0; align-items: flex-start; }
+  #radioList .radiostate { font-size: 12px; margin-top: 6px; }
   .modebar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .modebar #qModeBtns { display: inline-flex; flex-wrap: wrap; gap: 4px; }
   .modebtn { padding: 4px 9px; font-size: 12px; }
@@ -548,14 +551,17 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <h2>Asetukset</h2>
     <div class="setsubs">
     <section class="msgp form" data-tab="aprs" data-fold="aprs-rx">
-      <h2>Graywolf-yhteys (KISS TCP)
+      <h2>Radiot ja TNC:t
         <label class="switch" title="Vastaanotto päällä"><input type="checkbox" id="rxEnabled"><span class="sl"></span><span class="swtxt" id="rxEnabledTxt">Pois</span></label></h2>
       <div class="inner form msgform">
-        <div class="note">Ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia.
-          Radiolla lähetetään vain APRS-viestejä, jos se on sallittu alla (APRS-viestit radiolla). Kuullut paketit tallennetaan tälle koneelle 30 vuorokaudeksi.</div>
-        <div class="frow">
-          <div class="fld"><label for="rxHost">Palvelin</label><input type="text" id="rxHost" style="width:180px"><div class="hint">sama kone: 127.0.0.1</div></div>
-          <div class="fld"><label for="rxPort">KISS TCP -portti</label><input type="number" id="rxPort" min="1" max="65535" style="width:110px"><div class="hint">oletus 8001</div></div>
+        <div class="note">Ohjelma kuuntelee alla olevia radioita yhtä aikaa. Radiolla lähetetään vain APRS-viestejä, jos se on sallittu
+          (APRS-viestit radiolla), ja silloin käytetään ensimmäistä yhdistettyä radiota, jolle lähetys on sallittu.
+          Kuullut paketit tallennetaan tälle koneelle 30 vuorokaudeksi.</div>
+        <div id="radioList"></div>
+        <datalist id="serialList"></datalist>
+        <div class="frow" style="align-items:center;margin-top:6px">
+          <button id="btnRadioAdd">+ Lisää radio</button>
+          <span class="hint" style="margin:0">Äänikortin kautta liitetylle radiolle käytä Graywolfia tai Direwolfia ja valitse tyypiksi KISS TCP tai AGWPE.</span>
         </div>
         <h3>Hiljentyneet digit ja iGatet</h3>
         <div class="frow">
@@ -580,10 +586,10 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       </div>
     </section>
     <section class="cfg form" data-tab="aprs" data-fold="cfg-rftx">
-      <h2>APRS-viestit radiolla (Graywolf)</h2>
+      <h2>APRS-viestit radiolla</h2>
       <div class="inner">
       <div class="note">APRS-viestit, kuittaukset ja komentojen vastaukset voidaan lähettää myös radiolla.
-        Lähetys käyttää yllä olevaa Graywolf-yhteyttä.</div>
+        Lähetys käyttää ensimmäistä yhdistettyä radiota, jolle lähetys on sallittu (Radiot ja TNC:t).</div>
       <div class="frow" style="align-items:center;margin-top:12px">
         <label style="margin:0;color:var(--text)"><input type="checkbox" id="rfTx"> Salli lähetys radiolla</label>
         <span id="rfState" class="rfstate"></span>
@@ -1744,9 +1750,10 @@ function rfFields() {
 $("rfRoute").onchange = rfFields; $("rfTx").onchange = rfFields;
 function rfState() {
   const rx = S.aprsrx || {};
-  const [cls, txt] = !rx.enabled ? ["muted", "Graywolf-yhteys ei ole käytössä"] :
-    rx.connected ? ["ok", "● Graywolf yhdistetty"] : ["bad", "● Ei yhteyttä Graywolfiin"];
-  const h = `<span class="${cls}">${esc(T(txt))}</span>`;
+  const txr = (rx.radios || []).find(r => r.connected && (S.config.aprsrx.radios || []).some(c => c.id === r.id && c.tx));
+  const [cls, txt] = !rx.enabled ? ["muted", T("Radiot eivät ole käytössä")] :
+    txr ? ["ok", "● " + T("Lähetysradio: {n}", {n: txr.name})] : ["bad", "● " + T("Ei radiota, jolla voi lähettää")];
+  const h = `<span class="${cls}">${esc(txt)}</span>`;
   if ($("rfState").innerHTML !== h) $("rfState").innerHTML = h;
 }
 $("btnRfSave").onclick = async () => {
@@ -2868,7 +2875,7 @@ function renderAprs() {
   const opts = [...own].sort((x, y) => x === login ? -1 : y === login ? 1 : x.localeCompare(y)).map(c => `<option value="${esc(c)}">${esc(c)}${c === login ? " " + esc(T("(ohjelma)")) : ""}</option>`).join("");
   if ($("rFrom").dataset.opts !== opts) { const cur = $("rFrom").value; $("rFrom").innerHTML = opts; $("rFrom").dataset.opts = opts; if (cur && own.has(cur)) $("rFrom").value = cur; }
   $("aprsReply").style.display = login ? "" : "none";
-  if (TAB === "aprs") rfState();
+  if (TAB === "aprs") { rfState(); radioStates(); }
   const rf = M.rf || {};
   if ($("rRouteFld").dataset.on !== String(!!rf.enabled)) {
     $("rRouteFld").dataset.on = String(!!rf.enabled); $("rRouteFld").style.display = rf.enabled ? "" : "none";
@@ -2879,7 +2886,7 @@ function routeTag(r) {
   if (!r) return "";
   if (r === "both") return ` <span class="muted" title="${esc(T("Radio (RF) ja APRS-IS"))}">· RF+IS</span>`;
   const t = r.split("+").map(x => x === "rf" ? "RF" : "IS").join("+");
-  return ` <span class="muted" title="${esc(T(r.includes("+") ? "Tuli sekä radiolta että APRS-IS:stä" : r === "rf" ? "Radio (Graywolf)" : "APRS-IS"))}">· ${esc(t)}</span>`;
+  return ` <span class="muted" title="${esc(T(r.includes("+") ? "Tuli sekä radiolta että APRS-IS:stä" : r === "rf" ? "Radio" : "APRS-IS"))}">· ${esc(t)}</span>`;
 }
 $("aprsBody").addEventListener("click", e => {
   if (e.target.closest(".clk")) return;
@@ -3462,7 +3469,7 @@ $("btnNetAddOwn").onclick = () => $("netOwnRows").append(netOwnRow({}));
 $("btnNetRefresh").onclick = async () => { $("btnNetRefresh").disabled = true; await netsLoad(true); $("btnNetRefresh").disabled = false; };
 $("netEnabled").onchange = async () => { $("netEnabledTxt").textContent = T($("netEnabled").checked ? "Päällä" : "Pois"); if (!await saveNets()) $("netEnabled").checked = !$("netEnabled").checked; };
 
-// ---------------- APRS-kuuluvuus (Graywolf KISS) ----------------
+// ---------------- APRS-kuuluvuus (radiot) ----------------
 let covMap = null, covTiles = null, covCells = null, covMarks = null, covVia = null, covRes = 0, covTimer = null, covSum = null;
 let covStations = null, covDigis = null, covStaData = null, covLabels = false;
 const COV_LAYERS_KEY = "bmm.covLayers";
@@ -3573,8 +3580,8 @@ function covPick(call) { covVia = covVia === call ? null : call; covLoadCells();
 function renderCov() {
   const j = covSum; if (!j) return;
   const st = j.status, t = j.totals;
-  $("covStatus").innerHTML = !st.enabled ? esc(T("Vastaanotto pois päältä – ota se käyttöön alla Graywolf-yhteys-osiosta."))
-    : st.connected ? `<span class="st-ok">●</span> ${esc(T("Yhdistetty KISS-porttiin"))}${st.last ? " · " + esc(T("viimeisin paketti {a}", {a: ago(st.last)})) : ""}`
+  $("covStatus").innerHTML = !st.enabled ? esc(T("Vastaanotto pois päältä – ota se käyttöön alla Radiot ja TNC:t -osiosta."))
+    : st.connected ? `<span class="st-ok">●</span> ${esc(T("Yhdistetty: {n}", {n: ((S.aprsrx && S.aprsrx.radios) || []).filter(r => r.connected).map(r => r.name).join(", ")}))}${st.last ? " · " + esc(T("viimeisin paketti {a}", {a: ago(st.last)})) : ""}`
     : `<span class="st-bad">●</span> ${esc(st.error || T("Ei yhteyttä"))}`;
   $("covCount").textContent = t.packets ? T("{n} pakettia", {n: t.packets}) : "";
   const pct = x => t.packets ? Math.round(100 * x / t.packets) + " %" : "–";
@@ -3614,16 +3621,101 @@ function renderCov() {
 $("covPeriod").onchange = covRefresh;
 $("covMode").onchange = () => { covLoadCells(); covLoadStations(); };
 $("digiBody").addEventListener("click", e => { const r = e.target.closest("tr[data-via]"); if (r) covPick(r.dataset.via); });
+// Radiolista (KISS TCP, KISS sarjaportti, AGWPE, simuloitu). Luonnos säilyy, kunnes tallennetaan.
+const RADIO_TYPES = [["kiss_tcp", "KISS TCP (Graywolf, Direwolf)"], ["kiss_serial", "KISS TNC sarjaportissa (USB, Bluetooth)"],
+  ["agwpe", "AGWPE (Direwolf, soundmodem)"], ["sim", "Simuloitu radio (testaukseen)"]];
+const RADIO_PORTS = {kiss_tcp: 8001, agwpe: 8000};
+const BAUDS = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200];
+let radioDraft = [], radioDirty = false, serialPorts = null;
+function collectRadios() {
+  return [...document.querySelectorAll("#radioList .radio")].map(el => {
+    const g = k => el.querySelector(`[data-k="${k}"]`);
+    const r = {id: el.dataset.id, type: g("type").value, name: g("name").value, enabled: g("enabled").checked, tx: g("tx").checked};
+    if (g("host")) { r.host = g("host").value; r.port = g("port").value; }
+    if (g("serial")) { r.serial = g("serial").value; r.baud = g("baud").value; }
+    return r;
+  });
+}
+function renderRadios() {
+  const h = radioDraft.map(r => {
+    const opts = RADIO_TYPES.map(([v, t]) => `<option value="${v}"${v === r.type ? " selected" : ""}>${esc(T(t))}</option>`).join("");
+    let conn = "";
+    if (r.type === "kiss_tcp" || r.type === "agwpe")
+      conn = `<div class="fld"><label>${esc(T("Palvelin"))}</label><input type="text" data-k="host" value="${esc(r.host || "127.0.0.1")}" style="width:150px"></div>
+        <div class="fld"><label>${esc(T("Portti"))}</label><input type="number" data-k="port" min="1" max="65535" value="${esc(r.port || RADIO_PORTS[r.type])}" style="width:90px"></div>`;
+    else if (r.type === "kiss_serial")
+      conn = `<div class="fld"><label>${esc(T("Sarjaportti"))}</label><input type="text" data-k="serial" list="serialList" value="${esc(r.serial || "")}" placeholder="COM5 / /dev/tty.usbmodem…" style="width:200px"></div>
+        <div class="fld"><label>${esc(T("Nopeus"))}</label><select data-k="baud">${BAUDS.map(b => `<option${b === (+r.baud || 9600) ? " selected" : ""}>${b}</option>`).join("")}</select></div>
+        <div class="fld" style="align-self:end"><button data-act="ports" title="${esc(T("Päivitä porttilista"))}">↻</button></div>`;
+    return `<div class="radio" data-id="${esc(r.id || "")}">
+      <div class="frow">
+        <div class="fld"><label>${esc(T("Nimi"))}</label><input type="text" data-k="name" value="${esc(r.name || "")}" maxlength="40" placeholder="${esc(T("esim. Graywolf"))}" style="width:150px"></div>
+        <div class="fld"><label>${esc(T("Radion tyyppi"))}</label><select data-k="type">${opts}</select></div>
+        ${conn}
+        <div class="fld checks" style="align-self:end">
+          <label><input type="checkbox" data-k="enabled"${r.enabled !== false ? " checked" : ""}> ${esc(T("Käytössä"))}</label>
+          <label><input type="checkbox" data-k="tx"${r.tx ? " checked" : ""}> ${esc(T("Lähetys sallittu"))}</label></div>
+        <div class="fld" style="align-self:end;margin-left:auto"><button data-act="del" title="${esc(T("Poista radio"))}">✕</button></div>
+      </div>
+      <div class="radiostate" data-st="${esc(r.id || "")}"></div>
+    </div>`;
+  }).join("") || `<div class="empty">${esc(T("Ei radioita. Lisää radio alta."))}</div>`;
+  $("radioList").innerHTML = h;
+  radioStates();
+  if (radioDraft.some(r => r.type === "kiss_serial") && serialPorts === null) loadSerialPorts();
+}
+async function loadSerialPorts() {
+  serialPorts = [];
+  try { serialPorts = (await (await fetchT("/api/aprsrx/serialports", 15000)).json()).ports || []; } catch (e) { /* ei listaa */ }
+  $("serialList").innerHTML = serialPorts.map(p => `<option value="${esc(p.device)}">${esc(p.desc || p.device)}</option>`).join("");
+}
+function radioStates() {
+  const st = {}; ((S.aprsrx && S.aprsrx.radios) || []).forEach(r => { st[r.id] = r; });
+  document.querySelectorAll("#radioList .radiostate").forEach(el => {
+    const r = st[el.dataset.st], c = S.config.aprsrx || {};
+    let h;
+    if (!r) h = `<span class="muted">${esc(T("Tallentamaton"))}</span>`;
+    else if (!c.enabled) h = `<span class="muted">${esc(T("Vastaanotto pois päältä"))}</span>`;
+    else if (!r.active) h = `<span class="muted">${esc(T("Ei käytössä"))}</span>`;
+    else if (r.connected) h = `<span class="ok">● ${esc(T("Yhdistetty"))}</span> <span class="muted">· ${esc(T("{n} pakettia", {n: r.count}))}${r.last ? " · " + esc(T("viimeisin {a}", {a: ago(r.last)})) : ""}${r.tx ? " · " + esc(T("lähetetty {n}", {n: r.tx})) : ""}</span>`;
+    else h = `<span class="bad">● ${esc(r.error || T("Ei yhteyttä"))}</span>`;
+    if (el.dataset.h !== h) { el.innerHTML = h; el.dataset.h = h; }
+  });
+}
+$("radioList").addEventListener("input", () => { radioDirty = true; });
+$("radioList").addEventListener("change", e => {
+  radioDirty = true;
+  if (e.target.dataset.k === "type") {
+    radioDraft = collectRadios();
+    const r = radioDraft.find(x => x.id === e.target.closest(".radio").dataset.id);
+    if (r) { r.port = RADIO_PORTS[r.type] || r.port; r.tx = r.type !== "sim"; }
+    renderRadios();
+  }
+});
+$("radioList").addEventListener("click", e => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  e.preventDefault();
+  if (b.dataset.act === "ports") { loadSerialPorts(); return; }
+  if (b.dataset.act === "del") {
+    radioDraft = collectRadios().filter(x => x.id !== b.closest(".radio").dataset.id);
+    radioDirty = true; renderRadios();
+  }
+});
+$("btnRadioAdd").onclick = () => {
+  radioDraft = collectRadios();
+  radioDraft.push({id: Math.random().toString(36).slice(2, 10).replace(/[^a-z0-9]/g, "x"), type: "kiss_tcp", name: "", enabled: true, tx: true, host: "127.0.0.1", port: 8001, baud: 9600});
+  radioDirty = true; renderRadios();
+};
 function fillRx() {
   const c = S.config.aprsrx || {};
   $("rxEnabled").checked = !!c.enabled; $("rxEnabledTxt").textContent = T(c.enabled ? "Päällä" : "Pois");
-  $("rxHost").value = c.host || ""; $("rxPort").value = c.port || 8001;
+  if (!radioDirty) { radioDraft = (c.radios || []).map(r => ({...r})); renderRadios(); }
   $("rxAlerts").checked = !!c.alerts; $("rxAuto").checked = !!c.auto_digis; $("rxSms").checked = !!c.sms;
   $("rxSilence").value = c.silence_min; $("rxMinHeard").value = c.min_heard; $("rxWatch").value = (c.watch || []).join(" ");
   $("rxTiles").value = S.config.map_tiles || ""; $("rxTilesAttr").value = S.config.map_tiles_attr || "";
 }
 function collectRx() {
-  return {aprsrx: {enabled: $("rxEnabled").checked, host: $("rxHost").value, port: $("rxPort").value, alerts: $("rxAlerts").checked,
+  return {aprsrx: {enabled: $("rxEnabled").checked, radios: collectRadios(), alerts: $("rxAlerts").checked,
     auto_digis: $("rxAuto").checked, sms: $("rxSms").checked, silence_min: $("rxSilence").value, min_heard: $("rxMinHeard").value,
     watch: $("rxWatch").value}, map_tiles: $("rxTiles").value, map_tiles_attr: $("rxTilesAttr").value};
 }
@@ -3632,7 +3724,7 @@ async function saveRx() {
   const old = S.config.map_tiles;
   let j; try { j = await saveCfg(collectRx()); } catch (e) { $("rxErr").textContent = String(e); return false; }
   if (!j.ok) { $("rxErr").textContent = j.error; unfold("aprs-rx"); return false; }
-  S.config = j.config; fillRx(); $("rxErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+  radioDirty = false; S.config = j.config; fillRx(); $("rxErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
   if (S.config.map_tiles !== old) covSetTiles();
   setTimeout(covRefresh, 1500);
   return true;

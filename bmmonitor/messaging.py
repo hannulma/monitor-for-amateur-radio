@@ -429,14 +429,14 @@ class MessagingHub:
         self.aprs_msgs: deque[dict] = deque(maxlen=300)
         self.aprs = AprsClient(self)
         self.feeds = FeedWatcher(self)
-        self.rf = None                       # AprsRx (Graywolfin KISS-yhteys), asetetaan sovelluksessa
+        self.rf = None                       # AprsRx (radioyhteydet), asetetaan sovelluksessa
         self.rf_queue: asyncio.Queue = asyncio.Queue()
         self.rf_sent: deque[float] = deque()
         self.acked: dict[tuple[str, str], float] = {}   # (viestin lähettäjä, msgid) → kuitattu (aika)
 
     # ---------------- reitti: APRS-IS vai radio ----------------
     def rf_ready(self) -> bool:
-        return bool(self.cfg.get("rf_tx")) and self.rf is not None and bool(self.rf.status.get("connected"))
+        return bool(self.cfg.get("rf_tx")) and self.rf is not None and self.rf.can_transmit()
 
     def enqueue(self, entry: dict):
         """Viesti lähtöjonoon reitin mukaan. Radio + APRS-IS: APRS-IS hoitaa tilan ja uudelleenlähetykset,
@@ -665,7 +665,7 @@ class MessagingHub:
             "feeds": self.feeds.status,
             "log": list(self.log)[:100],
             "rf": {"enabled": bool(self.cfg.get("rf_tx")), "ready": self.rf_ready(),
-                   "connected": bool(self.rf and self.rf.status.get("connected"))},
+                   "connected": bool(self.rf and self.rf.can_transmit())},
             "aprs_msgs": [{k: e.get(k) for k in ("time", "dir", "from", "to", "text", "msgid", "status", "tries", "copies", "route")}
                           for e in list(self.aprs_msgs)[:150]],
             "watch_bases": sorted(self.watch_bases()),

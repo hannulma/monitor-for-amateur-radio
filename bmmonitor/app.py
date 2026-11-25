@@ -203,7 +203,7 @@ class Monitor:
         svc = self.cfg.get("services") or {}
         self.cfg["services"] = {k: {**v, **(svc.get(k) or {})} for k, v in DEFAULT_SERVICES.items()}
         self.cfg["calls_limit"] = nearest_calls_limit(self.cfg.get("calls_limit"))
-        self.cfg["aprsrx"] = {**DEFAULT_APRSRX, **(self.cfg.get("aprsrx") or {})}
+        self.cfg["aprsrx"] = normalize_aprsrx({}, {**DEFAULT_APRSRX, **(self.cfg.get("aprsrx") or {})})   # myös radiolista
         self.cfg["nets"] = {**DEFAULT_NETS, **(self.cfg.get("nets") or {})}
         self.cfg["log"] = {**DEFAULT_LOG, **(self.cfg.get("log") or {})}
         if "update_beta" not in self.cfg:
@@ -1226,6 +1226,10 @@ def make_app(mon: Monitor) -> web.Application:
         loc = mon.cfg["services"]["location"]
         return (loc["lat"], loc["lon"]) if loc.get("lat") is not None else None
 
+    async def aprsrx_serialports(_):
+        from .radios import serial_ports
+        return web.json_response({"ports": await in_thread(serial_ports)})
+
     async def aprsrx_summary(request):
         period = request.query.get("period", "24h")
         mon.aprsrx._commit()
@@ -1381,6 +1385,7 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_get("/api/nets", nets_list)
     app.router.add_get("/api/aprsrx/cells", aprsrx_cells)
     app.router.add_get("/api/aprsrx/stations", aprsrx_stations)
+    app.router.add_get("/api/aprsrx/serialports", aprsrx_serialports)
     app.router.add_get("/api/log", log_list)
     app.router.add_post("/api/log", log_save)
     app.router.add_delete("/api/log/{id:\\d+}", log_delete)

@@ -83,9 +83,13 @@ Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · 
 ### APRS
 - **APRS-viestit:** kutsusi kaikkien SSID:iden saapuvat ja lähtevät APRS-viestit, myös BrandMeisterin kautta
   DMR-radiosta lähtevät. Viestiä klikkaamalla voit vastata suoraan (valittavissa millä SSID:llä).
-  Halutessasi viestit, kuittaukset ja komentojen vastaukset lähtevät myös radiolla Graywolfin kautta
+  Halutessasi viestit, kuittaukset ja komentojen vastaukset lähtevät myös radiolla
   (APRS → Asetukset → APRS-viestit radiolla; reitti automaattinen / APRS-IS / radio / radio ja APRS-IS, oletuksena pois).
-- **APRS-kartta:** ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia (oletus `127.0.0.1:8001`).
+- **Radiot ja TNC:t:** yksi tai useampi radio yhtä aikaa (APRS → Asetukset → Radiot ja TNC:t): **KISS TCP** (Graywolf,
+  Dire Wolf; oletus `127.0.0.1:8001`), **KISS TNC sarjaportissa** (USB tai Bluetooth, esim. Mobilinkd, Kenwood TH-D74/D75
+  KISS-tilassa), **AGWPE** (Dire Wolf, soundmodem) ja **simuloitu radio** testaukseen. Äänikortin kautta liitetylle radiolle
+  käytä Graywolfia tai Dire Wolfia. Lähetykseen käytetään ensimmäistä yhdistettyä radiota, jolle lähetys on sallittu.
+- **APRS-kartta:** radioiden kuulemista paketeista.
   Kartan tasot (24 h / 7 vrk / 30 vrk): **RF-kuuluvuus** – lämpökartta siitä, mistä asemasi kuulee paketteja
   suoraan ja mistä digipiitterien kautta; **APRS-asemat** – radiolla kuultujen asemien viimeisin sijainti;
   **Digipiitterit** – digiä klikkaamalla näkyy sen kautta kuultu alue. Taulukoissa digien osuudet ja yleisimmät polut. Hälytys, kun tuttu digi tai valitsemasi asema
@@ -174,7 +178,7 @@ otsikolla (vaatii *APRS → Asetukset → Komennot radiosta → Vastaa komentoih
 ### Asetukset ja Ohjelma
 Toimintojen asetukset ovat kunkin välilehden alimmassa, pienennettävässä **Asetukset**-osiossa:
 - **BrandMeister:** seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, oma kutsu ja BrandMeister API-avain.
-- **APRS:** Graywolf-yhteys, APRS-viestit radiolla, APRS-IS-yhteys ja vastaanottajat, komennot radiosta.
+- **APRS:** radiot ja TNC:t, APRS-viestit radiolla, APRS-IS-yhteys ja vastaanottajat, komennot radiosta.
 - **Syötteet:** syötteet ja viestit radioon.
 - **Lokit:** oma asema, oletustila ja tunnistus, QRZ Logbook.
 
