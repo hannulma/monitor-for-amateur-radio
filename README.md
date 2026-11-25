@@ -25,6 +25,9 @@ DMR radio via APRS.
   last activity, duration, via which repeater/hotspot, number of calls and total airtime.
 - **Live audio** – listen to one or several talkgroups directly in the app (Hoseline audio stream), with the
   current talker, talker alias and level meter.
+- **Contact log** – contacts (QSOs) are recognised from BrandMeister calls when you and another station take turns
+  on a talkgroup or have a private call; add them to the log with one click. Logs tab: search, edit, ADIF/CSV export
+  and sync to **QRZ Logbook** (requires a QRZ subscription, XML level or higher).
 - **Friend alerts** – desktop notification, sound and/or a DMR text message when a station on your list
   keys up anywhere on the network.
 - **Station card** – click any callsign for registry data, APRS SSID, repeaters/hotspots and where and when

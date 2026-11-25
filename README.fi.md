@@ -61,9 +61,18 @@ BrandMeister lähettää), `-v` (enemmän lokia).
   avausten määrä ja yhteenlaskettu puheaika. Kaiutinpainike aloittaa ryhmän **kuuntelun** (useita ryhmiä
   voi kuunnella yhtä aikaa; ryhmiä 1–90 ei voi kuunnella).
 - **Viimeisimmät puhelut:** 10, 25, 50, 100 tai 150 viimeisintä, suodatettavissa puheryhmän mukaan.
+- **Yhteydet (QSO):** kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai
+  pidätte yksityispuhelun, yhteys näkyy ehdokkaana. *Lisää lokiin* avaa valmiiksi täytetyn lomakkeen; *Ohita* poistaa ehdokkaan.
 - **Netit tänään ja huomenna:** FinDMR-kierros ([6kw.fi](https://6kw.fi/findmr/)), W0WC:n BrandMeister-nettikalenteri
   ja omat ICS-kalenterit sekä oma lista. Ajat omassa ajassa, "käynnissä – liikennettä" kun netin puheryhmässä
   puhutaan, kuuntelu- ja check-in-painikkeet, muistutus ennen seurattujen puheryhmien nettejä.
+
+### Lokit
+- **Loki:** omat yhteydet (aika UTC, kutsu, nimi, kaista, raportit, kommentti), haku, muokkaus ja poisto, yhteyden
+  lisäys käsin sekä vienti **ADIF**- (.adi) ja CSV-tiedostoksi. DMR-yhteydet merkitään ADIF-tilalla DIGITALVOICE / DMR.
+- **Asetukset:** oma kutsu ja lokaattori, oletusraportti ja -kaista, tunnistus päälle/pois.
+- **QRZ Logbook:** lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan (vaatii QRZ-tilauksen, XML-taso tai ylempi).
+  API-avain tallennetaan salasanavarastoon. Jokaisen yhteyden lähetystila näkyy lokissa; epäonnistuneet voi lähettää uudelleen.
 
 ### APRS
 - **APRS-viestit:** kutsusi kaikkien SSID:iden saapuvat ja lähtevät APRS-viestit, myös BrandMeisterin kautta
@@ -220,6 +229,7 @@ Asetukset, lokit ja tilastot tallentuvat vain omalle koneelle:
 | `config.json` | asetukset (BrandMeister API-avain ja oma APRS-passcode ovat Windowsissa ja macOS:ssä käyttöjärjestelmän salasanavarastossa, muuten tässä tiedostossa) |
 | `calls.csv` | seuratut puhelut (aukeaa Excelissä) |
 | `monitor.log` | loki, kun ohjelma toimii ilman komentoikkunaa |
+| `qso_log.sqlite` | oma loki (Lokit-välilehti) |
 | `checkin.json`, `checkin/*.csv` | käynnissä oleva check-in-kierros ja päättyneiden kierrosten lokit |
 | `tg_names.json`, `feeds_state.json` | välimuistit |
 

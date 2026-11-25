@@ -263,4 +263,12 @@ EN: dict[str, str] = {
     "Ei yhteyttä Graywolfiin – viestiä ei voi lähettää radiolla": "No connection to Graywolf – the message cannot be sent on the radio",
     "Polussa voi olla enintään 8 osaa": "The path can have at most 8 parts",
     "Virheellinen polku: {x}": "Invalid path: {x}",
+    "Virheellinen kutsu: {x}": "Invalid callsign: {x}",
+    "Virheellinen lokaattori: {x}": "Invalid locator: {x}",
+    "Virheellinen aika": "Invalid time",
+    "yksityispuhelu": "private call",
+    "Ehdokasta ei löydy": "Candidate not found",
+    "Aseta QRZ Logbookin API-avain": "Set the QRZ Logbook API key",
+    "API-avain ei kelpaa": "Invalid API key",
+    "oli jo QRZ:ssa": "was already in QRZ",
 }

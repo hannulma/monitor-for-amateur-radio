@@ -657,3 +657,110 @@ def test_aprs_stations_layer(tmp_path):
     assert {s["call"] for s in rx.stations("24h", "direct", None, None)["stations"]} == {"OH2IG", "OH2OLD"}
     assert parse_symbol("APRS", b"=6012.34N\\02456.78E_wx") == "\\_" and symbol_kind("\\_") == "wx"
     rx.close()
+
+
+def test_qso_detector_and_log(tmp_path):
+    from types import SimpleNamespace
+    from bmmonitor.qso import DEFAULT_LOG, QsoDetector, QsoLog, adif_file, band_for, parse_freq, qso_adif
+    det = QsoDetector(lambda c: c == "OH2BEA")
+    t0 = 1_700_000_000
+
+    def ev(call, start, dur=20, tg=244, private_to=None, ctx=None):
+        p = {"SourceCall": call, "SourceID": hash(call) % 10**7, "DestinationID": tg, "Start": start, "Stop": start + dur,
+             "SourceName": call.title(), "LinkCall": "OH2RAC", "ContextID": ctx, "CallTypes": ["Voice", "Group"]}
+        if private_to:
+            p.update(CallTypes=["Voice", "Private"], DestinationCall=private_to, DestinationID=1234)
+        det.on_event(p)
+
+    ev("OH2BEA", t0)                       # oma
+    ev("OH2ABC", t0 + 30)                  # toinen
+    assert det.snapshot() == []            # vasta yksi vaihto
+    ev("OH2BEA", t0 + 60)                  # oma → kaksi vaihtoa = ehdokas
+    c = det.snapshot()
+    assert len(c) == 1 and c[0]["call"] == "OH2ABC" and c[0]["turns"] == 3 and c[0]["tg"] == 244
+    ev("OH2BEA", t0 + 60)                  # sama lähetys uudelleen: ei vaikutusta
+    assert det.snapshot()[0]["turns"] == 3
+    ev("OH2XYZ", t0 + 90)                  # sivullinen puhuu kerran: ei ehdokasta
+    assert {x["call"] for x in det.snapshot()} == {"OH2ABC"}
+    ev("OH9AAA", t0 + 1000, tg=91)         # eri puheryhmä, ei omaa vuoroa
+    ev("OH2BEA", t0 + 2000, tg=91)         # liian pitkä väli
+    ev("OH9AAA", t0 + 2030, tg=91)
+    assert {x["call"] for x in det.snapshot()} == {"OH2ABC"}
+    ev("OH2BEA", t0 + 2060, tg=91)
+    assert {x["call"] for x in det.snapshot()} == {"OH2ABC", "OH9AAA"}
+    ev("OH2PRV", t0 + 3000, private_to="OH2BEA")     # yksityispuhelu omaan kutsuun = heti ehdokas
+    prv = [x for x in det.snapshot() if x["call"] == "OH2PRV"][0]
+    assert prv["private"] and prv["tg"] is None
+    det.close(prv["id"])
+    ev("OH2BEA", t0 + 3030, private_to="OH2PRV")     # suljettu ehdokas ei palaa
+    assert "OH2PRV" not in {x["call"] for x in det.snapshot()}
+
+    assert band_for(parse_freq("434.5000")) == "70cm" and band_for(parse_freq(145600000)) == "2m"
+    q = {"call": "OH2ABC", "start": t0, "end": t0 + 80, "band": "70cm", "freq": 434.5, "rst_sent": "59", "rst_rcvd": "57",
+         "name": "Matti", "comment": "BM TG 244", "my_call": "OH2BEA", "grid": "KP20lf"}
+    a = qso_adif(q)
+    assert "<CALL:6>OH2ABC" in a and "<MODE:12>DIGITALVOICE<SUBMODE:3>DMR" in a and "<FREQ:5>434.5" in a
+    assert "<QSO_DATE:8>20231114" in a and "<TIME_ON:6>221320" in a and "<GRIDSQUARE:6>KP20LF" in a and a.endswith("<eor>")
+    assert "<eoh>" in adif_file([q])
+
+    mon = SimpleNamespace(cfg={"log": dict(DEFAULT_LOG), "devices": {"my_call": "OH2BEA"}, "messaging": {}},
+                          dirty=False, save_config=lambda: None,
+                          devmon=SimpleNamespace(state={555: {"rx": "433.6250", "tx": "433.6250"}}))
+    lg = QsoLog(mon, tmp_path / "log.sqlite")
+    lg.qrz_key = ""
+    for e in ({"SourceCall": "OH2BEA", "Start": t0, "Stop": t0 + 10, "ContextID": 555},
+              {"SourceCall": "OH2ABC", "Start": t0 + 20, "Stop": t0 + 30},
+              {"SourceCall": "OH2BEA", "Start": t0 + 40, "Stop": t0 + 50, "ContextID": 555}):
+        lg.on_event({"SourceID": hash(e["SourceCall"]), "DestinationID": 244, "CallTypes": ["Voice", "Group"], **e})
+    cid = lg.snapshot()["candidates"][0]["id"]
+    d = lg.candidate_defaults(cid)
+    assert d["call"] == "OH2ABC" and d["band"] == "70cm" and d["freq"] == 433.625 and "TG 244" in d["comment"]
+    qid = lg.add({**d, "rst_rcvd": "55"})
+    assert lg.snapshot()["candidates"] == [] and lg.count() == 1
+    row = lg.get(qid)
+    assert row["my_call"] == "OH2BEA" and row["rst_rcvd"] == "55" and row["qrz_status"] is None
+    lg.update(qid, {"name": "Matti"})
+    assert lg.get(qid)["name"] == "Matti"
+    with pytest.raises(ValueError):
+        lg.add({"call": "huono kutsu", "start": t0})
+    mon.cfg["log"]["qrz"] = True
+    qid2 = lg.add({"call": "OH3XYZ", "start": t0 + 500})
+    assert lg.get(qid2)["qrz_status"] == "queued" and lg.snapshot()["qrz"]["pending"] == 1
+    lg.delete(qid)
+    assert lg.count() == 1
+    lg.close()
+
+
+def test_qrz_send(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from bmmonitor.qso import DEFAULT_LOG, QsoLog
+    mon = SimpleNamespace(cfg={"log": {**DEFAULT_LOG, "qrz": True}, "devices": {"my_call": "OH2BEA"}, "messaging": {}},
+                          dirty=False, save_config=lambda: None, devmon=SimpleNamespace(state={}))
+    lg = QsoLog(mon, tmp_path / "log.sqlite")
+    lg.qrz_key = "TEST-KEY"
+    sent = []
+    replies = iter([{"RESULT": "OK", "LOGID": "777", "COUNT": "1"},
+                    {"RESULT": "REPLACE", "LOGID": "777"},
+                    {"RESULT": "FAIL", "REASON": "Unable to add QSO to database: duplicate"},
+                    {"RESULT": "AUTH", "REASON": "invalid api key"}])
+
+    async def fake(data):
+        sent.append(data)
+        return next(replies)
+    monkeypatch.setattr(lg, "_qrz", fake)
+
+    async def go():
+        a = lg.add({"call": "OH2ABC", "start": 1_700_000_000})
+        await lg._qrz_send(lg.get(a))
+        assert lg.get(a)["qrz_status"] == "ok" and lg.get(a)["qrz_logid"] == "777" and "OPTION" not in sent[0]
+        lg.update(a, {"name": "Matti"})
+        await lg._qrz_send(lg.get(a))
+        assert sent[1]["OPTION"] == "REPLACE" and lg.get(a)["qrz_status"] == "ok"
+        b = lg.add({"call": "OH2DEF", "start": 1_700_000_100})
+        await lg._qrz_send(lg.get(b))
+        assert lg.get(b)["qrz_status"] == "ok"
+        c = lg.add({"call": "OH2GHI", "start": 1_700_000_200})
+        await lg._qrz_send(lg.get(c))
+        assert lg.get(c)["qrz_status"] == "auth" and lg.qrz_state["ok"] is False
+    asyncio.run(go())
+    lg.close()

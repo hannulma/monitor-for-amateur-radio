@@ -10,6 +10,7 @@ The program contacts external services only while the corresponding feature is i
 - OpenStreetMap tiles while viewing the APRS coverage map
 - net calendars (6kw.fi, Google Calendar) while the Nets section is on
 - feeds and calendars you add yourself, and a check-in sheet if you connect one
+- QRZ Logbook, if you switch log sync on
 - feedback to the maintainer only when you send it yourself (secrets are removed)
 
 Every feature can be switched off in the program's settings. Full privacy policy:

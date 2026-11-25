@@ -94,6 +94,8 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .listen svg { width: 14px; height: 14px; fill: currentColor; }
   .rfhint { max-width: 220px; }
   .rfstate { font-size: 12px; padding: 2px 10px; border-radius: 10px; border: 1px solid var(--line); }
+  .logcomment { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .linkbtn { background: none; border: none; padding: 0 4px; color: var(--accent); cursor: pointer; }
   .netlisten { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; }
   .netlisten svg { width: 14px; height: 14px; fill: currentColor; }
   .netlisten.on { background: var(--live); border-color: var(--live); color: var(--onaccent); }
@@ -350,6 +352,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
 <nav class="tabs" id="tabs">
   <button data-tab="seuranta" class="active">BrandMeister</button>
   <button data-tab="aprs">APRS</button>
+  <button data-tab="lokit">Lokit</button>
   <button data-tab="kaverit">Kaverit<span class="badge" id="alertBadge" style="display:none"></span></button>
   <button data-tab="laitteet">Laitteet</button>
   <button data-tab="tilastot">Tilastot</button>
@@ -726,7 +729,18 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="empty" id="callEmpty">Ei puheluita.</div>
     </div>
   </section>
-  <section data-tab="seuranta" data-fold="bm-nets">
+  <section data-tab="seuranta" data-fold="bm-qso">
+    <h2>Yhteydet (QSO) <span class="count" id="qsoCount"></span></h2>
+    <div class="note" id="qsoNoCall" style="display:none;margin:10px">Aseta oma kutsu (Lokit-välilehti → Asetukset tai Laitteet-välilehti),
+      niin ohjelma tunnistaa yhteytesi puhelulistasta.</div>
+    <div class="scroll" style="max-height:none">
+      <table><thead><tr><th>Aika (UTC)</th><th>Kutsu</th><th>Nimi</th><th>Missä</th><th class="num">Vuoroja</th><th>Tila</th><th></th></tr></thead>
+        <tbody id="qsoBody"></tbody></table>
+      <div class="empty" id="qsoEmpty">Ei yhteysehdokkaita. Kun sinä ja toinen asema vuorottelette samassa puheryhmässä, yhteys näkyy tässä.</div>
+    </div>
+    <div class="hint" style="margin:6px 10px 10px">Lokiin lisätyt yhteydet näet Lokit-välilehdellä. <span id="qsoLogInfo"></span></div>
+  </section>
+  <section class="wide" data-tab="seuranta" data-fold="bm-nets">
     <h2>Netit tänään ja huomenna <span class="count" id="netCount"></span>
       <select class="filter" id="netFilter" title="Näytettävät netit">
         <option value="all">Kaikki netit</option><option value="watched">Vain seuratut puheryhmät</option></select>
@@ -755,6 +769,54 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="frow svcsave"><button class="primary" id="btnNetSave">Tallenna</button><button id="btnNetRefresh">Päivitä kalenterit nyt</button><span class="err" id="netErr"></span></div>
       <div class="hint" id="netSrcStatus"></div>
     </details>
+  </section>
+
+  <!-- ============ LOKIT ============ -->
+  <section class="wide" data-tab="lokit" data-fold="log-list">
+    <h2>Loki <span class="count" id="logCount"></span>
+      <input type="search" class="filter" id="logSearch" placeholder="Hae kutsu, nimi tai kommentti" style="width:220px">
+      <button class="filter" id="btnLogNew" style="margin-left:6px">+ Uusi yhteys</button>
+      <a class="filter" href="/api/log/export.adi" download style="margin-left:6px">ADIF ↓</a>
+      <a class="filter" href="/api/log/export.csv" download style="margin-left:6px">CSV ↓</a></h2>
+    <div class="scroll" style="max-height:none">
+      <table><thead><tr><th>Päivä (UTC)</th><th>Aika</th><th>Kutsu</th><th>Nimi</th><th>Kaista</th><th>RST</th><th>Kommentti</th><th>QRZ</th><th></th></tr></thead>
+        <tbody id="logBody"></tbody></table>
+      <div class="empty" id="logEmpty">Lokissa ei ole vielä yhteyksiä.</div>
+      <div style="text-align:center;margin:8px"><button id="btnLogMore" style="display:none">Näytä kaikki</button></div>
+    </div>
+  </section>
+  <section class="cfg form" data-tab="lokit" data-fold="log-cfg">
+    <h2>Asetukset</h2>
+    <div class="inner">
+    <div class="frow">
+      <div class="fld"><label for="logMyCall">Oma kutsu</label><input id="logMyCall" type="text" style="width:130px;text-transform:uppercase">
+        <div class="hint" id="logMyCallHint">tyhjä = Laitteet-välilehden oma kutsu</div></div>
+      <div class="fld"><label for="logMyGrid">Oma lokaattori</label><input id="logMyGrid" type="text" placeholder="KP20lf" style="width:110px"></div>
+      <div class="fld"><label for="logRst">Oletusraportti</label><input id="logRst" type="text" style="width:70px"></div>
+      <div class="fld"><label for="logBand">Oletuskaista</label><select id="logBand"></select>
+        <div class="hint">jos taajuus ei ole tiedossa</div></div>
+    </div>
+    <div class="frow"><div class="fld checks"><label><input type="checkbox" id="logDetect"> Tunnista yhteydet BrandMeisterin puheluista</label>
+      <div class="hint">Yhteysehdokas syntyy, kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai pidätte yksityispuhelun.
+        Ehdokas päättyy 10 minuutin hiljaisuuden jälkeen. Ehdokkaat näkyvät BrandMeister-välilehdellä.</div></div></div>
+    <div class="frow svcsave"><button class="primary" id="btnLogCfgSave">Tallenna</button><span class="err" id="logCfgErr"></span></div>
+    </div>
+  </section>
+  <section class="cfg form" data-tab="lokit" data-fold="log-qrz">
+    <h2>QRZ Logbook <span class="count" id="qrzHead"></span></h2>
+    <div class="inner">
+    <div class="note">Lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan. Rajapinnan käyttö vaatii QRZ-tilauksen (XML-taso tai ylempi).
+      API-avaimen löydät QRZ.comista: Logbook → Settings → API Key. Avain tallennetaan käyttöjärjestelmän salasanavarastoon.</div>
+    <div class="frow" style="margin-top:10px">
+      <div class="fld checks"><label><input type="checkbox" id="qrzOn"> Lähetä lokiin lisätyt yhteydet QRZ Logbookiin</label></div>
+    </div>
+    <div class="frow">
+      <div class="fld"><label for="qrzKey">API-avain</label><input id="qrzKey" type="password" autocomplete="off" placeholder="ABCD-0A0B-1C1D-2E2F" style="width:240px"></div>
+    </div>
+    <div class="frow svcsave"><button class="primary" id="btnQrzSave">Tallenna</button><button id="btnQrzTest">Testaa yhteys</button>
+      <button id="btnQrzRetry">Lähetä epäonnistuneet uudelleen</button><span class="err" id="qrzErr"></span></div>
+    <div class="hint" id="qrzState"></div>
+    </div>
   </section>
 
   <!-- ============ KAVERIT ============ -->
@@ -1096,6 +1158,38 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   </div>
 </div></div>
 
+<div class="modal-bg" id="qsoBg"><div class="modal" style="width:min(640px,100%)">
+  <div class="mh"><h2 id="qsoTitle">Yhteys lokiin</h2><span class="spacer"></span><button id="qsoClose" aria-label="Sulje">✕</button></div>
+  <div class="mb form">
+    <div class="frow">
+      <div class="fld"><label for="qCall">Kutsu</label><input id="qCall" type="text" style="width:130px;text-transform:uppercase"></div>
+      <div class="fld" style="flex:1"><label for="qName">Nimi</label><input id="qName" type="text" style="width:100%"></div>
+    </div>
+    <div class="frow">
+      <div class="fld"><label for="qStart">Alku (UTC)</label><input id="qStart" type="datetime-local" step="60"></div>
+      <div class="fld"><label for="qEnd">Loppu (UTC)</label><input id="qEnd" type="datetime-local" step="60"></div>
+    </div>
+    <div class="frow">
+      <div class="fld"><label for="qBand">Kaista</label><select id="qBand"></select></div>
+      <div class="fld"><label for="qFreq">Taajuus (MHz)</label><input id="qFreq" type="text" inputmode="decimal" style="width:110px"></div>
+      <div class="fld"><label for="qRstS">RST lähetetty</label><input id="qRstS" type="text" style="width:60px"></div>
+      <div class="fld"><label for="qRstR">RST vastaanotettu</label><input id="qRstR" type="text" style="width:60px"></div>
+    </div>
+    <div class="frow">
+      <div class="fld" style="flex:1"><label for="qQth">QTH</label><input id="qQth" type="text" style="width:100%"></div>
+      <div class="fld"><label for="qGrid">Lokaattori</label><input id="qGrid" type="text" style="width:100px"></div>
+    </div>
+    <label for="qComment">Kommentti</label><input id="qComment" type="text" style="width:100%">
+    <div class="hint">Tila: DIGITALVOICE / DMR. <span id="qInfo"></span></div>
+    <div class="frow svcsave" style="justify-content:flex-end">
+      <span class="err" id="qErr" style="margin-right:auto"></span>
+      <label id="qDelRemoteL" style="display:none"><input type="checkbox" id="qDelRemote"> myös QRZ:sta</label>
+      <button id="qDelete" style="display:none">Poista</button>
+      <button class="primary" id="qSave">Lisää lokiin</button><button id="qCancel">Peruuta</button>
+    </div>
+  </div>
+</div></div>
+
 <div class="modal-bg" id="modalBg"><div class="modal">
   <div class="mh"><h2 id="mTitle"></h2><span class="muted" id="mSub"></span><span class="spacer"></span><button id="mClose">Sulje</button></div>
   <div class="mb" id="mBody"></div>
@@ -1220,6 +1314,7 @@ function render() {
   $("watching").textContent = T("Seurataan: {list}", {list: S.config.talkgroups.join(", ") || "–"});
   renderUpdate();
   if (TAB === "checkin") renderCheckin();
+  renderQso();
 
   // Puheryhmät
   const rows = [...S.talkgroups].sort((a, b) => {
@@ -1380,6 +1475,158 @@ $("btnRfSave").onclick = async () => {
   if (!j.ok) { $("rfErr").textContent = j.error; return; }
   S.config = j.config; fillRf(); $("rfErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
 };
+
+// ---------------- loki (QSO) ----------------
+const LOG_BANDS = ["160m", "80m", "60m", "40m", "30m", "20m", "17m", "15m", "12m", "10m", "6m", "4m", "2m", "1.25m", "70cm", "33cm", "23cm"];
+let logRev = -1, logAll = false, logRows = [], qsoEdit = null, logSearchT = null;
+const p2 = n => String(n).padStart(2, "0");
+function utcDate(ts) { const d = new Date(ts * 1000); return `${d.getUTCFullYear()}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())}`; }
+function utcHM(ts) { const d = new Date(ts * 1000); return `${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`; }
+function utcDT(ts) { return ts ? `${utcDate(ts)}T${utcHM(ts)}` : ""; }
+function parseUtcDT(v) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(v || "");
+  return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 1000 : null;
+}
+function fillBands(sel, val) {
+  if (!sel.options.length) sel.innerHTML = LOG_BANDS.map(b => `<option value="${b}">${b}</option>`).join("");
+  sel.value = LOG_BANDS.includes(val) ? val : "70cm";
+}
+function renderQso() {
+  const L = S.log; if (!L) return;
+  $("qsoNoCall").style.display = L.my_call ? "none" : "";
+  const c = L.candidates || [];
+  $("qsoCount").textContent = c.length ? `(${c.length})` : "";
+  $("qsoEmpty").style.display = c.length || !L.my_call ? "none" : "";
+  $("qsoLogInfo").textContent = T("Lokissa {n} yhteyttä.", {n: L.count});
+  const h = c.map(q => `<tr class="${q.active ? "live" : ""}">
+      <td style="white-space:nowrap">${esc(utcHM(q.start))}–${esc(utcHM(q.end))}</td>
+      <td><b>${esc(q.call)}</b></td><td>${esc(q.name)}</td>
+      <td>${q.private ? esc(T("yksityispuhelu")) : `TG ${esc(q.tg)}${q.tg_name ? ` <span class="muted">${esc(q.tg_name)}</span>` : ""}`}</td>
+      <td class="num">${esc(q.turns)}</td>
+      <td style="white-space:nowrap">${q.active ? `<span class="ok">${esc(T("käynnissä"))}</span>` : `<span class="muted">${esc(T("päättynyt"))}</span>`}</td>
+      <td style="white-space:nowrap"><button class="primary" data-qadd="${esc(q.id)}">${esc(T("Lisää lokiin"))}</button>
+        <button data-qskip="${esc(q.id)}">${esc(T("Ohita"))}</button></td></tr>`).join("");
+  if ($("qsoBody").dataset.html !== h) { $("qsoBody").innerHTML = h; $("qsoBody").dataset.html = h; }
+  if (TAB === "lokit") { renderQrzState(); if (L.rev !== logRev) loadLog(); }
+}
+$("qsoBody").addEventListener("click", async e => {
+  const a = e.target.closest("button[data-qadd]"), k = e.target.closest("button[data-qskip]");
+  if (a) {
+    let j; try { j = await (await fetchT("/api/log/candidate/" + encodeURIComponent(a.dataset.qadd), 15000)).json(); } catch (err) { return; }
+    if (j.ok) openQso(j.qso);
+  } else if (k) {
+    await api("/api/log/dismiss", {id: k.dataset.qskip});
+  }
+});
+function openQso(q) {
+  q = q || {};
+  qsoEdit = {id: q.id || null, candidate: q.candidate || null, tg: q.tg, via: q.via};
+  const lc = S.config.log || {};
+  $("qsoTitle").textContent = T(q.id ? "Muokkaa yhteyttä" : "Yhteys lokiin");
+  $("qSave").textContent = T(q.id ? "Tallenna" : "Lisää lokiin");
+  $("qCall").value = q.call || ""; $("qName").value = q.name || "";
+  const t = q.start || now();
+  $("qStart").value = utcDT(t); $("qEnd").value = utcDT(q.end || (q.id ? null : t));
+  fillBands($("qBand"), q.band || lc.band); $("qFreq").value = q.freq || "";
+  $("qRstS").value = q.rst_sent || (q.id ? "" : lc.rst || "59"); $("qRstR").value = q.rst_rcvd || (q.id ? "" : lc.rst || "59");
+  $("qQth").value = q.qth || ""; $("qGrid").value = q.grid || ""; $("qComment").value = q.comment || "";
+  $("qDelete").style.display = q.id ? "" : "none";
+  $("qDelRemoteL").style.display = q.id && q.qrz_logid ? "" : "none"; $("qDelRemote").checked = false;
+  $("qInfo").textContent = q.id && q.qrz_status ? T("QRZ: {s}", {s: qrzLabel(q)[1]}) : "";
+  $("qErr").textContent = ""; $("qDelete").dataset.armed = "";
+  $("qsoBg").classList.add("open");
+  setTimeout(() => (q.call ? $("qRstR") : $("qCall")).focus(), 50);
+}
+const qsoClose = () => $("qsoBg").classList.remove("open");
+$("qsoClose").onclick = qsoClose; $("qCancel").onclick = qsoClose;
+$("qsoBg").addEventListener("click", e => { if (e.target === $("qsoBg")) qsoClose(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") qsoClose(); });
+$("qSave").onclick = async () => {
+  $("qErr").textContent = "";
+  const start = parseUtcDT($("qStart").value), end = parseUtcDT($("qEnd").value);
+  if (!start) { $("qErr").textContent = T("Anna alkuaika"); return; }
+  const j = await api("/api/log", {id: qsoEdit.id, candidate: qsoEdit.candidate, tg: qsoEdit.tg, via: qsoEdit.via,
+    call: $("qCall").value, name: $("qName").value, start, end, band: $("qBand").value, freq: $("qFreq").value,
+    rst_sent: $("qRstS").value, rst_rcvd: $("qRstR").value, qth: $("qQth").value, grid: $("qGrid").value, comment: $("qComment").value});
+  if (!j.ok) { $("qErr").textContent = j.error; return; }
+  qsoClose(); logRev = -1; if (TAB === "lokit") loadLog();
+};
+$("qDelete").onclick = async () => {
+  if (!$("qDelete").dataset.armed) { $("qDelete").dataset.armed = "1"; $("qDelete").textContent = T("Vahvista poisto"); return; }
+  try { await fetchT(`/api/log/${qsoEdit.id}?remote=${$("qDelRemote").checked ? 1 : 0}`, 15000, {method: "DELETE"}); } catch (e) { /* */ }
+  $("qDelete").textContent = T("Poista"); qsoClose(); logRev = -1; loadLog();
+};
+function qrzLabel(r) {
+  return {ok: ["ok", "✓"], queued: ["muted", T("jonossa")], error: ["warn", T("virhe – yritetään uudelleen")],
+          failed: ["bad", T("hylätty")], auth: ["bad", T("API-avain ei kelpaa")]}[r.qrz_status] || ["muted", "–"];
+}
+async function loadLog() {
+  const q = $("logSearch").value.trim();
+  let j; try { j = await (await fetchT(`/api/log?limit=${logAll ? 0 : 200}&q=${encodeURIComponent(q)}`, 30000)).json(); } catch (e) { return; }
+  logRev = S && S.log ? S.log.rev : -1;
+  logRows = j.rows || [];
+  $("logCount").textContent = j.count ? `(${j.count})` : "";
+  $("logEmpty").style.display = logRows.length ? "none" : "";
+  $("logEmpty").textContent = T(q ? "Ei hakua vastaavia yhteyksiä." : "Lokissa ei ole vielä yhteyksiä.");
+  $("btnLogMore").style.display = !logAll && !q && j.count > logRows.length ? "" : "none";
+  $("logBody").innerHTML = logRows.map(r => {
+    const [cls, txt] = qrzLabel(r);
+    const retry = ["error", "failed", "auth"].includes(r.qrz_status) ? ` <button class="linkbtn" data-lretry="${r.id}" title="${esc(T("Lähetä uudelleen"))}">↻</button>` : "";
+    return `<tr><td style="white-space:nowrap">${esc(utcDate(r.start))}</td>
+      <td style="white-space:nowrap">${esc(utcHM(r.start))}${r.end ? "–" + esc(utcHM(r.end)) : ""}</td>
+      <td><b>${esc(r.call)}</b></td><td>${esc(r.name || "")}</td><td>${esc(r.band || "")}</td>
+      <td style="white-space:nowrap">${esc(r.rst_sent || "")}/${esc(r.rst_rcvd || "")}</td>
+      <td class="logcomment" title="${esc(r.comment || "")}">${esc(r.comment || "")}</td>
+      <td class="${cls}" style="white-space:nowrap" title="${esc(r.qrz_error || r.qrz_logid || "")}">${esc(txt)}${retry}</td>
+      <td><button data-ledit="${r.id}">${esc(T("Muokkaa"))}</button></td></tr>`;
+  }).join("");
+}
+$("logBody").addEventListener("click", async e => {
+  const ed = e.target.closest("button[data-ledit]"), rt = e.target.closest("button[data-lretry]");
+  if (ed) openQso(logRows.find(r => String(r.id) === ed.dataset.ledit));
+  if (rt) { await api("/api/log/qrz/retry", {id: +rt.dataset.lretry}); }
+});
+$("logSearch").oninput = () => { clearTimeout(logSearchT); logSearchT = setTimeout(loadLog, 300); };
+$("btnLogMore").onclick = () => { logAll = true; loadLog(); };
+$("btnLogNew").onclick = () => openQso({});
+function fillLogCfg() {
+  const c = S.config.log || {};
+  $("logMyCall").value = c.my_call || ""; $("logMyCall").placeholder = (S.log && S.log.my_call) || "OH2ABC";
+  $("logMyGrid").value = c.my_grid || ""; $("logRst").value = c.rst || "59";
+  fillBands($("logBand"), c.band); $("logDetect").checked = c.detect !== false;
+  $("qrzOn").checked = !!c.qrz; $("qrzKey").value = c.qrz_key || "";
+  renderQrzState();
+}
+function renderQrzState() {
+  const q = (S.log && S.log.qrz) || {};
+  $("qrzHead").textContent = q.enabled ? T("· päällä") : "";
+  const parts = [q.key ? T("API-avain tallennettu.") : T("Ei API-avainta.")];
+  if (q.ok === true) parts.push(`<span class="ok">${esc(T("✓ Yhteys toimii: {c}, QRZ-lokissa {n} yhteyttä.", {c: q.callsign || "?", n: q.count || 0}))}</span>`);
+  else if (q.ok === false) parts.push(`<span class="bad">${esc(T("Virhe: {e}", {e: q.error || "?"}))}</span>`);
+  if (q.pending) parts.push(esc(T("Odottaa lähetystä: {n}", {n: q.pending})));
+  const h = parts.map(x => x.startsWith("<") ? x : esc(x)).join(" ");
+  if ($("qrzState").dataset.html !== h) { $("qrzState").innerHTML = h; $("qrzState").dataset.html = h; }
+}
+$("btnLogCfgSave").onclick = async () => {
+  $("logCfgErr").textContent = "";
+  const j = await saveCfg({log: {my_call: $("logMyCall").value, my_grid: $("logMyGrid").value, rst: $("logRst").value,
+    band: $("logBand").value, detect: $("logDetect").checked}});
+  if (!j.ok) { $("logCfgErr").textContent = j.error; return; }
+  S.config = j.config; fillLogCfg(); $("logCfgErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+};
+$("btnQrzSave").onclick = async () => {
+  $("qrzErr").textContent = "";
+  const j = await saveCfg({log: {qrz: $("qrzOn").checked, qrz_key: $("qrzKey").value}});
+  if (!j.ok) { $("qrzErr").textContent = j.error; return; }
+  S.config = j.config; fillLogCfg();
+  if ($("qrzKey").value) $("btnQrzTest").onclick(); else $("qrzErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+};
+$("btnQrzTest").onclick = async () => {
+  $("qrzErr").textContent = T("Testataan…");
+  const j = await api("/api/log/qrz/test", {});
+  $("qrzErr").innerHTML = j.ok ? `<span class="ok">${esc(T("Yhteys toimii"))}</span>` : esc(j.error || "?");
+};
+$("btnQrzRetry").onclick = async () => { await api("/api/log/qrz/retry", {}); $("qrzErr").innerHTML = `<span class="ok">${esc(T("Lisätty jonoon"))}</span>`; };
 
 // ---------------- check-in ----------------
 const CI_NETS = {244: "Suomi", 248: "Viro", 91: "Worldwide"};
@@ -1705,6 +1952,7 @@ function showTab(tab) {
   if (tab === "viestit" || tab === "aprs") fillMsg();
   if (tab === "aprs") { fillRx(); covShow(); }
   if (tab === "seuranta") netsShow();
+  if (tab === "lokit") { fillLogCfg(); loadLog(); }
   if (tab === "kaverit") { fillWatch(); seenAlerts = maxAlertSeq(); updateAlertBadge(); }
   if (tab === "laitteet") fillDevices();
   if (tab === "tilastot") loadStats();

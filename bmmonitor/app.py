@@ -33,6 +33,7 @@ from .checkin import CheckIn
 from .sheetsync import SheetError
 from . import APP_ID, APP_NAME, __date__, __version__, desktop, feedback, secret_store
 from .nets import DEFAULT_NETS, NetCalendar, normalize_nets
+from .qso import DEFAULT_LOG, QsoLog, adif_file, csv_file, normalize_log
 from .aprsrx import DEFAULT_APRSRX, DEFAULT_TILES, DEFAULT_TILES_ATTR, AprsRx, normalize_aprsrx
 from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
                         validate_passcode, ws_options)
@@ -201,6 +202,7 @@ class Monitor:
         self.cfg["calls_limit"] = nearest_calls_limit(self.cfg.get("calls_limit"))
         self.cfg["aprsrx"] = {**DEFAULT_APRSRX, **(self.cfg.get("aprsrx") or {})}
         self.cfg["nets"] = {**DEFAULT_NETS, **(self.cfg.get("nets") or {})}
+        self.cfg["log"] = {**DEFAULT_LOG, **(self.cfg.get("log") or {})}
         if "update_beta" not in self.cfg:
             # beta-asennuksen käyttäjä pysyy testiversioissa myös vakaan version jälkeen; uusi vakaa asennus ei
             from .updater import is_prerelease
@@ -249,6 +251,7 @@ class Monitor:
         self.aprsrx = AprsRx(self, cfg_path.parent / "aprs_rx.sqlite")
         self.hub.rf = self.aprsrx              # APRS-viestit myös radiolla (jos sallittu)
         self.nets = NetCalendar(self, cfg_path.parent / "nets_cache")
+        self.qso = QsoLog(self, cfg_path.parent / "qso_log.sqlite")
         self.tile_sem = asyncio.Semaphore(4)
         self.tile_fail, self.tile_down_until = 0, 0.0
 
@@ -259,7 +262,8 @@ class Monitor:
     def public_config(self) -> dict:
         """Asetukset sivulle: salaisuudet vain peitettyinä."""
         return {**self.cfg, "bm_api_key": "********" if self.bm_key else "",
-                "messaging": {**self.cfg["messaging"], "passcode": "********" if self.hub.passcode_secret else ""}}
+                "messaging": {**self.cfg["messaging"], "passcode": "********" if self.hub.passcode_secret else ""},
+                "log": {**self.cfg["log"], "qrz_key": "********" if self.qso.qrz_key else ""}}
 
     def save_config(self):
         self.cfg_path.write_text(json.dumps(self.cfg, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -352,6 +356,13 @@ class Monitor:
                 raise ValueError(tr("Virheellinen yksikkö"))
             self.cfg["units"] = new["units"]
             set_units(new["units"])
+        if "log" in new:
+            lg = dict(new["log"] or {})
+            key = lg.pop("qrz_key", None)
+            self.cfg["log"] = normalize_log(lg, self.cfg["log"])
+            if key is not None and key != "********":
+                self.qso.set_qrz_key(str(key))
+            self.qso._changed()
         if "nets" in new:
             self.cfg["nets"] = normalize_nets(new["nets"] or {}, self.cfg["nets"])
             self.nets.reconfigure()
@@ -462,6 +473,7 @@ class Monitor:
         self.devmon.on_event(p)
         if is_group_call(p):
             self.checkin.on_event(p, history)
+        self.qso.on_event(p)
         tg = p.get("DestinationID")
         pattern = self.matcher.match(tg)
         if not pattern or not is_group_call(p):
@@ -619,6 +631,7 @@ class Monitor:
             pass
 
     def housekeeping(self):
+        self.qso.housekeeping()
         now = time.time()
         for sid, info in list(self.sessions.items()):
             if now - float(info.get("start", now)) > STALE_ACTIVE_SEC:
@@ -658,6 +671,7 @@ class Monitor:
             "version": __version__, "date": __date__,
             "ui": {"window": self.ui is not None, "available": desktop.available()},
             "aprsrx": self.aprsrx.snapshot(),
+            "log": self.qso.snapshot(),
             "config": self.public_config(),
             "status": self.status,
             "started": self.started,
@@ -868,6 +882,17 @@ async def demo_loop(mon: Monitor):
     users = [("OH2ABC", "Matti", 2440001), ("OH3XYZ", "Pekka", 2440002), ("OH6QQ", "Liisa", 2440003),
              ("OH1TT", "Juha", 2440004), ("DL1AAA", "Hans", 2620001), ("OH8RR", "Anna", 2440005)]
     tgs = [244, 2441, 2442, 2443, 2449, 91, 24400, 3100]
+    me = mon.qso.my_call()
+    if me:      # esimerkkiyhteydet lokin kokeilemiseen: vuorottelu TG 244:ssä ja yksityispuhelu
+        t = time.time() - 900
+        for i, (c, nm, uid) in enumerate([(me, "", 2440999), ("OH2ABC", "Matti", 2440001), (me, "", 2440999),
+                                         ("OH2ABC", "Matti", 2440001)]):
+            mon.handle_payload({"SessionID": f"dq{i}", "SourceCall": c, "SourceName": nm, "SourceID": uid,
+                                "DestinationID": 244, "CallTypes": ["Voice", "Group"], "LinkCall": "OH2RUC",
+                                "Start": int(t + i * 60), "Stop": int(t + i * 60 + 40), "Event": "Session-Stop"})
+        mon.handle_payload({"SessionID": "dqp", "SourceCall": "OH6QQ", "SourceName": "Liisa", "SourceID": 2440003,
+                            "DestinationID": 2440999, "DestinationCall": me, "CallTypes": ["Voice", "Private"],
+                            "Start": int(time.time() - 120), "Stop": int(time.time() - 90), "Event": "Session-Stop"})
     n = 0
     while True:
         n += 1
@@ -1209,6 +1234,64 @@ def make_app(mon: Monitor) -> web.Application:
         mon.aprsrx._commit()
         return web.json_response(await in_thread(mon.aprsrx.cells, q.get("period", "24h"), mode, via, res, home()))
 
+    # ---------------- loki ----------------
+    async def log_list(request):
+        q = request.query
+        try:
+            limit = max(0, min(5000, int(q.get("limit", 200))))
+        except ValueError:
+            limit = 200
+        return web.json_response({"ok": True, "rows": mon.qso.list(limit, q.get("q", "").strip()),
+                                  "count": mon.qso.count()})
+
+    async def log_save(request):
+        try:
+            body = await request.json()
+            if body.get("id"):
+                mon.qso.update(int(body["id"]), body)
+                qid = int(body["id"])
+            else:
+                qid = mon.qso.add(body)
+            return web.json_response({"ok": True, "id": qid})
+        except (ValueError, KeyError) as e:
+            return web.json_response({"ok": False, "error": str(e)})
+
+    async def log_delete(request):
+        mon.qso.delete(int(request.match_info["id"]), remote=request.query.get("remote") == "1")
+        return web.json_response({"ok": True})
+
+    async def log_export(request):
+        rows = list(reversed(mon.qso.list(0)))
+        call = (mon.qso.my_call() or "loki").lower()
+        if request.match_info["fmt"] == "adi":
+            body, ctype, ext = adif_file(rows), "text/plain", "adi"
+        else:
+            body, ctype, ext = "\ufeff" + csv_file(rows), "text/csv", "csv"
+        return web.Response(text=body, content_type=ctype, charset="utf-8", headers={
+            "Content-Disposition": f'attachment; filename="{call}-{time.strftime("%Y%m%d")}.{ext}"'})
+
+    async def log_candidate(request):
+        d = mon.qso.candidate_defaults(request.match_info["cid"])
+        return web.json_response({"ok": bool(d), "qso": d, "error": None if d else tr("Ehdokasta ei löydy")})
+
+    async def log_dismiss(request):
+        body = await request.json()
+        mon.qso.detector.close(str(body.get("id") or ""))
+        mon.dirty = True
+        return web.json_response({"ok": True})
+
+    async def log_qrz_test(request):
+        try:
+            st = await mon.qso.qrz_status()
+            return web.json_response({"ok": bool(st.get("ok")), "state": st, "error": st.get("error")})
+        except Exception as e:  # noqa: BLE001
+            return web.json_response({"ok": False, "error": friendly_error(e)})
+
+    async def log_qrz_retry(request):
+        body = await request.json() if request.can_read_body else {}
+        mon.qso.retry_qrz(int(body["id"]) if body.get("id") else None)
+        return web.json_response({"ok": True})
+
     async def aprsrx_stations(request):
         q = request.query
         via = (q.get("via") or "").upper() or None
@@ -1290,6 +1373,14 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_get("/api/nets", nets_list)
     app.router.add_get("/api/aprsrx/cells", aprsrx_cells)
     app.router.add_get("/api/aprsrx/stations", aprsrx_stations)
+    app.router.add_get("/api/log", log_list)
+    app.router.add_post("/api/log", log_save)
+    app.router.add_delete("/api/log/{id:\\d+}", log_delete)
+    app.router.add_get("/api/log/export.{fmt:(adi|csv)}", log_export)
+    app.router.add_get("/api/log/candidate/{cid}", log_candidate)
+    app.router.add_post("/api/log/dismiss", log_dismiss)
+    app.router.add_post("/api/log/qrz/test", log_qrz_test)
+    app.router.add_post("/api/log/qrz/retry", log_qrz_retry)
     app.router.add_get("/tiles/{z}/{x}/{y}.png", tile)
     app.router.add_get("/api/station", station)
     app.router.add_get("/api/stats", stats)
@@ -1469,6 +1560,7 @@ async def _run(args, mon, cfg_path, ui):
     tasks.append(asyncio.create_task(mon.checkin.run()))
     tasks.append(asyncio.create_task(mon.aprsrx.run()))
     tasks.append(asyncio.create_task(mon.nets.run()))
+    tasks.append(asyncio.create_task(mon.qso.run()))
     start_loop_watchdog(asyncio.get_running_loop())
     if not args.demo:
         tasks.append(asyncio.create_task(mon.updater.run()))
@@ -1486,6 +1578,7 @@ async def _run(args, mon, cfg_path, ui):
                 pass
         await runner.cleanup()
         mon.aprsrx.close()
+        mon.qso.close()
 
 
 def main():
