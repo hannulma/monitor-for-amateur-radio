@@ -26,8 +26,9 @@ DMR radio via APRS.
 - **Live audio** – listen to one or several talkgroups directly in the app (Hoseline audio stream), with the
   current talker, talker alias and level meter.
 - **Contact log** – contacts (QSOs) are recognised from BrandMeister calls when you and another station take turns
-  on a talkgroup or have a private call; add them to the log with one click. Logs tab: search, edit, ADIF/CSV export
-  and sync to **QRZ Logbook** (requires a QRZ subscription, XML level or higher).
+  on a talkgroup or have a private call; add them to the log with one click. Manual entries for any mode (SSB, CW, FM, FT8, D-STAR, C4FM, …;
+  quick buttons plus all ADIF modes, RST defaults 59/599). Logs tab: search, filter by mode, edit, ADIF/CSV export.
+  The log is stored locally; optional sync to **QRZ Logbook** (requires a QRZ subscription, XML level or higher).
 - **Friend alerts** – desktop notification, sound and/or a DMR text message when a station on your list
   keys up anywhere on the network.
 - **Station card** – click any callsign for registry data, APRS SSID, repeaters/hotspots and where and when
@@ -40,7 +41,8 @@ DMR radio via APRS.
   overlapping keyups are marked, and a notice above the log shows when an already logged station transmits again. Click **Heard – log** (or type part of the callsign and press Enter) to give the
   station the next log number. The log uses the FinDMR sheet columns (NRO, callsign, RPT/HOTSPOT, KUNTA,
   Lisätietoja, Oper); RPT/HOTSPOT comes from the BrandMeister device (repeater callsign and city, or TetraPack / POC / Fusion / Open DMR / Hotspot by link type). With the optional
-  [Google Sheets script](sheets/README.md) entries go straight into the shared sheet and several operators can
+  [Google Sheets script](sheets/README.md) (step-by-step guide and copy buttons for the script files in the app:
+  Check-in → Google Sheet → Help) entries go straight into the shared sheet and several operators can
   log at once (personal keys via one-time pairing codes, signed requests); without it, **Copy new rows** puts
   the rows on the clipboard ready to paste. Finished rounds are saved as CSV.
 - **Statistics** – activity per hour/day, top talkers, busiest talkgroups, and BrandMeister's own per-talkgroup

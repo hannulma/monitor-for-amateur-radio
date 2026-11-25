@@ -36,9 +36,33 @@ DEFAULT_LOG = {
     "rst": "59",
     "band": "70cm",         # käytetään, jos taajuus ei ole tiedossa
     "detect": True,         # tunnista yhteysehdokkaat BrandMeisterin puheluista
+    "mode": "DMR",          # käsin lisättävien yhteyksien oletustila
     "qrz": False,           # lähetä lokiin lisätyt QRZ Logbookiin
     # "qrz_key": salasanavarastossa (qrz-logbook-key)
 }
+
+# Tila käyttöliittymän nimellä → ADIF MODE / SUBMODE (ADIF 3.1). Pikapainikkeet ensin.
+MODES = {
+    "SSB": ("SSB", ""), "CW": ("CW", ""), "AM": ("AM", ""), "FM": ("FM", ""), "RTTY": ("RTTY", ""),
+    "PSK31": ("PSK", "PSK31"), "DSTAR": ("DIGITALVOICE", "DSTAR"), "DMR": ("DIGITALVOICE", "DMR"),
+    "C4FM": ("DIGITALVOICE", "C4FM"),
+    "LSB": ("SSB", "LSB"), "USB": ("SSB", "USB"), "FT8": ("FT8", ""), "FT4": ("MFSK", "FT4"), "JS8": ("MFSK", "JS8"),
+    "Q65": ("MFSK", "Q65"), "JT65": ("JT65", ""), "JT9": ("JT9", ""), "MSK144": ("MSK144", ""),
+    "PSK63": ("PSK", "PSK63"), "PSK125": ("PSK", "PSK125"), "OLIVIA": ("OLIVIA", ""), "CONTESTI": ("CONTESTI", ""),
+    "THOR": ("THOR", ""), "DOMINO": ("DOMINO", ""), "HELL": ("HELL", ""), "MFSK": ("MFSK", ""), "SSTV": ("SSTV", ""),
+    "FAX": ("FAX", ""), "ATV": ("ATV", ""), "PKT": ("PKT", ""), "M17": ("DIGITALVOICE", "M17"),
+    "FREEDV": ("DIGITALVOICE", "FREEDV"), "DIGITALVOICE": ("DIGITALVOICE", ""),
+}
+PHONE = {"SSB", "AM", "FM", "DIGITALVOICE"}      # puhetilat: raportti RS (59), muut RST (599)
+
+
+def mode_label(mode: str | None, submode: str | None) -> str:
+    return (submode or mode or "").upper()
+
+
+def default_rst(label: str) -> str:
+    return "59" if MODES.get(label, ("", ""))[0] in PHONE else "599"
+
 
 BANDS = [(1.8, 2.0, "160m"), (3.5, 4.0, "80m"), (5.06, 5.45, "60m"), (7.0, 7.3, "40m"), (10.1, 10.15, "30m"),
          (14.0, 14.35, "20m"), (18.068, 18.168, "17m"), (21.0, 21.45, "15m"), (24.89, 24.99, "12m"),
@@ -127,7 +151,8 @@ def csv_file(rows: list[dict]) -> str:
                 "qth", "grid", "tg", "via", "comment", "qrz"])
     for r in rows:
         w.writerow([_utc(r["start"], "%Y-%m-%d"), _utc(r["start"], "%H:%M"), _utc(r["end"], "%H:%M") if r.get("end") else "",
-                    r["call"], r.get("name") or "", r.get("band") or "", r.get("freq") or "", "DMR",
+                    r["call"], r.get("name") or "", r.get("band") or "", r.get("freq") or "",
+                    mode_label(r.get("mode"), r.get("submode")) or "DMR",
                     r.get("rst_sent") or "", r.get("rst_rcvd") or "", r.get("qth") or "", r.get("grid") or "",
                     r.get("tg") or "", r.get("via") or "", r.get("comment") or "", r.get("qrz_status") or ""])
     return out.getvalue()
@@ -151,6 +176,11 @@ def normalize_log(new: dict, old: dict) -> dict:
         if new["band"] not in BAND_NAMES:
             raise ValueError(tr("Virheellinen arvo: {x}", x=new["band"]))
         out["band"] = new["band"]
+    if "mode" in new:
+        m = str(new["mode"] or "").upper()
+        if m not in MODES:
+            raise ValueError(tr("Virheellinen arvo: {x}", x=m))
+        out["mode"] = m
     for k in ("detect", "qrz"):
         if k in new:
             out[k] = bool(new[k])
@@ -346,9 +376,9 @@ class QsoLog:
         freq_rx = parse_freq(dev.get("tx"))
         via = c.get("my_via") or c.get("via") or ""
         where = tr("yksityispuhelu") if c["private"] else f"TG {c['tg']}" + (f" {c['tg_name']}" if c.get("tg_name") else "")
-        return {"call": c["call"], "name": c.get("name") or "", "start": c["start"], "end": c["end"],
+        return {"call": c["call"], "name": c.get("name") or "", "start": c["start"], "end": c["end"], "mode_label": "DMR",
                 "band": band_for(freq) or self.cfg.get("band") or "70cm", "freq": freq, "freq_rx": freq_rx,
-                "rst_sent": self.cfg.get("rst") or "59", "rst_rcvd": self.cfg.get("rst") or "59",
+                "rst_sent": self.cfg.get("rst") or "59", "rst_rcvd": self.cfg.get("rst") or "59",   # DMR = puhe
                 "comment": f"BrandMeister {where}" + (f" via {via}" if via else ""),
                 "tg": c.get("tg"), "via": via, "candidate": cid}
 
@@ -382,7 +412,11 @@ class QsoLog:
         out["grid"] = grid
         for k, n in (("name", 60), ("qth", 60), ("comment", 200), ("rst_sent", 3), ("rst_rcvd", 3), ("via", 30)):
             out[k] = str(d.get(k) or "").strip()[:n]
-        out["mode"], out["submode"] = "DIGITALVOICE", "DMR"
+        label = str(d.get("mode_label") or "").upper() or mode_label(d.get("mode"), d.get("submode")) or \
+            (self.cfg.get("mode") or "DMR")
+        if label not in MODES:
+            raise ValueError(tr("Virheellinen arvo: {x}", x=label))
+        out["mode"], out["submode"] = MODES[label]
         try:
             out["tg"] = int(d["tg"]) if d.get("tg") not in (None, "") else None
         except (TypeError, ValueError):
@@ -429,17 +463,27 @@ class QsoLog:
 
     def get(self, qid: int) -> dict | None:
         r = self.db.execute("SELECT * FROM qsos WHERE id=?", (qid,)).fetchone()
-        return dict(r) if r else None
+        return {**dict(r), "mode_label": mode_label(r["mode"], r["submode"])} if r else None
 
-    def list(self, limit: int = 200, q: str = "") -> list[dict]:
-        sql, args = "SELECT * FROM qsos", []
+    def list(self, limit: int = 200, q: str = "", mode: str = "") -> list[dict]:
+        sql, args, where = "SELECT * FROM qsos", [], []
         if q:
-            sql += " WHERE call LIKE ? OR name LIKE ? OR comment LIKE ?"
-            args = [f"%{q.upper()}%", f"%{q}%", f"%{q}%"]
+            where.append("(call LIKE ? OR name LIKE ? OR comment LIKE ?)")
+            args += [f"%{q.upper()}%", f"%{q}%", f"%{q}%"]
+        if mode:
+            m, sm = MODES.get(mode.upper(), (mode.upper(), ""))
+            if sm:
+                where.append("submode = ?")
+                args.append(sm)
+            else:
+                where.append("mode = ? AND (submode IS NULL OR submode = '')")
+                args.append(m)
+        if where:
+            sql += " WHERE " + " AND ".join(where)
         sql += " ORDER BY start DESC"
         if limit:
             sql += f" LIMIT {int(limit)}"
-        return [dict(r) for r in self.db.execute(sql, args)]
+        return [{**dict(r), "mode_label": mode_label(r["mode"], r["submode"])} for r in self.db.execute(sql, args)]
 
     def count(self) -> int:
         return self.db.execute("SELECT COUNT(*) FROM qsos").fetchone()[0]
@@ -447,6 +491,7 @@ class QsoLog:
     def snapshot(self) -> dict:
         pend = self.db.execute("SELECT COUNT(*) FROM qsos WHERE qrz_status IN ('queued','error')").fetchone()[0]
         return {"rev": self.rev, "count": self.count(), "my_call": self.my_call(),
+                "modes": [[k, default_rst(k)] for k in MODES],
                 "candidates": self.detector.snapshot() if self.cfg.get("detect", True) else [],
                 "qrz": {**self.qrz_state, "enabled": bool(self.cfg.get("qrz")), "key": bool(self.qrz_key), "pending": pend}}
 

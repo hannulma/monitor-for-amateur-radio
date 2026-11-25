@@ -1241,7 +1241,7 @@ def make_app(mon: Monitor) -> web.Application:
             limit = max(0, min(5000, int(q.get("limit", 200))))
         except ValueError:
             limit = 200
-        return web.json_response({"ok": True, "rows": mon.qso.list(limit, q.get("q", "").strip()),
+        return web.json_response({"ok": True, "rows": mon.qso.list(limit, q.get("q", "").strip(), q.get("mode", "").strip()),
                                   "count": mon.qso.count()})
 
     async def log_save(request):

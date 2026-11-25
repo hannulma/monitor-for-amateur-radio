@@ -726,8 +726,24 @@ def test_qso_detector_and_log(tmp_path):
     mon.cfg["log"]["qrz"] = True
     qid2 = lg.add({"call": "OH3XYZ", "start": t0 + 500})
     assert lg.get(qid2)["qrz_status"] == "queued" and lg.snapshot()["qrz"]["pending"] == 1
+    # tila: oletus DMR, valinta pikanimellä, ADIF-muunnos, suodatus
+    assert lg.get(qid)["mode"] == "DIGITALVOICE" and lg.get(qid)["mode_label"] == "DMR"
+    q3 = lg.add({"call": "OH1CW", "start": t0 + 900, "mode_label": "CW", "band": "20m"})
+    q4 = lg.add({"call": "OH1PSK", "start": t0 + 950, "mode_label": "psk31"})
+    q5 = lg.add({"call": "OH1DS", "start": t0 + 990, "mode_label": "DSTAR"})
+    assert (lg.get(q3)["mode"], lg.get(q3)["submode"]) == ("CW", "")
+    assert (lg.get(q4)["mode"], lg.get(q4)["submode"]) == ("PSK", "PSK31")
+    assert lg.get(q5)["submode"] == "DSTAR" and "<SUBMODE:5>DSTAR" in qso_adif(lg.get(q5))
+    assert [r["call"] for r in lg.list(0, "", "CW")] == ["OH1CW"]
+    assert {r["call"] for r in lg.list(0, "", "DMR")} == {"OH2ABC", "OH3XYZ"}
+    lg.update(q3, {"name": "Cw"})
+    assert lg.get(q3)["mode"] == "CW"
+    with pytest.raises(ValueError):
+        lg.add({"call": "OH1XX", "start": t0, "mode_label": "WHATEVER"})
+    from bmmonitor.qso import default_rst
+    assert default_rst("SSB") == "59" and default_rst("CW") == "599" and default_rst("DMR") == "59"
     lg.delete(qid)
-    assert lg.count() == 1
+    assert lg.count() == 4
     lg.close()
 
 
@@ -764,3 +780,16 @@ def test_qrz_send(tmp_path, monkeypatch):
         assert lg.get(c)["qrz_status"] == "auth" and lg.qrz_state["ok"] is False
     asyncio.run(go())
     lg.close()
+
+
+def test_bundled_sheet_script_matches_source():
+    """Ohjelman mukana kopioitava Apps Script -skripti on sama kuin sheets/-kansiossa."""
+    root = Path(__file__).resolve().parent.parent
+    for name in ("Code.gs", "appsscript.json"):
+        assert (root / "bmmonitor" / "static" / "sheets" / name).read_bytes() == (root / "sheets" / name).read_bytes(), name
+
+
+def test_i18n_keys_for_new_ui():
+    js = (Path(__file__).resolve().parent.parent / "bmmonitor" / "static" / "i18n.js").read_text(encoding="utf-8")
+    for k in ("Kirjaa yhteys (QSO) lokiin", "Tila (mode)", "Kaikki tilat", "Google-taulukon käyttöönotto"):
+        assert f'"{k}"' in js, k

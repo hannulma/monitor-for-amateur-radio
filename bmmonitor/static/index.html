@@ -98,6 +98,12 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .listen svg { width: 14px; height: 14px; fill: currentColor; }
   .rfhint { max-width: 220px; }
   .rfstate { font-size: 12px; padding: 2px 10px; border-radius: 10px; border: 1px solid var(--line); }
+  .hintlist { margin: 10px 0 0; padding-left: 18px; }
+  .hintlist li { margin: 4px 0; }
+  .modebar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .modebar #qModeBtns { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+  .modebtn { padding: 4px 9px; font-size: 12px; }
+  .modebtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .logcomment { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .linkbtn { background: none; border: none; padding: 0 4px; color: var(--accent); cursor: pointer; }
   .netlisten { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; }
@@ -127,6 +133,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   nav.tabs { display: flex; gap: 2px; padding: 0 18px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 49px; z-index: 4; overflow-x: auto; }
   nav.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 9px 14px; color: var(--muted); font-size: 13px; white-space: nowrap; }
   nav.tabs button:hover { color: var(--text); }
+  nav.tabs .tabsep { flex: none; width: 1px; align-self: center; height: 18px; background: var(--line); margin: 0 6px; }
   nav.tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
   nav.tabs .badge { background: var(--bad); color: #fff; border-radius: 9px; padding: 0 6px; font-size: 11px; margin-left: 5px; }
   .clk { cursor: pointer; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
@@ -179,6 +186,19 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .modal .mh { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
   .modal .mh h2 { margin: 0; font-size: 20px; }
   .modal .mb { padding: 6px 16px 16px; }
+  .guide { font-size: 13.5px; line-height: 1.55; }
+  .guide h3 { margin: 18px 0 6px; font-size: 15px; }
+  .guide .guidebar { position: sticky; top: 0; background: var(--panel); padding: 10px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--line); z-index: 1; }
+  .guide ol.steps { padding-left: 22px; }
+  .guide ol.steps > li { margin: 0 0 10px; padding-left: 4px; }
+  .guide ol.steps ul { margin: 4px 0; padding-left: 18px; }
+  .guide .tip { margin: 5px 0 0; padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 0 6px 6px 0; color: var(--muted); }
+  .guide .warnline { display: block; margin-top: 6px; color: var(--warn, #e0a030); }
+  .guide kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; font-size: 12px; background: var(--bg); }
+  .guide dl.faq dt { font-weight: 600; margin-top: 8px; }
+  .guide dl.faq dd { margin: 2px 0 0 14px; color: var(--muted); }
+  .guide [lang] { display: none; }
+  .guide.fi [lang="fi"], .guide.en [lang="en"] { display: block; }
   .about { font-size: 14px; color: var(--text); margin: 4px 0 6px; }
   .about b { font-weight: 700; }
   .fbform textarea, .fbform input[type=text], .fbform input[type=email] { background: var(--bg); color: var(--text); border: 1px solid var(--line);
@@ -355,15 +375,19 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
 </header>
 <nav class="tabs" id="tabs">
   <button data-tab="seuranta" class="active">BrandMeister</button>
-  <button data-tab="aprs">APRS</button>
-  <button data-tab="lokit">Lokit</button>
+  <button data-tab="tilastot">Tilastot</button>
   <button data-tab="kaverit">Kaverit<span class="badge" id="alertBadge" style="display:none"></span></button>
   <button data-tab="laitteet">Laitteet</button>
-  <button data-tab="tilastot">Tilastot</button>
   <button data-tab="checkin">Check-in</button>
+  <span class="tabsep" aria-hidden="true"></span>
+  <button data-tab="aprs">APRS</button>
+  <button data-tab="viestit">Syötteet</button>
+  <span class="tabsep" aria-hidden="true"></span>
+  <button data-tab="lokit">Lokit</button>
+  <span class="tabsep" aria-hidden="true"></span>
   <button data-tab="palvelut">Palvelut</button>
   <button data-tab="satelliitit">Satelliitit</button>
-  <button data-tab="viestit">Syötteet</button>
+  <span class="tabsep" aria-hidden="true"></span>
   <button data-tab="asetukset">Ohjelma</button>
   <span class="foldall"><button id="foldOpen" title="Avaa kaikki tämän välilehden osiot">Avaa kaikki</button><button id="foldClose" title="Pienennä kaikki tämän välilehden osiot otsikoiksi">Pienennä kaikki</button></span>
 </nav>
@@ -392,7 +416,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   </section>
   <section class="wide cfg" data-tab="asetukset">
     <div class="note" style="margin:12px">Toimintojen asetukset ovat kunkin välilehden alimmassa Asetukset-osiossa
-      (BrandMeister, APRS, Lokit, Syötteet). Tällä välilehdellä ovat ohjelman yleiset asetukset, päivitykset ja tiedot.</div>
+      (BrandMeister, APRS, Syötteet, Lokit). Tällä välilehdellä ovat ohjelman yleiset asetukset, päivitykset ja tiedot.</div>
   </section>
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-lang">
     <h2>Kieli ja yksiköt</h2>
@@ -653,7 +677,15 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <div class="feedrow feedhead"><span class="fen-h">Käytössä</span><span class="fname">Etuliite</span><span class="furl">Osoite</span><span class="fcmd">Komento</span><span class="fbtns"></span></div>
         <div id="feedRows"></div>
         <button id="btnAddFeed">+ Lisää syöte</button>
-        <div class="hint">Komento-kenttä (esim. SAA) tekee syötteen uusimmasta otsikosta radiosta kysyttävän. Uutta syötettä seurattaessa nykyiset uutiset ohitetaan, ja viesti lähtee vasta seuraavasta uudesta uutisesta. Etuliite näkyy viestin alussa, esim. <code>BM: otsikko</code>.</div>
+        <ul class="hint hintlist">
+          <li><b>Käytössä</b> – kun rasti on pois, syötettä ei seurata eikä siitä lähetetä viestejä.</li>
+          <li><b>Etuliite</b> – lyhyt tunniste, joka näkyy viestin alussa, esim. <code>BM: otsikko</code>. Siitä tunnistat radion näytöltä, mistä syötteestä viesti on.</li>
+          <li><b>Osoite</b> – syötteen www-osoite (RSS, Atom tai JSON Feed). Uutta syötettä seurattaessa nykyiset uutiset ohitetaan, ja viesti lähtee vasta seuraavasta uudesta uutisesta.</li>
+          <li><b>Komento</b> – vapaaehtoinen sana (esim. SAA), jolla voit pyytää syötteen uusimman otsikon radioosi milloin tahansa.
+            Lähetä radiosta Brandmeisterin APRS-palvelunumeroon 244999 yksityisviesti, jossa on oma APRS-IS-tunnuksesi ja komento, esim. <code>OH2ABC-13 SAA</code>.
+            Ohjelma vastaa vain, kun <a href="#" id="toCmdCfg">APRS → Asetukset → Komennot radiosta</a> -kohdassa on valittu Vastaa komentoihin.
+            Komento APUA listaa kaikki käytettävissä olevat komennot.</li>
+        </ul>
         <div class="frow" style="margin-top:14px; align-items:center">
           <button class="primary" id="btnMsgSave">Tallenna</button>
           <button id="btnFeedCheck">Tarkista syötteet nyt</button>
@@ -696,7 +728,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     </div>
   </section>
   <section data-tab="seuranta" data-fold="bm-qso">
-    <h2>Yhteydet (QSO) <span class="count" id="qsoCount"></span></h2>
+    <h2>Kirjaa yhteys (QSO) lokiin <span class="count" id="qsoCount"></span></h2>
     <div class="note" id="qsoNoCall" style="display:none;margin:10px">Aseta oma kutsu Lokit-välilehden asetuksissa,
       niin ohjelma tunnistaa yhteytesi puhelulistasta.</div>
     <div class="scroll" style="max-height:none">
@@ -705,7 +737,9 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="empty" id="qsoEmpty">Ei yhteysehdokkaita. Kun sinä ja toinen asema vuorottelette samassa puheryhmässä, yhteys näkyy tässä.</div>
     </div>
     <div class="hint" style="margin:6px 10px 10px">Lokiin lisätyt yhteydet näet Lokit-välilehdellä. <span id="qsoLogInfo"></span>
-      Oma kutsu, tunnistus ja QRZ-lähetys: <a href="#" id="toLogCfg">Lokit → Asetukset</a>.</div>
+      Oma kutsu ja tunnistus: <a href="#" id="toLogCfg">Lokit → Asetukset</a>.<br>
+      Lokitiedot tallentuvat oletuksena paikallisesti tälle tietokoneelle. Halutessasi voit synkronoida ne QRZ.comin lokikirjaan, mikä vaatii maksullisen QRZ.com-tilauksen:
+      <a href="#" id="toQrzCfg">Lokit → Asetukset → QRZ Logbook</a>.</div>
   </section>
   <section class="wide" data-tab="seuranta" data-fold="bm-nets">
     <h2>Netit tänään ja huomenna <span class="count" id="netCount"></span>
@@ -799,11 +833,12 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   <section class="wide" data-tab="lokit" data-fold="log-list">
     <h2>Loki <span class="count" id="logCount"></span>
       <input type="search" class="filter" id="logSearch" placeholder="Hae kutsu, nimi tai kommentti" style="width:220px">
+      <select class="filter" id="logMode" style="margin-left:6px" title="Mode"></select>
       <button class="filter" id="btnLogNew" style="margin-left:6px">+ Uusi yhteys</button>
       <a class="filter" href="/api/log/export.adi" download style="margin-left:6px">ADIF ↓</a>
       <a class="filter" href="/api/log/export.csv" download style="margin-left:6px">CSV ↓</a></h2>
     <div class="scroll" style="max-height:none">
-      <table><thead><tr><th>Päivä (UTC)</th><th>Aika</th><th>Kutsu</th><th>Nimi</th><th>Kaista</th><th>RST</th><th>Kommentti</th><th>QRZ</th><th></th></tr></thead>
+      <table><thead><tr><th>Päivä (UTC)</th><th>Aika</th><th>Kutsu</th><th>Nimi</th><th>Kaista</th><th>Mode</th><th>RST</th><th>Kommentti</th><th>QRZ</th><th></th></tr></thead>
         <tbody id="logBody"></tbody></table>
       <div class="empty" id="logEmpty">Lokissa ei ole vielä yhteyksiä.</div>
       <div style="text-align:center;margin:8px"><button id="btnLogMore" style="display:none">Näytä kaikki</button></div>
@@ -822,6 +857,8 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <div class="fld"><label for="logRst">Oletusraportti</label><input id="logRst" type="text" style="width:70px"></div>
         <div class="fld"><label for="logBand">Oletuskaista</label><select id="logBand"></select>
           <div class="hint">jos taajuus ei ole tiedossa</div></div>
+        <div class="fld"><label for="logModeDef">Oletustila</label><select id="logModeDef"></select>
+          <div class="hint">käsin lisättävät; tunnistetut aina DMR</div></div>
       </div>
       <div class="frow"><div class="fld checks"><label><input type="checkbox" id="logDetect"> Tunnista yhteydet BrandMeisterin puheluista</label>
         <div class="hint">Yhteysehdokas syntyy, kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai pidätte yksityispuhelun.
@@ -926,7 +963,8 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="hint" id="ciErr" style="padding:0 14px 10px"></div>
   </section>
   <section data-tab="checkin" class="wide form">
-    <h2>Google-taulukko <span class="count" id="ciSheetState" style="text-transform:none"></span></h2>
+    <h2>Google-taulukko <span class="count" id="ciSheetState" style="text-transform:none"></span>
+      <a href="#" class="hdrlink" id="ciSheetHelp">Ohje: taulukon luominen ja yhdistäminen</a></h2>
     <div class="inner">
       <div id="ciSheetOn" style="display:none; align-items:center; gap:12px; flex-wrap:wrap">
         <span id="ciSheetInfo"></span>
@@ -939,7 +977,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <div><label for="ciSheetCode">Parituskoodi</label>
           <input id="ciSheetCode" type="text" style="width:110px; text-transform:uppercase" placeholder="ABC-123" autocomplete="off" spellcheck="false"></div>
         <div><button class="primary" id="ciSheetConnect">Yhdistä</button></div>
-        <div class="hint" style="max-width:520px; margin:0">Kun taulukko on yhdistetty, kirjaukset menevät taulukkoon heti ja lokinumeron antaa taulukko, joten useampi ylläpitäjä voi kirjata samaan aikaan. Taulukon omistaja antaa skriptin osoitteen ja kertakäyttöisen parituskoodin (taulukon valikko Check-in → Lisää ylläpitäjä). Ilman taulukkoa lokin voi kopioida leikepöydän kautta.</div>
+        <div class="hint" style="max-width:520px; margin:0">Kun taulukko on yhdistetty, kirjaukset menevät taulukkoon heti ja lokinumeron antaa taulukko, joten useampi ylläpitäjä voi kirjata samaan aikaan. Taulukon omistaja antaa skriptin osoitteen ja kertakäyttöisen parituskoodin (taulukon valikko Check-in → Lisää ylläpitäjä). Ilman taulukkoa lokin voi kopioida leikepöydän kautta. <a href="#" id="ciSheetHelp2">Vaiheittainen ohje</a></div>
       </div>
       <div class="bad" id="ciSheetErr" style="margin-top:6px"></div>
     </div>
@@ -1198,6 +1236,9 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="fld"><label for="qStart">Alku (UTC)</label><input id="qStart" type="datetime-local" step="60"></div>
       <div class="fld"><label for="qEnd">Loppu (UTC)</label><input id="qEnd" type="datetime-local" step="60"></div>
     </div>
+    <div class="fld"><label for="qMode">Tila (mode)</label>
+      <div class="modebar"><span id="qModeBtns" role="group" aria-label="Tila"></span>
+        <select id="qMode" title="Kaikki tilat"></select></div></div>
     <div class="frow">
       <div class="fld"><label for="qBand">Kaista</label><select id="qBand"></select></div>
       <div class="fld"><label for="qFreq">Taajuus (MHz)</label><input id="qFreq" type="text" inputmode="decimal" style="width:110px"></div>
@@ -1209,12 +1250,204 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="fld"><label for="qGrid">Lokaattori</label><input id="qGrid" type="text" style="width:100px"></div>
     </div>
     <label for="qComment">Kommentti</label><input id="qComment" type="text" style="width:100%">
-    <div class="hint">Tila: DIGITALVOICE / DMR. <span id="qInfo"></span></div>
+    <div class="hint"><span id="qAdif"></span> <span id="qInfo"></span></div>
     <div class="frow svcsave" style="justify-content:flex-end">
       <span class="err" id="qErr" style="margin-right:auto"></span>
       <label id="qDelRemoteL" style="display:none"><input type="checkbox" id="qDelRemote"> myös QRZ:sta</label>
       <button id="qDelete" style="display:none">Poista</button>
       <button class="primary" id="qSave">Lisää lokiin</button><button id="qCancel">Peruuta</button>
+    </div>
+  </div>
+</div></div>
+
+<div class="modal-bg" id="shBg"><div class="modal" style="width:min(780px,100%)">
+  <div class="mh"><h2>Google-taulukon käyttöönotto</h2><span class="spacer"></span><button id="shClose" aria-label="Sulje">✕</button></div>
+  <div class="mb guide">
+    <div class="guidebar">
+      <button class="primary" data-copy="Code.gs">Kopioi Code.gs</button>
+      <button class="primary" data-copy="appsscript.json">Kopioi appsscript.json</button>
+      <span class="ok" id="shCopied"></span>
+    </div>
+    <div lang="fi" data-noi18n>
+      <p>Kun taulukko on yhdistetty, check-in-kirjaukset menevät suoraan Google-taulukkoon. Lokinumeron antaa taulukko,
+        joten useampi ylläpitäjä voi kirjata samaan aikaan ilman päällekkäisiä numeroita.</p>
+      <p class="who"><b>Kuka tekee mitä?</b> Taulukon <b>omistaja</b> tekee vaiheet 1–9 kerran. Muut <b>ylläpitäjät</b> tekevät vain vaiheen 10:
+        he eivät tarvitse Google-tunnusta eivätkä muokkausoikeutta taulukkoon.</p>
+
+      <h3>A. Skriptin asennus (omistaja)</h3>
+      <ol class="steps">
+        <li><b>Avaa taulukko.</b> Kirjaudu selaimessa Google-tunnuksella, joka omistaa taulukon, ja avaa taulukko.
+          <div class="tip">Vinkki: kokeile ensin taulukon kopiolla (<b>Tiedosto → Tee kopio</b>). Kun kaikki toimii, toista vaiheet varsinaisessa taulukossa.
+          Taulukossa pitää olla pohjavälilehti, jonka nimi alkaa sanalla <code>LOGIPOHJA</code> (FinDMR-taulukko v0.68).</div></li>
+        <li><b>Avaa skriptieditori.</b> Valitse taulukon valikosta <b>Laajennukset → Apps Script</b>. Uuteen selainvälilehteen
+          avautuu editori. Voit nimetä projektin vasemmasta yläkulmasta, esim. <i>Check-in</i>.</li>
+        <li><b>Liitä Code.gs.</b> Paina tämän ikkunan yläreunan <b>Kopioi Code.gs</b> -painiketta. Valitse editorin vasemmasta
+          reunasta <b>Tiedostot → Code.gs</b>, valitse sen koko sisältö (<kbd>Ctrl</kbd>+<kbd>A</kbd>, Macissa <kbd>Cmd</kbd>+<kbd>A</kbd>)
+          ja liitä kopioitu teksti tilalle (<kbd>Ctrl</kbd>+<kbd>V</kbd> / <kbd>Cmd</kbd>+<kbd>V</kbd>).</li>
+        <li><b>Näytä appsscript.json.</b> Valitse vasemmasta reunasta <b>Projektin asetukset</b> (rataskuvake) ja rastita
+          <b>Näytä "appsscript.json"-luettelotiedosto editorissa</b>. Palaa editoriin (<b>&lt;&gt;</b>-kuvake).</li>
+        <li><b>Liitä appsscript.json.</b> Paina <b>Kopioi appsscript.json</b>, avaa editorissa tiedosto <b>appsscript.json</b>
+          ja korvaa sen koko sisältö samalla tavalla kuin vaiheessa 3. Tallenna (<kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Cmd</kbd>+<kbd>S</kbd>
+          tai levykekuvake).
+          <div class="tip">Tämä tiedosto rajaa skriptin oikeudet <b>vain tähän taulukkoon</b>. Se ei pääse omistajan muihin tiedostoihin.</div></li>
+        <li><b>Tarkista asetukset.</b> <code>Code.gs</code>:n alussa on kohta <code>CONFIG</code>. Oletukset sopivat FinDMR-taulukkoon:
+          pohjavälilehti <code>LOGIPOHJA</code>, kierrosvälilehdet <code>Kierros &lt;numero&gt; &lt;ppkkvv&gt;</code>, tiedot riviltä 3 alkaen
+          sarakkeisiin A–F (NRO, kutsu, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper), päivämäärä solussa D1, kierrosnumero F1 ja operaattori G2.
+          Jos taulukkosi on erilainen, muuta arvot ja tallenna. Muuten tähän ei tarvitse koskea.</li>
+        <li><b>Ota käyttöön verkkosovelluksena.</b> Valitse oikeasta yläkulmasta <b>Ota käyttöön → Uusi käyttöönotto</b>.
+          Paina <b>Valitse tyyppi</b> -kohdan ratasta ja valitse <b>Verkkosovellus</b>. Aseta:
+          <ul><li><b>Suorita käyttäjänä:</b> Minä (oma osoitteesi)</li>
+              <li><b>Kenellä on käyttöoikeus:</b> Kuka tahansa</li></ul>
+          ja paina <b>Ota käyttöön</b>.
+          <div class="tip">"Kuka tahansa" tarkoittaa vain, että osoitteeseen voi lähettää pyyntöjä kirjautumatta. Skripti hyväksyy silti vain
+          pyynnöt, jotka on allekirjoitettu lisätyn ylläpitäjän omalla avaimella. Ilman tätä asetusta ohjelma ei saa yhteyttä.</div></li>
+        <li><b>Myönnä käyttöoikeus.</b> Google pyytää valtuutusta: paina <b>Myönnä käyttöoikeus</b> ja valitse tilisi.
+          Koska skripti on oma eikä Googlen tarkastama, näkyy varoitus <i>"Google ei ole vahvistanut tätä sovellusta"</i>.
+          Valitse <b>Lisäasetukset → Siirry projektiin … (ei turvallinen)</b> ja sitten <b>Salli</b>.</li>
+        <li><b>Kopioi osoite.</b> Kopioi näkyviin tuleva <b>verkkosovelluksen URL-osoite</b>. Se on muotoa
+          <code>https://script.google.com/macros/s/…/exec</code>. Käytä osoitetta, joka päättyy <code>/exec</code>, ei <code>/dev</code>.
+          Lataa sen jälkeen taulukko uudelleen selaimessa: valikkoriville ilmestyy <b>Check-in</b>-valikko (muutaman sekunnin viiveellä).</li>
+      </ol>
+
+      <h3>B. Ylläpitäjän lisääminen ja yhdistäminen</h3>
+      <ol class="steps" start="10">
+        <li><b>Luo parituskoodi ja yhdistä.</b> Omistaja valitsee taulukossa <b>Check-in → Lisää ylläpitäjä / uusi parituskoodi</b> ja antaa
+          ylläpitäjän kutsun (myös itselleen, jos kirjaa itse). Ensimmäisellä kerralla Google voi kysyä valtuutusta uudelleen, kuten vaiheessa 8.
+          Taulukko näyttää koodin, esim. <code>K7M-42Q</code>. Koodi on voimassa 15 minuuttia ja kelpaa kerran.
+          <ul><li>Anna ylläpitäjälle koodi ja verkkosovelluksen osoite.</li>
+              <li>Ylläpitäjä liittää ne tämän välilehden <b>Google-taulukko</b>-osioon kenttiin <b>Skriptin osoite</b> ja <b>Parituskoodi</b> ja painaa <b>Yhdistä</b>.</li>
+              <li>Ohjelma vaihtaa koodin omaan avaimeen, joka tallennetaan käyttöjärjestelmän salasanavarastoon. Avainta ei lähetetä verkossa,
+                vaan jokainen pyyntö allekirjoitetaan sillä.</li></ul></li>
+      </ol>
+
+      <h3>Ylläpitäjien hallinta</h3>
+      <ul>
+        <li><b>Check-in → Poista ylläpitäjä:</b> ylläpitäjän ohjelma ei voi enää kirjata taulukkoon.</li>
+        <li><b>Check-in → Näytä ylläpitäjät:</b> lisätyt ylläpitäjät ja milloin he ovat viimeksi käyttäneet taulukkoa.</li>
+        <li>Jos ylläpitäjä vaihtaa konetta, luo hänelle uusi parituskoodi. Vanha avain lakkaa silloin toimimasta.</li>
+        <li>Kaikki tapahtumat (paritukset, kirjaukset, muutokset) tallentuvat piilotetulle välilehdelle <i>Check-in-tapahtumat</i>.</li>
+      </ul>
+
+      <h3>Käyttö netin aikana</h3>
+      <p>Aloita kierros ohjelmassa tavalliseen tapaan. Jos kierroksen välilehteä ei vielä ole, skripti luo sen pohjasta, siirtää sen ensimmäiseksi
+        ja täyttää päivämäärän, kierrosnumeron ja operaattorin. Jos toinen ylläpitäjä on jo aloittanut saman kierroksen, kaikki kirjaavat samaan
+        välilehteen. Ohjelma hakee taulukon tilan 5 sekunnin välein, joten muiden kirjaukset näkyvät myös sinulla.</p>
+
+      <h3>Skriptin päivittäminen</h3>
+      <p>Kun ohjelman mukana tulee uusi skriptiversio: kopioi Code.gs uudelleen, liitä ja tallenna. Valitse sitten
+        <b>Ota käyttöön → Hallinnoi käyttöönottoja</b>, paina kynäkuvaketta, valitse <b>Versio: Uusi versio</b> ja <b>Ota käyttöön</b>.
+        Osoite pysyy samana, eikä ylläpitäjien tarvitse tehdä mitään.
+        <span class="warnline">Älä käytä päivitykseen "Uusi käyttöönotto" -toimintoa: se luo uuden osoitteen, ja kaikki joutuisivat yhdistämään uudelleen.</span></p>
+
+      <h3>Yleisiä ongelmia</h3>
+      <dl class="faq">
+        <dt>"Taulukko vastasi odottamattomasti (HTTP …)"</dt>
+        <dd>Osoite on väärä tai käyttöoikeus ei ole "Kuka tahansa". Tarkista, että osoite päättyy <code>/exec</code>, ja korjaa asetus kohdassa
+          Ota käyttöön → Hallinnoi käyttöönottoja → kynä.</dd>
+        <dt>"Parituskoodi ei kelpaa tai se on jo käytetty" / "on vanhentunut"</dt>
+        <dd>Koodi kelpaa kerran ja 15 minuuttia. Luo uusi koodi taulukon Check-in-valikosta.</dd>
+        <dt>"Tunnistus epäonnistui" tai "Ylläpitäjää … ei ole lisätty"</dt>
+        <dd>Oikeus on poistettu tai sinulle on luotu uusi koodi toisella koneella. Pyydä omistajalta uusi parituskoodi ja yhdistä uudelleen.</dd>
+        <dt>"Tietokoneen kello on väärässä"</dt>
+        <dd>Pyynnöt hylätään, jos koneen kello heittää yli 5 minuuttia. Ota käyttöön automaattinen ajan asetus käyttöjärjestelmässä.</dd>
+        <dt>"Pohjavälilehteä "LOGIPOHJA…" ei löytynyt"</dt>
+        <dd>Taulukosta puuttuu pohjavälilehti, tai sen nimi on eri. Lisää välilehti tai muuta <code>TEMPLATE_PREFIX</code> kohdassa CONFIG.</dd>
+        <dt>Check-in-valikko ei näy taulukossa</dt>
+        <dd>Lataa taulukko uudelleen ja odota hetki. Tarkista, että Code.gs on tallennettu.</dd>
+        <dt>Muutos skriptiin ei näy</dt>
+        <dd>Tallennettu muutos tulee voimaan vasta, kun julkaiset uuden version (katso Skriptin päivittäminen).</dd>
+      </dl>
+      <p class="muted">Skriptin lähdekoodi ja tarkempi kuvaus turvallisuudesta: <a href="https://github.com/hannulma/monitor-for-amateur-radio/tree/main/sheets" target="_blank" rel="noopener">GitHub → sheets</a>.</p>
+    </div>
+
+    <div lang="en" data-noi18n>
+      <p>When a spreadsheet is connected, check-in entries go straight into Google Sheets. The sheet assigns the log number,
+        so several net controllers can log at the same time without duplicate numbers.</p>
+      <p class="who"><b>Who does what?</b> The sheet <b>owner</b> does steps 1–9 once. Other <b>net controllers</b> only do step 10:
+        they need neither a Google account nor edit access to the sheet.</p>
+
+      <h3>A. Installing the script (owner)</h3>
+      <ol class="steps">
+        <li><b>Open the sheet.</b> Sign in to Google in your browser with the account that owns the sheet, and open it.
+          <div class="tip">Tip: try it first on a copy (<b>File → Make a copy</b>). When everything works, repeat the steps on the real sheet.
+          The sheet must have a template tab whose name starts with <code>LOGIPOHJA</code> (FinDMR sheet v0.68).</div></li>
+        <li><b>Open the script editor.</b> In the sheet menu choose <b>Extensions → Apps Script</b>. The editor opens in a new browser tab.
+          You can name the project in the top-left corner, e.g. <i>Check-in</i>.</li>
+        <li><b>Paste Code.gs.</b> Press <b>Copy Code.gs</b> at the top of this window. In the editor's left pane choose <b>Files → Code.gs</b>,
+          select all of its content (<kbd>Ctrl</kbd>+<kbd>A</kbd>, on a Mac <kbd>Cmd</kbd>+<kbd>A</kbd>) and paste the copied text in its place
+          (<kbd>Ctrl</kbd>+<kbd>V</kbd> / <kbd>Cmd</kbd>+<kbd>V</kbd>).</li>
+        <li><b>Show appsscript.json.</b> In the left pane choose <b>Project Settings</b> (gear icon) and tick
+          <b>Show "appsscript.json" manifest file in editor</b>. Go back to the editor (<b>&lt;&gt;</b> icon).</li>
+        <li><b>Paste appsscript.json.</b> Press <b>Copy appsscript.json</b>, open the file <b>appsscript.json</b> in the editor and replace
+          all of its content as in step 3. Save (<kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Cmd</kbd>+<kbd>S</kbd> or the disk icon).
+          <div class="tip">This file limits the script's access to <b>this spreadsheet only</b>. It cannot reach the owner's other files.</div></li>
+        <li><b>Check the settings.</b> At the top of <code>Code.gs</code> there is a <code>CONFIG</code> block. The defaults suit the FinDMR sheet:
+          template tab <code>LOGIPOHJA</code>, round tabs <code>Kierros &lt;number&gt; &lt;ddmmyy&gt;</code>, data from row 3 in columns A–F
+          (NRO, call, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper), date in D1, round number in F1 and operator in G2.
+          If your sheet differs, change the values and save. Otherwise leave them as they are.</li>
+        <li><b>Deploy as a web app.</b> In the top-right corner choose <b>Deploy → New deployment</b>. Press the gear next to
+          <b>Select type</b> and choose <b>Web app</b>. Set:
+          <ul><li><b>Execute as:</b> Me (your address)</li>
+              <li><b>Who has access:</b> Anyone</li></ul>
+          and press <b>Deploy</b>.
+          <div class="tip">"Anyone" only means that requests can be sent to the address without signing in. The script still accepts only
+          requests signed with an added net controller's own key. Without this setting the app cannot connect.</div></li>
+        <li><b>Authorize.</b> Google asks for authorization: press <b>Authorize access</b> and choose your account.
+          Because the script is your own and not reviewed by Google, you will see the warning <i>"Google hasn't verified this app"</i>.
+          Choose <b>Advanced → Go to … (unsafe)</b> and then <b>Allow</b>.</li>
+        <li><b>Copy the address.</b> Copy the <b>Web app URL</b> that is shown. It looks like
+          <code>https://script.google.com/macros/s/…/exec</code>. Use the address ending in <code>/exec</code>, not <code>/dev</code>.
+          Then reload the sheet in your browser: a <b>Check-in</b> menu appears in the menu bar (after a few seconds).</li>
+      </ol>
+
+      <h3>B. Adding and connecting a net controller</h3>
+      <ol class="steps" start="10">
+        <li><b>Create a pairing code and connect.</b> The owner chooses <b>Check-in → Lisää ylläpitäjä / uusi parituskoodi</b> (add net controller)
+          in the sheet and enters the controller's callsign (also their own, if they log themselves). The first time, Google may ask for
+          authorization again as in step 8. The sheet shows a code, e.g. <code>K7M-42Q</code>. The code is valid for 15 minutes and works once.
+          <ul><li>Give the controller the code and the web app address.</li>
+              <li>The controller enters them in the <b>Google Sheet</b> section of this tab, in the fields <b>Script address</b> and <b>Pairing code</b>, and presses <b>Connect</b>.</li>
+              <li>The app exchanges the code for its own key, stored in the operating system's password store. The key is never sent over the
+                network; every request is signed with it.</li></ul></li>
+      </ol>
+
+      <h3>Managing net controllers</h3>
+      <ul>
+        <li><b>Check-in → Poista ylläpitäjä</b> (remove): the controller's app can no longer log to the sheet.</li>
+        <li><b>Check-in → Näytä ylläpitäjät</b> (show): added controllers and when they last used the sheet.</li>
+        <li>If a controller moves to another computer, create a new pairing code for them. The old key then stops working.</li>
+        <li>All events (pairings, entries, edits) are recorded on the hidden tab <i>Check-in-tapahtumat</i>.</li>
+      </ul>
+
+      <h3>During the net</h3>
+      <p>Start the round in the app as usual. If the round's tab does not exist yet, the script creates it from the template, moves it first and
+        fills in the date, round number and operator. If another controller has already started the same round, everyone logs to the same tab.
+        The app reads the sheet every 5 seconds, so the others' entries appear for you too.</p>
+
+      <h3>Updating the script</h3>
+      <p>When the app ships a new script version: copy Code.gs again, paste and save. Then choose <b>Deploy → Manage deployments</b>,
+        press the pencil icon, choose <b>Version: New version</b> and <b>Deploy</b>. The address stays the same and controllers don't need to do anything.
+        <span class="warnline">Don't use "New deployment" for updates: it creates a new address and everyone would have to reconnect.</span></p>
+
+      <h3>Common problems</h3>
+      <dl class="faq">
+        <dt>"The sheet replied unexpectedly (HTTP …)"</dt>
+        <dd>The address is wrong or access is not "Anyone". Check that the address ends in <code>/exec</code> and fix the setting under
+          Deploy → Manage deployments → pencil.</dd>
+        <dt>"Pairing code is not valid or already used" / "has expired"</dt>
+        <dd>A code works once and for 15 minutes. Create a new one from the sheet's Check-in menu.</dd>
+        <dt>"Authentication failed" or "Net controller … has not been added"</dt>
+        <dd>Access was removed or a new code was created for you on another computer. Ask the owner for a new pairing code and reconnect.</dd>
+        <dt>"The computer's clock is wrong"</dt>
+        <dd>Requests are rejected if the clock is more than 5 minutes off. Turn on automatic time in your operating system.</dd>
+        <dt>"Template tab "LOGIPOHJA…" not found"</dt>
+        <dd>The sheet has no template tab, or it is named differently. Add the tab or change <code>TEMPLATE_PREFIX</code> in CONFIG.</dd>
+        <dt>The Check-in menu doesn't appear in the sheet</dt>
+        <dd>Reload the sheet and wait a moment. Check that Code.gs has been saved.</dd>
+        <dt>A change to the script has no effect</dt>
+        <dd>A saved change takes effect only after you deploy a new version (see Updating the script).</dd>
+      </dl>
+      <p class="muted">Script source code and a more detailed security description: <a href="https://github.com/hannulma/monitor-for-amateur-radio/tree/main/sheets" target="_blank" rel="noopener">GitHub → sheets</a>.</p>
     </div>
   </div>
 </div></div>
@@ -1548,6 +1781,32 @@ $("qsoBody").addEventListener("click", async e => {
     await api("/api/log/dismiss", {id: k.dataset.qskip});
   }
 });
+const MODE_QUICK = ["SSB", "CW", "AM", "FM", "RTTY", "PSK31", "DSTAR", "DMR", "C4FM"];
+const MODE_NAME = {DSTAR: "D-STAR"};
+const ADIF_MODE = {DMR: "DIGITALVOICE / DMR", DSTAR: "DIGITALVOICE / DSTAR", C4FM: "DIGITALVOICE / C4FM", M17: "DIGITALVOICE / M17",
+  FREEDV: "DIGITALVOICE / FREEDV", PSK31: "PSK / PSK31", PSK63: "PSK / PSK63", PSK125: "PSK / PSK125", FT4: "MFSK / FT4",
+  JS8: "MFSK / JS8", Q65: "MFSK / Q65", LSB: "SSB / LSB", USB: "SSB / USB"};
+function modeList() { return ((S.log && S.log.modes) || []).map(m => m[0]); }
+function modeRst(m) { const x = ((S.log && S.log.modes) || []).find(k => k[0] === m); return x ? x[1] : "59"; }
+function fillModeSelect(sel, val, blank) {
+  const h = (blank ? `<option value="">${esc(T("Kaikki tilat"))}</option>` : "") +
+    modeList().map(m => `<option value="${esc(m)}">${esc(MODE_NAME[m] || m)}</option>`).join("");
+  if (sel.dataset.h !== h) { sel.innerHTML = h; sel.dataset.h = h; }
+  sel.value = val || "";
+}
+function setQsoMode(m, fromUser) {
+  const prev = $("qMode").value;
+  $("qMode").value = m;
+  $("qModeBtns").querySelectorAll("button").forEach(b => { b.classList.toggle("on", b.dataset.m === m); b.setAttribute("aria-pressed", b.dataset.m === m); });
+  if (fromUser && prev && prev !== m) {   // raportin oletus seuraa tilaa (59 / 599), ellei sitä ole muutettu
+    for (const id of ["qRstS", "qRstR"]) if (!$(id).value || $(id).value === modeRst(prev)) $(id).value = modeRst(m);
+  }
+  $("qAdif").textContent = T("ADIF-tila: {m}.", {m: ADIF_MODE[m] || m});
+}
+$("qModeBtns").innerHTML = MODE_QUICK.map(m => `<button type="button" class="modebtn" data-m="${m}">${MODE_NAME[m] || m}</button>`).join("");
+$("qModeBtns").addEventListener("click", e => { const b = e.target.closest("button[data-m]"); if (b) setQsoMode(b.dataset.m, true); });
+$("qMode").onchange = () => setQsoMode($("qMode").value, true);
+$("logMode").onchange = () => loadLog();
 function openQso(q) {
   q = q || {};
   qsoEdit = {id: q.id || null, candidate: q.candidate || null, tg: q.tg, via: q.via};
@@ -1558,7 +1817,10 @@ function openQso(q) {
   const t = q.start || now();
   $("qStart").value = utcDT(t); $("qEnd").value = utcDT(q.end || (q.id ? null : t));
   fillBands($("qBand"), q.band || lc.band); $("qFreq").value = q.freq || "";
-  $("qRstS").value = q.rst_sent || (q.id ? "" : lc.rst || "59"); $("qRstR").value = q.rst_rcvd || (q.id ? "" : lc.rst || "59");
+  const mode = q.mode_label || (q.id ? "DMR" : lc.mode || "DMR");
+  fillModeSelect($("qMode"), ""); $("qMode").value = ""; setQsoMode(mode, false);
+  const rst = modeRst(mode) === "59" ? (lc.rst || "59") : modeRst(mode);
+  $("qRstS").value = q.rst_sent || (q.id ? "" : rst); $("qRstR").value = q.rst_rcvd || (q.id ? "" : rst);
   $("qQth").value = q.qth || ""; $("qGrid").value = q.grid || ""; $("qComment").value = q.comment || "";
   $("qDelete").style.display = q.id ? "" : "none";
   $("qDelRemoteL").style.display = q.id && q.qrz_logid ? "" : "none"; $("qDelRemote").checked = false;
@@ -1576,7 +1838,7 @@ $("qSave").onclick = async () => {
   const start = parseUtcDT($("qStart").value), end = parseUtcDT($("qEnd").value);
   if (!start) { $("qErr").textContent = T("Anna alkuaika"); return; }
   const j = await api("/api/log", {id: qsoEdit.id, candidate: qsoEdit.candidate, tg: qsoEdit.tg, via: qsoEdit.via,
-    call: $("qCall").value, name: $("qName").value, start, end, band: $("qBand").value, freq: $("qFreq").value,
+    call: $("qCall").value, name: $("qName").value, start, end, band: $("qBand").value, freq: $("qFreq").value, mode_label: $("qMode").value,
     rst_sent: $("qRstS").value, rst_rcvd: $("qRstR").value, qth: $("qQth").value, grid: $("qGrid").value, comment: $("qComment").value});
   if (!j.ok) { $("qErr").textContent = j.error; return; }
   qsoClose(); logRev = -1; if (TAB === "lokit") loadLog();
@@ -1592,19 +1854,20 @@ function qrzLabel(r) {
 }
 async function loadLog() {
   const q = $("logSearch").value.trim();
-  let j; try { j = await (await fetchT(`/api/log?limit=${logAll ? 0 : 200}&q=${encodeURIComponent(q)}`, 30000)).json(); } catch (e) { return; }
+  const md = $("logMode").value;
+  let j; try { j = await (await fetchT(`/api/log?limit=${logAll ? 0 : 200}&q=${encodeURIComponent(q)}&mode=${encodeURIComponent(md)}`, 30000)).json(); } catch (e) { return; }
   logRev = S && S.log ? S.log.rev : -1;
   logRows = j.rows || [];
   $("logCount").textContent = j.count ? `(${j.count})` : "";
   $("logEmpty").style.display = logRows.length ? "none" : "";
-  $("logEmpty").textContent = T(q ? "Ei hakua vastaavia yhteyksiä." : "Lokissa ei ole vielä yhteyksiä.");
-  $("btnLogMore").style.display = !logAll && !q && j.count > logRows.length ? "" : "none";
+  $("logEmpty").textContent = T(q || md ? "Ei hakua vastaavia yhteyksiä." : "Lokissa ei ole vielä yhteyksiä.");
+  $("btnLogMore").style.display = !logAll && !q && !md && j.count > logRows.length ? "" : "none";
   $("logBody").innerHTML = logRows.map(r => {
     const [cls, txt] = qrzLabel(r);
     const retry = ["error", "failed", "auth"].includes(r.qrz_status) ? ` <button class="linkbtn" data-lretry="${r.id}" title="${esc(T("Lähetä uudelleen"))}">↻</button>` : "";
     return `<tr><td style="white-space:nowrap">${esc(utcDate(r.start))}</td>
       <td style="white-space:nowrap">${esc(utcHM(r.start))}${r.end ? "–" + esc(utcHM(r.end)) : ""}</td>
-      <td><b>${esc(r.call)}</b></td><td>${esc(r.name || "")}</td><td>${esc(r.band || "")}</td>
+      <td><b>${esc(r.call)}</b></td><td>${esc(r.name || "")}</td><td>${esc(r.band || "")}</td><td>${esc(MODE_NAME[r.mode_label] || r.mode_label || "")}</td>
       <td style="white-space:nowrap">${esc(r.rst_sent || "")}/${esc(r.rst_rcvd || "")}</td>
       <td class="logcomment" title="${esc(r.comment || "")}">${esc(r.comment || "")}</td>
       <td class="${cls}" style="white-space:nowrap" title="${esc(r.qrz_error || r.qrz_logid || "")}">${esc(txt)}${retry}</td>
@@ -1624,6 +1887,7 @@ function fillLogCfg() {
   $("logMyCall").value = c.my_call || ""; $("logMyCall").placeholder = (S.log && S.log.my_call) || "OH2ABC";
   $("logMyGrid").value = c.my_grid || ""; $("logRst").value = c.rst || "59";
   fillBands($("logBand"), c.band); $("logDetect").checked = c.detect !== false;
+  fillModeSelect($("logModeDef"), c.mode || "DMR"); fillModeSelect($("logMode"), $("logMode").value, true);
   $("qrzOn").checked = !!c.qrz; $("qrzKey").value = c.qrz_key || "";
   renderQrzState();
 }
@@ -1640,7 +1904,7 @@ function renderQrzState() {
 $("btnLogCfgSave").onclick = async () => {
   $("logCfgErr").textContent = "";
   const j = await saveCfg({log: {my_call: $("logMyCall").value, my_grid: $("logMyGrid").value, rst: $("logRst").value,
-    band: $("logBand").value, detect: $("logDetect").checked}});
+    band: $("logBand").value, detect: $("logDetect").checked, mode: $("logModeDef").value}});
   if (!j.ok) { $("logCfgErr").textContent = j.error; return; }
   S.config = j.config; fillLogCfg(); $("logCfgErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
 };
@@ -2097,6 +2361,27 @@ $("btnAprsSave").onclick = async () => {
 };
 $("toAprs").onclick = e => { e.preventDefault(); showTab("aprs"); unfold("aprs-cfg"); };
 $("toLogCfg").onclick = e => { e.preventDefault(); showTab("lokit"); unfold("log-cfg"); };
+function openSheetHelp(e) {
+  if (e) e.preventDefault();
+  const g = document.querySelector("#shBg .guide"); g.classList.toggle("fi", LANG !== "en"); g.classList.toggle("en", LANG === "en");
+  $("shCopied").textContent = ""; $("shBg").classList.add("open"); $("shBg").scrollTop = 0;
+}
+$("ciSheetHelp").onclick = openSheetHelp; $("ciSheetHelp2").onclick = openSheetHelp;
+const shClose = () => $("shBg").classList.remove("open");
+$("shClose").onclick = shClose;
+$("shBg").addEventListener("click", e => { if (e.target === $("shBg")) shClose(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") shClose(); });
+document.querySelectorAll("#shBg [data-copy]").forEach(b => b.onclick = async () => {
+  const name = b.dataset.copy; $("shCopied").textContent = "";
+  try {
+    const r = await fetchT("/static/sheets/" + name, 15000); if (!r.ok) throw new Error(r.status);
+    const ok = await copyText(await r.text());
+    $("shCopied").className = ok ? "ok" : "err";
+    $("shCopied").textContent = T(ok ? "{f} kopioitu leikepöydälle – liitä se Apps Script -editoriin." : "Kopiointi ei onnistunut.", {f: name});
+  } catch (err) { $("shCopied").className = "err"; $("shCopied").textContent = T("Kopiointi ei onnistunut."); }
+});
+$("toQrzCfg").onclick = e => { e.preventDefault(); showTab("lokit"); unfold("log-qrz"); };
+$("toCmdCfg").onclick = e => { e.preventDefault(); showTab("aprs"); unfold("msg-cmd"); };
 $("btnFeedCheck").onclick = () => fetch("/api/feeds/check", {method: "POST"});
 $("btnTest").onclick = async () => {
   $("aprsErr").textContent = "";

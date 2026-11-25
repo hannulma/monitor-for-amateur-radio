@@ -56,21 +56,27 @@ BrandMeister lähettää), `-v` (enemmän lokia).
 
 ## Välilehdet
 
+Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · Kaverit · Laitteet · Check-in │ APRS · Syötteet │ Lokit │ Palvelut · Satelliitit │ Ohjelma**.
+
 ### BrandMeister
 - **Puheryhmät:** lähetys juuri nyt (vihreä LÄHETYS), viimeisin yhteys, puhuja, kesto, toistin/hotspot,
   avausten määrä ja yhteenlaskettu puheaika. Kaiutinpainike aloittaa ryhmän **kuuntelun** (useita ryhmiä
   voi kuunnella yhtä aikaa; ryhmiä 1–90 ei voi kuunnella).
 - **Viimeisimmät puhelut:** 10, 25, 50, 100 tai 150 viimeisintä, suodatettavissa puheryhmän mukaan.
-- **Yhteydet (QSO):** kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai
-  pidätte yksityispuhelun, yhteys näkyy ehdokkaana. *Lisää lokiin* avaa valmiiksi täytetyn lomakkeen; *Ohita* poistaa ehdokkaan.
+- **Kirjaa yhteys (QSO) lokiin:** kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai
+  pidätte yksityispuhelun, yhteys näkyy ehdokkaana. *Lisää lokiin* avaa valmiiksi täytetyn lomakkeen (tila DMR); *Ohita* poistaa ehdokkaan.
+  Loki tallentuu oletuksena paikallisesti; QRZ.com-synkronointi on valinnainen (maksullinen QRZ-tilaus).
 - **Netit tänään ja huomenna:** FinDMR-kierros ([6kw.fi](https://6kw.fi/findmr/)), W0WC:n BrandMeister-nettikalenteri
   ja omat ICS-kalenterit sekä oma lista. Ajat omassa ajassa, "käynnissä – liikennettä" kun netin puheryhmässä
   puhutaan, kuuntelu- ja check-in-painikkeet, muistutus ennen seurattujen puheryhmien nettejä.
 
 ### Lokit
-- **Loki:** omat yhteydet (aika UTC, kutsu, nimi, kaista, raportit, kommentti), haku, muokkaus ja poisto, yhteyden
-  lisäys käsin sekä vienti **ADIF**- (.adi) ja CSV-tiedostoksi. DMR-yhteydet merkitään ADIF-tilalla DIGITALVOICE / DMR.
-- **Asetukset** (välilehden alimpana): oma kutsu ja lokaattori, oletusraportti ja -kaista, tunnistus päälle/pois sekä QRZ Logbook.
+- **Loki:** omat yhteydet (aika UTC, kutsu, nimi, kaista, tila, raportit, kommentti), haku, suodatus tilan mukaan,
+  muokkaus ja poisto, yhteyden lisäys käsin sekä vienti **ADIF**- (.adi) ja CSV-tiedostoksi.
+- **Tila (mode):** pikapainikkeet SSB · CW · AM · FM · RTTY · PSK31 · D-STAR · DMR · C4FM sekä valikko kaikista ADIF-tiloista
+  (esim. FT8, FT4, JS8, SSTV, M17). Digitaaliset puhetilat viedään ADIF-muodossa DIGITALVOICE / DMR, DSTAR tai C4FM ja PSK31 muodossa PSK / PSK31.
+  Raportin oletus vaihtuu tilan mukaan: puhe 59, CW ja datatilat 599. BrandMeisterista tunnistetut yhteydet ovat aina DMR.
+- **Asetukset** (välilehden alimpana): oma kutsu ja lokaattori, oletusraportti, -kaista ja -tila (käsin lisättävät), tunnistus päälle/pois sekä QRZ Logbook.
 - **QRZ Logbook:** lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan (vaatii QRZ-tilauksen, XML-taso tai ylempi).
   API-avain tallennetaan salasanavarastoon. Jokaisen yhteyden lähetystila näkyy lokissa; epäonnistuneet voi lähettää uudelleen.
 
@@ -123,7 +129,8 @@ BrandMeisterin laitetiedoista (toistin → tunnus ja paikkakunta, paikkakunta va
 "Hotspot"; maakohtaisessa netissä toisen maan asema → "Ulkomaat"), ja ne sekä Lisätietoja ovat muokattavissa. Taulukon alasvetovalikkoon
 (Toistimet-data) puuttuva toistin lisätään listalle automaattisesti.
 
-**Google-taulukko:** kun taulukon omistaja on lisännyt taulukkoon skriptin ([ohje](sheets/README.md)),
+**Google-taulukko:** kun taulukon omistaja on lisännyt taulukkoon skriptin (ohjelmassa *Check-in → Google-taulukko → Ohje* on vaiheittainen ohje ja painikkeet skriptitiedostojen
+kopiointiin; ks. myös [sheets/README.md](sheets/README.md)),
 ylläpitäjä yhdistää ohjelman taulukkoon skriptin osoitteella ja kertakäyttöisellä parituskoodilla. Sen
 jälkeen kirjaukset menevät taulukkoon heti, lokinumeron antaa taulukko ja useampi ylläpitäjä voi kirjata
 samaan aikaan – kunkin ylläpitäjän kirjaukset näkyvät muillakin muutamassa sekunnissa. Jokaisella
@@ -160,13 +167,16 @@ Koko teksti aukeaa ohjelmassa otsikkoa klikkaamalla.
 ### Syötteet
 RSS-, Atom- ja JSON Feed -syötteet (esim. BrandMeisterin uutiset, SRAL): uuden uutisen otsikko lähetetään
 radioon APRS-välilehdellä asetetuille vastaanottajille. Syötteiden tila ja viestiloki; syötteet ja viestiasetukset ovat välilehden alimpana Asetukset-osiossa.
+Kullakin syötteellä on **etuliite** (näkyy viestin alussa), **osoite** ja valinnainen **komento**: kun lähetät radiosta
+Brandmeisterin numeroon 244999 yksityisviestin `<oma APRS-IS-tunnus> <komento>`, ohjelma vastaa syötteen uusimmalla
+otsikolla (vaatii *APRS → Asetukset → Komennot radiosta → Vastaa komentoihin*; `APUA` listaa komennot).
 
 ### Asetukset ja Ohjelma
 Toimintojen asetukset ovat kunkin välilehden alimmassa, pienennettävässä **Asetukset**-osiossa:
 - **BrandMeister:** seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, oma kutsu ja BrandMeister API-avain.
 - **APRS:** Graywolf-yhteys, APRS-viestit radiolla, APRS-IS-yhteys ja vastaanottajat, komennot radiosta.
-- **Lokit:** oma asema ja tunnistus, QRZ Logbook.
 - **Syötteet:** syötteet ja viestit radioon.
+- **Lokit:** oma asema, oletustila ja tunnistus, QRZ Logbook.
 
 **Ohjelma**-välilehdellä ovat **kieli**, **teema** (vaalea, tumma tai käyttöjärjestelmän mukaan), **päivitykset**,
 palaute ja **Sulje ohjelma**.
