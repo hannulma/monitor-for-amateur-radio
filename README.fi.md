@@ -9,7 +9,7 @@ hälytyksiä suoraan DMR-radioosi APRS:n kautta.
 
 > [!NOTE]
 > **Vakaa versio 0.14.0.** Uusimmat ominaisuudet tulevat ensin testiversioihin (beta), jotka voi ottaa käyttöön
-> kohdasta *Asetukset → Versio ja päivitykset*. Virheilmoitukset ja palaute:
+> kohdasta *Ohjelma → Versio ja päivitykset*. Virheilmoitukset ja palaute:
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
 
 ![Seuranta](docs/screenshot-monitor.png)
@@ -29,8 +29,8 @@ Lataa uusin versio **[Releases](https://github.com/hannulma/monitor-for-amateur-
 Ohjelma käynnistää koneellesi pienen paikallisen palvelimen (`http://127.0.0.1:8765/`, mitään ei avata verkkoon).
 Windowsissa ja macOS:ssä käyttöliittymä avautuu **omaan ikkunaansa**. Ikkunan sulkeminen jättää ohjelman taustalle:
 seuranta ja hälytykset jatkuvat, ja ikkunan saa takaisin kuvakkeesta (Windows: ilmaisinalue, macOS: valikkorivi).
-Kokonaan ohjelma suljetaan kuvakkeen valikosta, kohdasta **Asetukset → Sulje ohjelma** tai macOS:ssä Cmd+Q:lla.
-Selaimessa käyttämisen voi valita kohdassa **Asetukset → Ohjelma → Käyttöliittymä**; Linuxissa ohjelma avautuu
+Kokonaan ohjelma suljetaan kuvakkeen valikosta, kohdasta **Ohjelma → Sulje ohjelma** tai macOS:ssä Cmd+Q:lla.
+Selaimessa käyttämisen voi valita kohdassa **Ohjelma → Ulkoasu, palaute ja tiedot → Käyttöliittymä**; Linuxissa ohjelma avautuu
 aina selaimeen. Jos ohjelma on jo käynnissä, uusi käynnistys vain avaa ikkunan tai sivun.
 
 ### Ensimmäinen käynnistys
@@ -70,7 +70,7 @@ BrandMeister lähettää), `-v` (enemmän lokia).
 ### Lokit
 - **Loki:** omat yhteydet (aika UTC, kutsu, nimi, kaista, raportit, kommentti), haku, muokkaus ja poisto, yhteyden
   lisäys käsin sekä vienti **ADIF**- (.adi) ja CSV-tiedostoksi. DMR-yhteydet merkitään ADIF-tilalla DIGITALVOICE / DMR.
-- **Asetukset:** oma kutsu ja lokaattori, oletusraportti ja -kaista, tunnistus päälle/pois.
+- **Asetukset** (välilehden alimpana): oma kutsu ja lokaattori, oletusraportti ja -kaista, tunnistus päälle/pois sekä QRZ Logbook.
 - **QRZ Logbook:** lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan (vaatii QRZ-tilauksen, XML-taso tai ylempi).
   API-avain tallennetaan salasanavarastoon. Jokaisen yhteyden lähetystila näkyy lokissa; epäonnistuneet voi lähettää uudelleen.
 
@@ -78,7 +78,7 @@ BrandMeister lähettää), `-v` (enemmän lokia).
 - **APRS-viestit:** kutsusi kaikkien SSID:iden saapuvat ja lähtevät APRS-viestit, myös BrandMeisterin kautta
   DMR-radiosta lähtevät. Viestiä klikkaamalla voit vastata suoraan (valittavissa millä SSID:llä).
   Halutessasi viestit, kuittaukset ja komentojen vastaukset lähtevät myös radiolla Graywolfin kautta
-  (Asetukset → APRS-viestit radiolla; reitti automaattinen / APRS-IS / radio / radio ja APRS-IS, oletuksena pois).
+  (APRS → Asetukset → APRS-viestit radiolla; reitti automaattinen / APRS-IS / radio / radio ja APRS-IS, oletuksena pois).
 - **APRS-kartta:** ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia (oletus `127.0.0.1:8001`).
   Kartan tasot (24 h / 7 vrk / 30 vrk): **RF-kuuluvuus** – lämpökartta siitä, mistä asemasi kuulee paketteja
   suoraan ja mistä digipiitterien kautta; **APRS-asemat** – radiolla kuultujen asemien viimeisin sijainti;
@@ -98,7 +98,7 @@ hälytykset saman yhteyden aikana. Välilehdellä on myös kaverien tila ja kaik
 ### Laitteet
 Seurattavat toistimet ja hotspotit (ID tai haku kutsulla): tila, viimeksi nähty, pysyvät ja dynaamiset
 puheryhmät, viimeisin liikenne. Hälytys, kun laite putoaa verkosta tai palaa. **BrandMeister API-avaimella**
-(Asetukset) omaa laitetta voi hallita: pysyvän puheryhmän lisäys/poisto, dynaamisten tyhjennys, puhelun
+(BrandMeister → Asetukset) omaa laitetta voi hallita: pysyvän puheryhmän lisäys/poisto, dynaamisten tyhjennys, puhelun
 katkaisu ja yhteyden nollaus. Avain luodaan BrandMeister SelfCaressa.
 
 ### Tilastot
@@ -159,17 +159,22 @@ Koko teksti aukeaa ohjelmassa otsikkoa klikkaamalla.
 
 ### Syötteet
 RSS-, Atom- ja JSON Feed -syötteet (esim. BrandMeisterin uutiset, SRAL): uuden uutisen otsikko lähetetään
-radioon APRS-välilehdellä asetetuille vastaanottajille. Syötteiden tila ja viestiloki.
+radioon APRS-välilehdellä asetetuille vastaanottajille. Syötteiden tila ja viestiloki; syötteet ja viestiasetukset ovat välilehden alimpana Asetukset-osiossa.
 
-### Asetukset
-Seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, BrandMeister API-avain, **kieli**, **teema** (vaalea, tumma
-tai käyttöjärjestelmän mukaan), **päivitykset** ja
-**Sulje ohjelma**.
+### Asetukset ja Ohjelma
+Toimintojen asetukset ovat kunkin välilehden alimmassa, pienennettävässä **Asetukset**-osiossa:
+- **BrandMeister:** seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, oma kutsu ja BrandMeister API-avain.
+- **APRS:** Graywolf-yhteys, APRS-viestit radiolla, APRS-IS-yhteys ja vastaanottajat, komennot radiosta.
+- **Lokit:** oma asema ja tunnistus, QRZ Logbook.
+- **Syötteet:** syötteet ja viestit radioon.
+
+**Ohjelma**-välilehdellä ovat **kieli**, **teema** (vaalea, tumma tai käyttöjärjestelmän mukaan), **päivitykset**,
+palaute ja **Sulje ohjelma**.
 
 - **Kieli (suomi / English)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
   Radiokomennot toimivat kummallakin kielellä (`APUA`/`HELP`, `KUKA`/`WHO`, `NYT`/`NOW`). Ilmatieteen laitoksen
   varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).
-- **Palaute / lokit** (Ohjelma-osio) lähettää viestin ja zip-paketin ylläpidolle. Salaisuudet (API-avain, passcode,
+- **Palaute / lokit** (Ohjelma-välilehti) lähettää viestin ja zip-paketin ylläpidolle. Salaisuudet (API-avain, passcode,
   check-in-avain) poistetaan ja sijainti pyöristetään lokaattoriksi; paketin voi ladata ja tarkistaa ennen lähetystä.
 - **Mittayksiköt (km / mailit)** koskevat kaikkia näytettyjä etäisyyksiä ja nopeuksia sekä hälytyksiä. Asetukset
   tallennetaan aina kilometreinä, joten yksikön vaihto ei muuta säteitä.

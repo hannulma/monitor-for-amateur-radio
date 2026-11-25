@@ -13,9 +13,9 @@ DMR radio via APRS.
 
 > [!NOTE]
 > **Stable release 0.14.0.** New features arrive first in test versions (beta), which you can enable in
-> *Settings → Version and updates*. Bug reports and feedback are very welcome in
+> *App → Version and updates*. Bug reports and feedback are very welcome in
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
-> The user interface is available in **Finnish** and **English** (Settings → Language and units).
+> The user interface is available in **Finnish** and **English** (App → Language and units). Feature settings are in the *Settings* section at the bottom of each tab.
 
 ![Monitor view](docs/screenshot-monitor.png)
 
@@ -48,7 +48,7 @@ DMR radio via APRS.
 - **APRS messaging** – see all APRS messages to and from every SSID of your callsign (including DMR ↔ APRS
   messages through the BrandMeister APRS gateway) and reply directly from the app.
   Optionally messages, acks and command replies are also transmitted on the radio through Graywolf
-  (Settings → APRS messages on the radio; route automatic / APRS-IS / radio / radio and APRS-IS, off by default).
+  (APRS → Settings → APRS messages on the radio; route automatic / APRS-IS / radio / radio and APRS-IS, off by default).
 - **APRS map** – listens to the KISS TCP port of Graywolf or Dire Wolf (default `127.0.0.1:8001`).
   Map layers (24 h / 7 days / 30 days): **RF coverage** – a heat map of where your station hears packets
   directly and via digipeaters; **APRS stations** – the latest position of stations heard on the radio;
@@ -78,7 +78,7 @@ DMR radio via APRS.
   `Tie 101 Espoo, Kalevalantie: Liikennevalot, epäkunnossa` or
   `Keltainen liikennesää: lumi/räntä, to 14–pe 12 (30 %)`.
 
-- **English and Finnish** – choose the language in Settings. It covers the user interface, the program's own
+- **English and Finnish** – choose the language on the App tab. It covers the user interface, the program's own
   alerts and the replies sent to your radio (radio commands work in both languages: `HELP`/`APUA`, `WHO`/`KUKA`,
   `NOW`/`NYT`). FMI warnings and Digitraffic bulletins stay in Finnish, their source language.
 - **Automatic updates** – the app checks GitHub for a new version once a day (can be turned off). On Windows
@@ -106,8 +106,8 @@ Get the latest version from **[Releases](https://github.com/hannulma/monitor-for
 The app runs a small local web server (`http://127.0.0.1:8765/`, nothing is exposed to your network). On Windows
 and macOS the user interface opens in **its own window**. Closing the window keeps the app running in the
 background – monitoring and alerts continue, and the window comes back from the icon in the notification area
-(Windows) or menu bar (macOS). Quit from the icon's menu, **Settings → Quit**, or Cmd+Q on macOS. You can choose
-the browser instead in **Settings → Program → User interface**; on Linux the app always uses the browser.
+(Windows) or menu bar (macOS). Quit from the icon's menu, **App → Quit**, or Cmd+Q on macOS. You can choose
+the browser instead on the **App** tab (*User interface*); on Linux the app always uses the browser.
 Starting the app again while it is running just shows the window or page.
 
 ### First launch (unsigned builds)
@@ -132,7 +132,7 @@ BrandMeister), `-v` (verbose).
 
 ## Quick start
 
-1. **Talkgroups:** *Asetukset* (Settings) → enter talkgroups separated by spaces, e.g. `244* 91 3100`.
+1. **Talkgroups:** *BrandMeister* tab → *Settings* (at the bottom) → enter talkgroups separated by spaces, e.g. `244* 91 3100`.
    `*` matches any digits, `?` exactly one.
 2. **Listen:** click the speaker button next to a talkgroup.
 3. **Friends:** *Kaverit* → add callsigns or DMR IDs, allow desktop notifications.

@@ -1545,7 +1545,7 @@ async def _run(args, mon, cfg_path, ui):
     url = f"http://127.0.0.1:{port}/"
     print(f"{APP_NAME} {__version__} käynnissä: {url}")
     print(f"Asetukset: {cfg_path}")
-    print("Lopeta painamalla Ctrl+C tai Asetukset → Sulje ohjelma.")
+    print("Lopeta painamalla Ctrl+C tai Ohjelma → Sulje ohjelma.")
     log.info("%s %s käynnissä: %s", APP_NAME, __version__, url)
     if ui is not None:
         mon.ui = ui

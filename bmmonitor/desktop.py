@@ -3,7 +3,7 @@
 Paikallinen palvelin pyörii omassa säikeessään kuten ennenkin; tämä moduuli näyttää saman käyttöliittymän
 käyttöjärjestelmän omalla selainmoottorilla (Windows: WebView2, macOS: WKWebView). Ikkunan sulkeminen
 piilottaa ikkunan ja ohjelma jatkaa taustalla; kokonaan ohjelma suljetaan kuvakkeen valikosta,
-Asetukset → Sulje ohjelma -painikkeesta tai macOS:ssä Cmd+Q:lla.
+Ohjelma → Sulje ohjelma -painikkeesta tai macOS:ssä Cmd+Q:lla.
 """
 from __future__ import annotations
 

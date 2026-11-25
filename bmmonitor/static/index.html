@@ -47,6 +47,10 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   main { padding: 16px 18px; display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; min-width: 0; }
   section.wide { grid-column: 1 / -1; }
+  .setsubs { padding: 12px; display: grid; gap: 12px; }
+  .setbox .setsubs > section { background: var(--bg); }
+  .setbox .setsubs > section > h2 { font-size: 12px; }
+  section.setbox.folded .setsubs { display: none; }
   section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex; gap: 10px; align-items: center; }
   section > h2 { cursor: pointer; user-select: none; }
   section > h2 > .fold { background: none; border: 0; padding: 0 2px; margin: 0 -4px 0 -6px; color: var(--muted); font-size: 11px; line-height: 1; width: 16px; transition: transform .12s; }
@@ -360,7 +364,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   <button data-tab="palvelut">Palvelut</button>
   <button data-tab="satelliitit">Satelliitit</button>
   <button data-tab="viestit">Syötteet</button>
-  <button data-tab="asetukset">Asetukset</button>
+  <button data-tab="asetukset">Ohjelma</button>
   <span class="foldall"><button id="foldOpen" title="Avaa kaikki tämän välilehden osiot">Avaa kaikki</button><button id="foldClose" title="Pienennä kaikki tämän välilehden osiot otsikoiksi">Pienennä kaikki</button></span>
 </nav>
 
@@ -386,57 +390,9 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       aikaväli, jolloin satelliitti on sijaintisi yhteysalueella; ympyrä on satelliitin kuuluvuusalue. Klikkaa satelliittia nähdäksesi
       sen taivaskartan. Zoomaa hiiren rullalla tai nipistämällä ja siirrä karttaa raahaamalla. Karttapohja: Natural Earth.</div>
   </section>
-  <section id="settings" class="cfg form" data-tab="asetukset" data-fold="cfg-monitor">
-    <h2>Seuranta ja historia</h2>
-    <div class="inner">
-    <div class="row">
-      <div style="flex:1; min-width:280px">
-        <label for="tgInput">Seurattavat puheryhmät</label>
-        <textarea id="tgInput" placeholder="244* 91 2441"></textarea>
-        <div class="hint">Erota välilyönnillä tai pilkulla. <b>*</b> = mikä tahansa merkkijono (244* = kaikki 244-alkuiset), <b>?</b> = yksi numero.</div>
-      </div>
-    </div>
-    <div class="frow" style="margin-top:12px">
-      <div class="fld">
-        <label for="dataFilter">Tekstiviestit ja data</label>
-        <select id="dataFilter">
-          <option value="all">Koko verkko</option>
-          <option value="matched">Vain seurattujen ryhmien / ID:iden</option>
-        </select>
-      </div>
-      <div class="fld" style="max-width:300px">
-        <label for="minDur">Ohita lyhyet avaukset: alle (sekuntia)</label>
-        <input id="minDur" type="number" min="0" step="0.5" style="width:90px">
-        <div class="hint">0 = kaikki puhelut tallentuvat. Listan pituus valitaan Viimeisimmät puhelut -paneelista.</div>
-      </div>
-      <div class="fld checks" style="padding-top:22px">
-        <label><input id="logCsv" type="checkbox"> Tallenna CSV-lokiin</label>
-      </div>
-    </div>
-    <div class="frow svcsave">
-      <button class="primary" id="btnSave">Tallenna</button>
-      <span class="err" id="saveErr"></span>
-      <span class="spacer"></span>
-      <button id="btnClear" title="Poistaa puhelu- ja tapahtumahistorian">Tyhjennä historia</button>
-    </div>
-    </div>
-  </section>
-  <section class="cfg form" data-tab="asetukset" data-fold="cfg-apikey">
-    <h2>Brandmeister API-avain (vapaaehtoinen)</h2>
-    <div class="inner">
-    <div class="frow" style="margin-top:12px">
-      <div class="fld" style="flex:1;min-width:280px">
-        <label for="apiKey">API-avain laitteen hallintaan</label>
-        <input id="apiKey" type="password" autocomplete="off" placeholder="eyJ0eXAiOiJKV1Qi…" style="width:100%">
-        <div class="hint">Luo avain: brandmeister.network → SelfCare → Security / API Keys. Avainta tarvitaan vain
-          Laitteet-välilehden hallintapainikkeisiin, ja Brandmeister sallii ne vain omille laitteillesi.
-          Avain tallentuu käyttöjärjestelmän salasanavarastoon.</div>
-      </div>
-      <div class="fld"><label for="myCall">Oma kutsu</label><input id="myCall" type="text" placeholder="OH2ABC" style="width:120px; text-transform:uppercase" spellcheck="false">
-        <div class="hint" style="max-width:200px">Laitteet, joiden kutsu on tämä, tunnistetaan omiksi.</div></div>
-    </div>
-    <div class="frow svcsave"><button class="primary" id="btnKeySave">Tallenna</button> <button id="btnKeyDel">Poista avain</button> <span id="keyState" class="muted"></span></div>
-    </div>
+  <section class="wide cfg" data-tab="asetukset">
+    <div class="note" style="margin:12px">Toimintojen asetukset ovat kunkin välilehden alimmassa Asetukset-osiossa
+      (BrandMeister, APRS, Lokit, Syötteet). Tällä välilehdellä ovat ohjelman yleiset asetukset, päivitykset ja tiedot.</div>
   </section>
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-lang">
     <h2>Kieli ja yksiköt</h2>
@@ -464,7 +420,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     </div>
   </section>
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-program">
-    <h2>Ohjelma</h2>
+    <h2>Ulkoasu, palaute ja tiedot</h2>
     <div class="inner">
     <div class="about" id="aboutLine"></div>
     <div class="frow" style="margin:10px 0 4px;align-items:center">
@@ -489,57 +445,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="paths" id="paths"></div>
     </div>
   </section>
-  <section class="cfg form" data-tab="asetukset" data-fold="cfg-rftx">
-    <h2>APRS-viestit radiolla (Graywolf)</h2>
-    <div class="inner">
-    <div class="note">APRS-viestit, kuittaukset ja komentojen vastaukset voidaan lähettää myös radiolla.
-      Lähetys käyttää APRS-välilehden Graywolf-yhteyttä.</div>
-    <div class="frow" style="align-items:center;margin-top:12px">
-      <label style="margin:0;color:var(--text)"><input type="checkbox" id="rfTx"> Salli lähetys radiolla</label>
-      <span id="rfState" class="rfstate"></span>
-    </div>
-    <div class="frow" id="rfFields" style="margin-top:12px">
-      <div class="fld"><label for="rfRoute">Oletusreitti</label>
-        <select id="rfRoute" style="width:220px"><option value="auto">Automaattinen</option><option value="is">APRS-IS</option><option value="rf">Radio (RF)</option><option value="both">Radio (RF) ja APRS-IS</option></select>
-        <div class="hint rfhint" id="rfRouteHint"></div></div>
-      <div class="fld" id="rfHeardFld"><label for="rfHeard">Kuultu radiolla (min)</label><input type="number" id="rfHeard" min="5" max="1440" style="width:110px">
-        <div class="hint rfhint">automaattisen reitin aikaraja</div></div>
-      <div class="fld"><label for="rfPath">Polku</label><input type="text" id="rfPath" placeholder="WIDE1-1,WIDE2-1" style="width:170px">
-        <div class="hint rfhint">tyhjä = ei digipiitterien kautta</div></div>
-    </div>
-    <div class="hint" style="margin-top:12px">Radiolla viesti lähetetään uudelleen minuutin välein (enintään 3 kertaa); lähetysten väli on vähintään 5 s ja
-      enintään 30 lähetystä 10 minuutissa. Komentoihin vastataan samaa reittiä, jota pitkin ne tulivat.</div>
-    <div class="frow svcsave"><button class="primary" id="btnRfSave">Tallenna</button><span class="err" id="rfErr"></span></div>
-    </div>
-  </section>
 
-  <section id="msgPanel" class="msgp" data-tab="viestit" data-fold="msg-main">
-    <h2>Syötteet → DMR-tekstiviestit
-      <label class="switch" title="Lähetys päällä"><input type="checkbox" id="mEnabled"><span class="sl"></span><span class="swtxt" id="mEnabledTxt">Pois</span></label></h2>
-    <div class="inner form msgform">
-      <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. APRS-IS-tunnus, vastaanottajat ja viestiasetukset ovat <a href="#" id="toAprs">APRS-välilehdellä</a>.</div>
-      <h3>Viestit radioon</h3>
-      <div class="frow">
-        <div class="fld"><label for="mParts">Viestejä / otsikko</label><input type="number" id="mParts" min="1" max="5" style="width:90px">
-          <div class="hint">67 merkkiä / viesti</div></div>
-        <div class="fld"><label for="mInterval">Tarkistusväli (min)</label><input type="number" id="mInterval" min="1" style="width:90px">
-          <div class="hint">kuinka usein syötteet haetaan</div></div>
-        <div class="fld checks">
-          <label><input type="checkbox" id="mAscii"> Muunna ääkköset (ä→a)</label>
-          <div class="hint">Jos radio ei näytä ääkkösiä oikein.</div></div>
-      </div>
-      <h3>Syötteet (RSS, Atom tai JSON Feed)</h3>
-      <div class="feedrow feedhead"><span class="fen-h">Käytössä</span><span class="fname">Etuliite</span><span class="furl">Osoite</span><span class="fcmd">Komento</span><span class="fbtns"></span></div>
-      <div id="feedRows"></div>
-      <button id="btnAddFeed">+ Lisää syöte</button>
-      <div class="hint">Komento-kenttä (esim. SAA) tekee syötteen uusimmasta otsikosta radiosta kysyttävän. Uutta syötettä seurattaessa nykyiset uutiset ohitetaan, ja viesti lähtee vasta seuraavasta uudesta uutisesta. Etuliite näkyy viestin alussa, esim. <code>BM: otsikko</code>.</div>
-      <div class="frow" style="margin-top:14px; align-items:center">
-        <button class="primary" id="btnMsgSave">Tallenna</button>
-        <button id="btnFeedCheck">Tarkista syötteet nyt</button>
-        <span class="err" id="msgErr"></span>
-      </div>
-    </div>
-  </section>
   <section class="wide" data-tab="aprs" data-fold="aprs-msgs">
     <h2>APRS-viestit <span class="count" id="aprsWho"></span></h2>
     <div class="scroll" style="max-height:340px">
@@ -596,92 +502,120 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="empty" id="pathEmpty">Ei paketteja tällä jaksolla.</div>
     </div>
   </section>
-  <section class="msgp form" data-tab="aprs" data-fold="aprs-rx">
-    <h2>Graywolf-yhteys (KISS TCP)
-      <label class="switch" title="Vastaanotto päällä"><input type="checkbox" id="rxEnabled"><span class="sl"></span><span class="swtxt" id="rxEnabledTxt">Pois</span></label></h2>
-    <div class="inner form msgform">
-      <div class="note">Ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia.
-        Radiolla lähetetään vain APRS-viestejä, jos se on sallittu Asetukset-välilehdellä. Kuullut paketit tallennetaan tälle koneelle 30 vuorokaudeksi.</div>
-      <div class="frow">
-        <div class="fld"><label for="rxHost">Palvelin</label><input type="text" id="rxHost" style="width:180px"><div class="hint">sama kone: 127.0.0.1</div></div>
-        <div class="fld"><label for="rxPort">KISS TCP -portti</label><input type="number" id="rxPort" min="1" max="65535" style="width:110px"><div class="hint">oletus 8001</div></div>
+  <section class="wide setbox" data-tab="aprs" data-fold="aprs-settings" data-fold-default="closed">
+    <h2>Asetukset</h2>
+    <div class="setsubs">
+    <section class="msgp form" data-tab="aprs" data-fold="aprs-rx">
+      <h2>Graywolf-yhteys (KISS TCP)
+        <label class="switch" title="Vastaanotto päällä"><input type="checkbox" id="rxEnabled"><span class="sl"></span><span class="swtxt" id="rxEnabledTxt">Pois</span></label></h2>
+      <div class="inner form msgform">
+        <div class="note">Ohjelma kuuntelee Graywolfin (tai Dire Wolfin) KISS TCP -porttia.
+          Radiolla lähetetään vain APRS-viestejä, jos se on sallittu alla (APRS-viestit radiolla). Kuullut paketit tallennetaan tälle koneelle 30 vuorokaudeksi.</div>
+        <div class="frow">
+          <div class="fld"><label for="rxHost">Palvelin</label><input type="text" id="rxHost" style="width:180px"><div class="hint">sama kone: 127.0.0.1</div></div>
+          <div class="fld"><label for="rxPort">KISS TCP -portti</label><input type="number" id="rxPort" min="1" max="65535" style="width:110px"><div class="hint">oletus 8001</div></div>
+        </div>
+        <h3>Hiljentyneet digit ja iGatet</h3>
+        <div class="frow">
+          <div class="fld checks">
+            <label><input type="checkbox" id="rxAlerts"> Hälytä, kun seurattu asema hiljenee</label>
+            <label><input type="checkbox" id="rxAuto"> Seuraa automaattisesti kuultuja digejä</label>
+            <label><input type="checkbox" id="rxSms"> Lähetä hälytys myös radioon</label></div>
+          <div class="fld"><label for="rxSilence">Hiljaisuus (min)</label><input type="number" id="rxSilence" min="5" style="width:100px">
+            <div class="hint">kuinka pitkä tauko hälyttää</div></div>
+          <div class="fld"><label for="rxMinHeard">Digin vähimmäismäärä</label><input type="number" id="rxMinHeard" min="1" style="width:100px">
+            <div class="hint">välitettyä pakettia / 7 vrk</div></div>
+          <div class="fld" style="flex:1;min-width:240px"><label for="rxWatch">Seuraa lisäksi (esim. iGatet)</label><input type="text" id="rxWatch" placeholder="OH2RCH-10 OH2ABC-1" style="width:100%">
+            <div class="hint">Hälytys tulee vain, kun oma vastaanotto toimii: muuta liikennettä on kuultu hiljaisuuden aikana.</div></div>
+        </div>
+        <h3>Karttapohja</h3>
+        <div class="frow">
+          <div class="fld" style="flex:2;min-width:280px"><label for="rxTiles">Karttatiilten osoite</label><input type="text" id="rxTiles" style="width:100%">
+            <div class="hint">Oletus OpenStreetMap. Tiilet haetaan ohjelman kautta ja tallennetaan välimuistiin. Tyhjä = oletus.</div></div>
+          <div class="fld" style="flex:1;min-width:200px"><label for="rxTilesAttr">Lähdemerkintä</label><input type="text" id="rxTilesAttr" style="width:100%"></div>
+        </div>
+        <div class="frow svcsave"><button class="primary" id="btnRxSave">Tallenna</button><span class="err" id="rxErr"></span></div>
       </div>
-      <h3>Hiljentyneet digit ja iGatet</h3>
-      <div class="frow">
-        <div class="fld checks">
-          <label><input type="checkbox" id="rxAlerts"> Hälytä, kun seurattu asema hiljenee</label>
-          <label><input type="checkbox" id="rxAuto"> Seuraa automaattisesti kuultuja digejä</label>
-          <label><input type="checkbox" id="rxSms"> Lähetä hälytys myös radioon</label></div>
-        <div class="fld"><label for="rxSilence">Hiljaisuus (min)</label><input type="number" id="rxSilence" min="5" style="width:100px">
-          <div class="hint">kuinka pitkä tauko hälyttää</div></div>
-        <div class="fld"><label for="rxMinHeard">Digin vähimmäismäärä</label><input type="number" id="rxMinHeard" min="1" style="width:100px">
-          <div class="hint">välitettyä pakettia / 7 vrk</div></div>
-        <div class="fld" style="flex:1;min-width:240px"><label for="rxWatch">Seuraa lisäksi (esim. iGatet)</label><input type="text" id="rxWatch" placeholder="OH2RCH-10 OH2ABC-1" style="width:100%">
-          <div class="hint">Hälytys tulee vain, kun oma vastaanotto toimii: muuta liikennettä on kuultu hiljaisuuden aikana.</div></div>
+    </section>
+    <section class="cfg form" data-tab="aprs" data-fold="cfg-rftx">
+      <h2>APRS-viestit radiolla (Graywolf)</h2>
+      <div class="inner">
+      <div class="note">APRS-viestit, kuittaukset ja komentojen vastaukset voidaan lähettää myös radiolla.
+        Lähetys käyttää yllä olevaa Graywolf-yhteyttä.</div>
+      <div class="frow" style="align-items:center;margin-top:12px">
+        <label style="margin:0;color:var(--text)"><input type="checkbox" id="rfTx"> Salli lähetys radiolla</label>
+        <span id="rfState" class="rfstate"></span>
       </div>
-      <h3>Karttapohja</h3>
-      <div class="frow">
-        <div class="fld" style="flex:2;min-width:280px"><label for="rxTiles">Karttatiilten osoite</label><input type="text" id="rxTiles" style="width:100%">
-          <div class="hint">Oletus OpenStreetMap. Tiilet haetaan ohjelman kautta ja tallennetaan välimuistiin. Tyhjä = oletus.</div></div>
-        <div class="fld" style="flex:1;min-width:200px"><label for="rxTilesAttr">Lähdemerkintä</label><input type="text" id="rxTilesAttr" style="width:100%"></div>
+      <div class="frow" id="rfFields" style="margin-top:12px">
+        <div class="fld"><label for="rfRoute">Oletusreitti</label>
+          <select id="rfRoute" style="width:220px"><option value="auto">Automaattinen</option><option value="is">APRS-IS</option><option value="rf">Radio (RF)</option><option value="both">Radio (RF) ja APRS-IS</option></select>
+          <div class="hint rfhint" id="rfRouteHint"></div></div>
+        <div class="fld" id="rfHeardFld"><label for="rfHeard">Kuultu radiolla (min)</label><input type="number" id="rfHeard" min="5" max="1440" style="width:110px">
+          <div class="hint rfhint">automaattisen reitin aikaraja</div></div>
+        <div class="fld"><label for="rfPath">Polku</label><input type="text" id="rfPath" placeholder="WIDE1-1,WIDE2-1" style="width:170px">
+          <div class="hint rfhint">tyhjä = ei digipiitterien kautta</div></div>
       </div>
-      <div class="frow svcsave"><button class="primary" id="btnRxSave">Tallenna</button><span class="err" id="rxErr"></span></div>
-    </div>
-  </section>
-  <section class="msgp form" data-tab="aprs" data-fold="aprs-cfg">
-    <h2>APRS-IS-yhteys ja vastaanottajat</h2>
-    <div class="inner form msgform">
-      <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. Brandmeister välittää ne DMR-tekstiviesteinä
-        sille radiolle, jonka DMR-ID:hen kutsu ja SSID on liitetty <b>BM SelfCaren APRS-asetuksissa</b>. Vastaanottajaksi
-        kirjoitetaan sama kutsu ja SSID (esim. <code>OH2ABC-7</code>). Viesti tulee perille, jos radio on kuultu verkossa äskettäin
-        tai SelfCaressa on <i>Text Capture</i> päällä.</div>
-      <h3>APRS-IS-yhteys</h3>
-      <div class="frow">
-        <div class="fld"><label for="mLogin">Oma APRS-IS-tunnus</label><input type="text" id="mLogin" placeholder="OH2ABC-13" style="width:150px">
-          <div class="hint">Ei samaa SSID:tä kuin Graywolfilla/iGatella</div></div>
-        <div class="fld"><label for="mPass">Passcode</label><input type="password" id="mPass" style="width:120px">
-          <div class="hint" id="mPassHint">tyhjä = lasketaan kutsusta</div></div>
-        <div class="fld"><label for="mServer">APRS-IS-palvelin</label><input type="text" id="mServer" style="width:200px"></div>
+      <div class="hint" style="margin-top:12px">Radiolla viesti lähetetään uudelleen minuutin välein (enintään 3 kertaa); lähetysten väli on vähintään 5 s ja
+        enintään 30 lähetystä 10 minuutissa. Komentoihin vastataan samaa reittiä, jota pitkin ne tulivat.</div>
+      <div class="frow svcsave"><button class="primary" id="btnRfSave">Tallenna</button><span class="err" id="rfErr"></span></div>
       </div>
-      <h3>Vastaanottajat</h3>
-      <div class="frow">
-        <div class="fld" style="flex:1;min-width:260px"><label for="mRecip">Vastaanottajat (radion kutsu-SSID)</label><input type="text" id="mRecip" placeholder="OH2ABC-7" style="width:100%">
-          <div class="hint">Erota välilyönnillä, esim. OH2ABC-6 OH2ABC-8</div></div>
-        <div class="fld" style="flex:1;min-width:260px"><label for="mAprsWatch">Näytä APRS-viestit kutsuille</label><input type="text" id="mAprsWatch" placeholder="oma kutsu (oletus)" style="width:100%">
-          <div class="hint">Kaikki SSID:t, esim. OH2ABC = OH2ABC-1 … -15</div></div>
+    </section>
+    <section class="msgp form" data-tab="aprs" data-fold="aprs-cfg">
+      <h2>APRS-IS-yhteys ja vastaanottajat</h2>
+      <div class="inner form msgform">
+        <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. Brandmeister välittää ne DMR-tekstiviesteinä
+          sille radiolle, jonka DMR-ID:hen kutsu ja SSID on liitetty <b>BM SelfCaren APRS-asetuksissa</b>. Vastaanottajaksi
+          kirjoitetaan sama kutsu ja SSID (esim. <code>OH2ABC-7</code>). Viesti tulee perille, jos radio on kuultu verkossa äskettäin
+          tai SelfCaressa on <i>Text Capture</i> päällä.</div>
+        <h3>APRS-IS-yhteys</h3>
+        <div class="frow">
+          <div class="fld"><label for="mLogin">Oma APRS-IS-tunnus</label><input type="text" id="mLogin" placeholder="OH2ABC-13" style="width:150px">
+            <div class="hint">Ei samaa SSID:tä kuin Graywolfilla/iGatella</div></div>
+          <div class="fld"><label for="mPass">Passcode</label><input type="password" id="mPass" style="width:120px">
+            <div class="hint" id="mPassHint">tyhjä = lasketaan kutsusta</div></div>
+          <div class="fld"><label for="mServer">APRS-IS-palvelin</label><input type="text" id="mServer" style="width:200px"></div>
+        </div>
+        <h3>Vastaanottajat</h3>
+        <div class="frow">
+          <div class="fld" style="flex:1;min-width:260px"><label for="mRecip">Vastaanottajat (radion kutsu-SSID)</label><input type="text" id="mRecip" placeholder="OH2ABC-7" style="width:100%">
+            <div class="hint">Erota välilyönnillä, esim. OH2ABC-6 OH2ABC-8</div></div>
+          <div class="fld" style="flex:1;min-width:260px"><label for="mAprsWatch">Näytä APRS-viestit kutsuille</label><input type="text" id="mAprsWatch" placeholder="oma kutsu (oletus)" style="width:100%">
+            <div class="hint">Kaikki SSID:t, esim. OH2ABC = OH2ABC-1 … -15</div></div>
+        </div>
+        <h3>Viestit</h3>
+        <div class="frow">
+          <div class="fld checks">
+            <label><input type="checkbox" id="mNoAck"> Älä odota kuittausta</label>
+            <div class="hint">Viesti lähetetään kerran eikä tule koskaan kahdesti, mutta perillemenoa ei voi seurata.</div></div>
+        </div>
+        <div class="frow svcsave"><button class="primary" id="btnAprsSave">Tallenna</button><span class="err" id="aprsErr"></span></div>
+        <h3>Testiviesti</h3>
+        <div class="frow" style="align-items:center">
+          <input type="text" id="mTest" maxlength="134" placeholder="Monitor for BrandMeister: testiviesti" style="flex:1;min-width:240px" aria-label="Testiviesti">
+          <button id="btnTest">Lähetä testiviesti</button>
+        </div>
+        <div id="aprsStatus" style="margin-top:12px"></div>
       </div>
-      <h3>Viestit</h3>
-      <div class="frow">
-        <div class="fld checks">
-          <label><input type="checkbox" id="mNoAck"> Älä odota kuittausta</label>
-          <div class="hint">Viesti lähetetään kerran eikä tule koskaan kahdesti, mutta perillemenoa ei voi seurata.</div></div>
+    </section>
+    <section class="msgp form" data-tab="aprs" data-fold="msg-cmd">
+      <h2>Komennot radiosta</h2>
+      <div class="inner">
+        <div class="note">Lähetä radiosta tekstiviesti Brandmeisterin APRS-palvelunumeroon <b>244999</b> (yksityisviesti) muodossa
+          <code>&lt;oma APRS-IS-tunnus&gt; &lt;komento&gt;</code>, esim. <code id="cmdExample">OH2ABC-13 TG244</code>. Ohjelma vastaa radioosi.<br>
+          Komennot: <b>APUA</b> · <b>TG244</b> (kuka puhui viimeksi) · <b>KUKA OH2ABC</b> (milloin ja missä kuultu) ·
+          <b>NYT</b> (lähetykset seuratuissa ryhmissä) · syötteiden komennot (esim. <b>SAA</b> = uusin otsikko).</div>
+        <div class="frow" style="margin-top:14px">
+          <div class="fld checks">
+            <label><input type="checkbox" id="mCmd"> Vastaa komentoihin</label>
+            <div class="hint"></div>
+            <label><input type="checkbox" id="mCmdAll"> Salli kaikille (ei suositella)</label></div>
+          <div class="fld" style="flex:1;min-width:240px"><label for="mCmdAllow">Lisäksi sallitut kutsut</label>
+            <input type="text" id="mCmdAllow" placeholder="OH1ABC OH3XYZ" style="width:100%">
+            <div class="hint">Oletuksena komentoja saa lähettää oma kutsusi ja vastaanottajien kutsut (kaikki SSID:t).</div></div>
+        </div>
+        <div class="frow svcsave"><button class="primary" id="btnCmdSave">Tallenna</button><span class="err" id="cmdErr"></span></div>
       </div>
-      <div class="frow svcsave"><button class="primary" id="btnAprsSave">Tallenna</button><span class="err" id="aprsErr"></span></div>
-      <h3>Testiviesti</h3>
-      <div class="frow" style="align-items:center">
-        <input type="text" id="mTest" maxlength="134" placeholder="Monitor for BrandMeister: testiviesti" style="flex:1;min-width:240px" aria-label="Testiviesti">
-        <button id="btnTest">Lähetä testiviesti</button>
-      </div>
-      <div id="aprsStatus" style="margin-top:12px"></div>
-    </div>
-  </section>
-  <section class="msgp form" data-tab="aprs" data-fold="msg-cmd">
-    <h2>Komennot radiosta</h2>
-    <div class="inner">
-      <div class="note">Lähetä radiosta tekstiviesti Brandmeisterin APRS-palvelunumeroon <b>244999</b> (yksityisviesti) muodossa
-        <code>&lt;oma APRS-IS-tunnus&gt; &lt;komento&gt;</code>, esim. <code id="cmdExample">OH2ABC-13 TG244</code>. Ohjelma vastaa radioosi.<br>
-        Komennot: <b>APUA</b> · <b>TG244</b> (kuka puhui viimeksi) · <b>KUKA OH2ABC</b> (milloin ja missä kuultu) ·
-        <b>NYT</b> (lähetykset seuratuissa ryhmissä) · syötteiden komennot (esim. <b>SAA</b> = uusin otsikko).</div>
-      <div class="frow" style="margin-top:14px">
-        <div class="fld checks">
-          <label><input type="checkbox" id="mCmd"> Vastaa komentoihin</label>
-          <div class="hint"></div>
-          <label><input type="checkbox" id="mCmdAll"> Salli kaikille (ei suositella)</label></div>
-        <div class="fld" style="flex:1;min-width:240px"><label for="mCmdAllow">Lisäksi sallitut kutsut</label>
-          <input type="text" id="mCmdAllow" placeholder="OH1ABC OH3XYZ" style="width:100%">
-          <div class="hint">Oletuksena komentoja saa lähettää oma kutsusi ja vastaanottajien kutsut (kaikki SSID:t).</div></div>
-      </div>
-      <div class="frow svcsave"><button class="primary" id="btnCmdSave">Tallenna</button><span class="err" id="cmdErr"></span></div>
+    </section>
     </div>
   </section>
   <section class="msgp" data-tab="viestit" data-fold="msg-feeds">
@@ -696,6 +630,38 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <table><thead><tr><th>Aika</th><th>Suunta</th><th>Kenelle / keneltä</th><th>Teksti</th><th>Tila</th></tr></thead><tbody id="msgLog"></tbody></table>
         <div class="empty" id="msgLogEmpty">Ei viestejä vielä.</div>
       </div>
+  </section>
+  <section class="wide setbox" data-tab="viestit" data-fold="msg-settings" data-fold-default="closed">
+    <h2>Asetukset</h2>
+    <div class="setsubs">
+    <section id="msgPanel" class="msgp" data-tab="viestit" data-fold="msg-main">
+      <h2>Syötteet → DMR-tekstiviestit
+        <label class="switch" title="Lähetys päällä"><input type="checkbox" id="mEnabled"><span class="sl"></span><span class="swtxt" id="mEnabledTxt">Pois</span></label></h2>
+      <div class="inner form msgform">
+        <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. APRS-IS-tunnus, vastaanottajat ja viestiasetukset ovat <a href="#" id="toAprs">APRS-välilehden asetuksissa</a>.</div>
+        <h3>Viestit radioon</h3>
+        <div class="frow">
+          <div class="fld"><label for="mParts">Viestejä / otsikko</label><input type="number" id="mParts" min="1" max="5" style="width:90px">
+            <div class="hint">67 merkkiä / viesti</div></div>
+          <div class="fld"><label for="mInterval">Tarkistusväli (min)</label><input type="number" id="mInterval" min="1" style="width:90px">
+            <div class="hint">kuinka usein syötteet haetaan</div></div>
+          <div class="fld checks">
+            <label><input type="checkbox" id="mAscii"> Muunna ääkköset (ä→a)</label>
+            <div class="hint">Jos radio ei näytä ääkkösiä oikein.</div></div>
+        </div>
+        <h3>Syötteet (RSS, Atom tai JSON Feed)</h3>
+        <div class="feedrow feedhead"><span class="fen-h">Käytössä</span><span class="fname">Etuliite</span><span class="furl">Osoite</span><span class="fcmd">Komento</span><span class="fbtns"></span></div>
+        <div id="feedRows"></div>
+        <button id="btnAddFeed">+ Lisää syöte</button>
+        <div class="hint">Komento-kenttä (esim. SAA) tekee syötteen uusimmasta otsikosta radiosta kysyttävän. Uutta syötettä seurattaessa nykyiset uutiset ohitetaan, ja viesti lähtee vasta seuraavasta uudesta uutisesta. Etuliite näkyy viestin alussa, esim. <code>BM: otsikko</code>.</div>
+        <div class="frow" style="margin-top:14px; align-items:center">
+          <button class="primary" id="btnMsgSave">Tallenna</button>
+          <button id="btnFeedCheck">Tarkista syötteet nyt</button>
+          <span class="err" id="msgErr"></span>
+        </div>
+      </div>
+    </section>
+    </div>
   </section>
 
   <section class="wide" data-tab="seuranta">
@@ -731,14 +697,15 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   </section>
   <section data-tab="seuranta" data-fold="bm-qso">
     <h2>Yhteydet (QSO) <span class="count" id="qsoCount"></span></h2>
-    <div class="note" id="qsoNoCall" style="display:none;margin:10px">Aseta oma kutsu (Lokit-välilehti → Asetukset tai Laitteet-välilehti),
+    <div class="note" id="qsoNoCall" style="display:none;margin:10px">Aseta oma kutsu Lokit-välilehden asetuksissa,
       niin ohjelma tunnistaa yhteytesi puhelulistasta.</div>
     <div class="scroll" style="max-height:none">
       <table><thead><tr><th>Aika (UTC)</th><th>Kutsu</th><th>Nimi</th><th>Missä</th><th class="num">Vuoroja</th><th>Tila</th><th></th></tr></thead>
         <tbody id="qsoBody"></tbody></table>
       <div class="empty" id="qsoEmpty">Ei yhteysehdokkaita. Kun sinä ja toinen asema vuorottelette samassa puheryhmässä, yhteys näkyy tässä.</div>
     </div>
-    <div class="hint" style="margin:6px 10px 10px">Lokiin lisätyt yhteydet näet Lokit-välilehdellä. <span id="qsoLogInfo"></span></div>
+    <div class="hint" style="margin:6px 10px 10px">Lokiin lisätyt yhteydet näet Lokit-välilehdellä. <span id="qsoLogInfo"></span>
+      Oma kutsu, tunnistus ja QRZ-lähetys: <a href="#" id="toLogCfg">Lokit → Asetukset</a>.</div>
   </section>
   <section class="wide" data-tab="seuranta" data-fold="bm-nets">
     <h2>Netit tänään ja huomenna <span class="count" id="netCount"></span>
@@ -770,6 +737,63 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="hint" id="netSrcStatus"></div>
     </details>
   </section>
+  <section class="wide setbox" data-tab="seuranta" data-fold="bm-settings" data-fold-default="closed">
+    <h2>Asetukset</h2>
+    <div class="setsubs">
+    <section id="settings" class="cfg form" data-tab="seuranta" data-fold="cfg-monitor">
+      <h2>Seuranta ja historia</h2>
+      <div class="inner">
+      <div class="row">
+        <div style="flex:1; min-width:280px">
+          <label for="tgInput">Seurattavat puheryhmät</label>
+          <textarea id="tgInput" placeholder="244* 91 2441"></textarea>
+          <div class="hint">Erota välilyönnillä tai pilkulla. <b>*</b> = mikä tahansa merkkijono (244* = kaikki 244-alkuiset), <b>?</b> = yksi numero.</div>
+        </div>
+      </div>
+      <div class="frow" style="margin-top:12px">
+        <div class="fld">
+          <label for="dataFilter">Tekstiviestit ja data</label>
+          <select id="dataFilter">
+            <option value="all">Koko verkko</option>
+            <option value="matched">Vain seurattujen ryhmien / ID:iden</option>
+          </select>
+        </div>
+        <div class="fld" style="max-width:300px">
+          <label for="minDur">Ohita lyhyet avaukset: alle (sekuntia)</label>
+          <input id="minDur" type="number" min="0" step="0.5" style="width:90px">
+          <div class="hint">0 = kaikki puhelut tallentuvat. Listan pituus valitaan Viimeisimmät puhelut -paneelista.</div>
+        </div>
+        <div class="fld checks" style="padding-top:22px">
+          <label><input id="logCsv" type="checkbox"> Tallenna CSV-lokiin</label>
+        </div>
+      </div>
+      <div class="frow svcsave">
+        <button class="primary" id="btnSave">Tallenna</button>
+        <span class="err" id="saveErr"></span>
+        <span class="spacer"></span>
+        <button id="btnClear" title="Poistaa puhelu- ja tapahtumahistorian">Tyhjennä historia</button>
+      </div>
+      </div>
+    </section>
+    <section class="cfg form" data-tab="seuranta" data-fold="cfg-apikey">
+      <h2>Brandmeister API-avain (vapaaehtoinen)</h2>
+      <div class="inner">
+      <div class="frow" style="margin-top:12px">
+        <div class="fld" style="flex:1;min-width:280px">
+          <label for="apiKey">API-avain laitteen hallintaan</label>
+          <input id="apiKey" type="password" autocomplete="off" placeholder="eyJ0eXAiOiJKV1Qi…" style="width:100%">
+          <div class="hint">Luo avain: brandmeister.network → SelfCare → Security / API Keys. Avainta tarvitaan vain
+            Laitteet-välilehden hallintapainikkeisiin, ja Brandmeister sallii ne vain omille laitteillesi.
+            Avain tallentuu käyttöjärjestelmän salasanavarastoon.</div>
+        </div>
+        <div class="fld"><label for="myCall">Oma kutsu</label><input id="myCall" type="text" placeholder="OH2ABC" style="width:120px; text-transform:uppercase" spellcheck="false">
+          <div class="hint" style="max-width:200px">Laitteet, joiden kutsu on tämä, tunnistetaan omiksi.</div></div>
+      </div>
+      <div class="frow svcsave"><button class="primary" id="btnKeySave">Tallenna</button> <button id="btnKeyDel">Poista avain</button> <span id="keyState" class="muted"></span></div>
+      </div>
+    </section>
+    </div>
+  </section>
 
   <!-- ============ LOKIT ============ -->
   <section class="wide" data-tab="lokit" data-fold="log-list">
@@ -785,37 +809,42 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div style="text-align:center;margin:8px"><button id="btnLogMore" style="display:none">Näytä kaikki</button></div>
     </div>
   </section>
-  <section class="cfg form" data-tab="lokit" data-fold="log-cfg">
+  <section class="wide setbox" data-tab="lokit" data-fold="log-settings" data-fold-default="closed">
     <h2>Asetukset</h2>
-    <div class="inner">
-    <div class="frow">
-      <div class="fld"><label for="logMyCall">Oma kutsu</label><input id="logMyCall" type="text" style="width:130px;text-transform:uppercase">
-        <div class="hint" id="logMyCallHint">tyhjä = Laitteet-välilehden oma kutsu</div></div>
-      <div class="fld"><label for="logMyGrid">Oma lokaattori</label><input id="logMyGrid" type="text" placeholder="KP20lf" style="width:110px"></div>
-      <div class="fld"><label for="logRst">Oletusraportti</label><input id="logRst" type="text" style="width:70px"></div>
-      <div class="fld"><label for="logBand">Oletuskaista</label><select id="logBand"></select>
-        <div class="hint">jos taajuus ei ole tiedossa</div></div>
-    </div>
-    <div class="frow"><div class="fld checks"><label><input type="checkbox" id="logDetect"> Tunnista yhteydet BrandMeisterin puheluista</label>
-      <div class="hint">Yhteysehdokas syntyy, kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai pidätte yksityispuhelun.
-        Ehdokas päättyy 10 minuutin hiljaisuuden jälkeen. Ehdokkaat näkyvät BrandMeister-välilehdellä.</div></div></div>
-    <div class="frow svcsave"><button class="primary" id="btnLogCfgSave">Tallenna</button><span class="err" id="logCfgErr"></span></div>
-    </div>
-  </section>
-  <section class="cfg form" data-tab="lokit" data-fold="log-qrz">
-    <h2>QRZ Logbook <span class="count" id="qrzHead"></span></h2>
-    <div class="inner">
-    <div class="note">Lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan. Rajapinnan käyttö vaatii QRZ-tilauksen (XML-taso tai ylempi).
-      API-avaimen löydät QRZ.comista: Logbook → Settings → API Key. Avain tallennetaan käyttöjärjestelmän salasanavarastoon.</div>
-    <div class="frow" style="margin-top:10px">
-      <div class="fld checks"><label><input type="checkbox" id="qrzOn"> Lähetä lokiin lisätyt yhteydet QRZ Logbookiin</label></div>
-    </div>
-    <div class="frow">
-      <div class="fld"><label for="qrzKey">API-avain</label><input id="qrzKey" type="password" autocomplete="off" placeholder="ABCD-0A0B-1C1D-2E2F" style="width:240px"></div>
-    </div>
-    <div class="frow svcsave"><button class="primary" id="btnQrzSave">Tallenna</button><button id="btnQrzTest">Testaa yhteys</button>
-      <button id="btnQrzRetry">Lähetä epäonnistuneet uudelleen</button><span class="err" id="qrzErr"></span></div>
-    <div class="hint" id="qrzState"></div>
+    <div class="setsubs">
+    <section class="cfg form" data-tab="lokit" data-fold="log-cfg">
+      <h2>Oma asema ja tunnistus</h2>
+      <div class="inner">
+      <div class="frow">
+        <div class="fld"><label for="logMyCall">Oma kutsu</label><input id="logMyCall" type="text" style="width:130px;text-transform:uppercase">
+          <div class="hint" id="logMyCallHint">tyhjä = BrandMeister-asetusten oma kutsu</div></div>
+        <div class="fld"><label for="logMyGrid">Oma lokaattori</label><input id="logMyGrid" type="text" placeholder="KP20lf" style="width:110px"></div>
+        <div class="fld"><label for="logRst">Oletusraportti</label><input id="logRst" type="text" style="width:70px"></div>
+        <div class="fld"><label for="logBand">Oletuskaista</label><select id="logBand"></select>
+          <div class="hint">jos taajuus ei ole tiedossa</div></div>
+      </div>
+      <div class="frow"><div class="fld checks"><label><input type="checkbox" id="logDetect"> Tunnista yhteydet BrandMeisterin puheluista</label>
+        <div class="hint">Yhteysehdokas syntyy, kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai pidätte yksityispuhelun.
+          Ehdokas päättyy 10 minuutin hiljaisuuden jälkeen. Ehdokkaat näkyvät BrandMeister-välilehdellä.</div></div></div>
+      <div class="frow svcsave"><button class="primary" id="btnLogCfgSave">Tallenna</button><span class="err" id="logCfgErr"></span></div>
+      </div>
+    </section>
+    <section class="cfg form" data-tab="lokit" data-fold="log-qrz">
+      <h2>QRZ Logbook <span class="count" id="qrzHead"></span></h2>
+      <div class="inner">
+      <div class="note">Lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan. API-avaimen käyttö vaatii maksullisen QRZ.com-tilauksen (XML-taso tai ylempi).
+        API-avaimen löydät QRZ.comista: Logbook → Settings → API Key. Avain tallennetaan käyttöjärjestelmän salasanavarastoon.</div>
+      <div class="frow" style="margin-top:10px">
+        <div class="fld checks"><label><input type="checkbox" id="qrzOn"> Lähetä lokiin lisätyt yhteydet QRZ Logbookiin</label></div>
+      </div>
+      <div class="frow">
+        <div class="fld"><label for="qrzKey">API-avain</label><input id="qrzKey" type="password" autocomplete="off" placeholder="ABCD-0A0B-1C1D-2E2F" style="width:240px"></div>
+      </div>
+      <div class="frow svcsave"><button class="primary" id="btnQrzSave">Tallenna</button><button id="btnQrzTest">Testaa yhteys</button>
+        <button id="btnQrzRetry">Lähetä epäonnistuneet uudelleen</button><span class="err" id="qrzErr"></span></div>
+      <div class="hint" id="qrzState"></div>
+      </div>
+    </section>
     </div>
   </section>
 
@@ -1431,16 +1460,17 @@ function collectMsg() {
     commands_enabled: $("mCmd").checked, commands_all: $("mCmdAll").checked, commands_allow: $("mCmdAllow").value};
 }
 
-function fillSettings() {
+function fillBmCfg() {       // BrandMeister → Asetukset
   $("tgInput").value = S.config.talkgroups.join(" ");
   $("dataFilter").value = S.config.data_filter;
   $("minDur").value = S.config.min_duration;
   $("logCsv").checked = !!S.config.log_csv;
-  $("verInfo").textContent = ""; aboutLine(); fillUi(); $("themeSel").value = S.config.theme || "dark";
-  $("langSel").value = LANG; $("unitSel").value = S.config.units || "metric"; $("updAuto").checked = S.config.update_check !== false; $("updBeta").checked = !!S.config.update_beta;
-  fillRf();
   $("keyState").textContent = S.config.bm_api_key ? "Avain tallennettu" : "Ei avainta";
   $("apiKey").value = ""; $("myCall").value = S.config.devices.my_call || "";
+}
+function fillSettings() {    // Ohjelma-välilehti
+  $("verInfo").textContent = ""; aboutLine(); fillUi(); $("themeSel").value = S.config.theme || "dark";
+  $("langSel").value = LANG; $("unitSel").value = S.config.units || "metric"; $("updAuto").checked = S.config.update_check !== false; $("updBeta").checked = !!S.config.update_beta;
   const p = S.paths;
   $("paths").innerHTML = [["Asetukset", p.config], ["Puheluloki", p.calls_csv], ["SMS/data-loki", p.data_csv], ["Datan raakatapahtumat", p.raw]]
     .map(([k, v]) => `${esc(T(k))}: ${esc(v)}`).join("<br>");
@@ -1463,7 +1493,7 @@ function rfFields() {
 $("rfRoute").onchange = rfFields; $("rfTx").onchange = rfFields;
 function rfState() {
   const rx = S.aprsrx || {};
-  const [cls, txt] = !rx.enabled ? ["muted", "Graywolf-yhteys ei ole käytössä (APRS-välilehti)"] :
+  const [cls, txt] = !rx.enabled ? ["muted", "Graywolf-yhteys ei ole käytössä"] :
     rx.connected ? ["ok", "● Graywolf yhdistetty"] : ["bad", "● Ei yhteyttä Graywolfiin"];
   const h = `<span class="${cls}">${esc(T(txt))}</span>`;
   if ($("rfState").innerHTML !== h) $("rfState").innerHTML = h;
@@ -1950,8 +1980,8 @@ function showTab(tab) {
   if (!S) return;
   if (tab === "asetukset") fillSettings();
   if (tab === "viestit" || tab === "aprs") fillMsg();
-  if (tab === "aprs") { fillRx(); covShow(); }
-  if (tab === "seuranta") netsShow();
+  if (tab === "aprs") { fillRx(); fillRf(); covShow(); }
+  if (tab === "seuranta") { netsShow(); fillBmCfg(); }
   if (tab === "lokit") { fillLogCfg(); loadLog(); }
   if (tab === "kaverit") { fillWatch(); seenAlerts = maxAlertSeq(); updateAlertBadge(); }
   if (tab === "laitteet") fillDevices();
@@ -1966,6 +1996,9 @@ $("tabs").addEventListener("click", e => { const b = e.target.closest("button[da
 const FOLD_KEY = "bmm.folded";
 let folded = new Set();
 try { folded = new Set(JSON.parse(localStorage.getItem(FOLD_KEY) || "[]")); } catch (e) { folded = new Set(); }
+const FOLD_SEEN_KEY = "bmm.foldSeen";
+let foldSeen = new Set();
+try { foldSeen = new Set(JSON.parse(localStorage.getItem(FOLD_SEEN_KEY) || "[]")); } catch (e) { foldSeen = new Set(); }
 function foldId(sec) {
   if (sec.dataset.fold) return sec.dataset.fold;
   const host = sec.closest("[data-tab]");
@@ -2004,7 +2037,12 @@ document.querySelectorAll("main section").forEach(sec => {
     if (t && t !== b) return;          // otsikon omat valinnat ja kytkimet toimivat normaalisti
     setFold(sec, !sec.classList.contains("folded"));
   });
-  setFold(sec, folded.has(sec.dataset.foldId), false);
+  let on = folded.has(sec.dataset.foldId);
+  if (sec.dataset.foldDefault === "closed" && !foldSeen.has(sec.dataset.foldId)) {   // ensimmäisellä kerralla pienennettynä
+    on = true; foldSeen.add(sec.dataset.foldId); rememberFold(sec.dataset.foldId, true);
+    try { localStorage.setItem(FOLD_SEEN_KEY, JSON.stringify([...foldSeen])); } catch (e) { /* ei tallennusta */ }
+  }
+  setFold(sec, on, false);
 });
 function foldTab(on) {
   document.querySelectorAll("main section").forEach(sec => {
@@ -2020,7 +2058,12 @@ $("btnCmdSave").onclick = async () => {   // sama tallennus kuin yläosassa, tul
 };
 $("foldOpen").onclick = () => foldTab(false);
 $("foldClose").onclick = () => foldTab(true);
-function unfold(id) { const s = document.querySelector(`main section[data-fold="${id}"]`); if (s && s.classList.contains("folded")) setFold(s, false); }
+function unfold(id) {     // avaa osio ja sen ympäröivät osiot (esim. Asetukset → alaosio) ja vieritä näkyviin
+  let s = document.querySelector(`main section[data-fold="${id}"]`);
+  const target = s;
+  while (s) { if (s.classList.contains("folded")) setFold(s, false); s = s.parentElement && s.parentElement.closest("main section"); }
+  if (target) setTimeout(() => target.scrollIntoView({behavior: "smooth", block: "start"}), 50);
+}
 $("btnSave").onclick = async () => {
   $("saveErr").textContent = "";
   const r = await fetch("/api/config", {method: "POST", headers: {"Content-Type": "application/json"},
@@ -2053,6 +2096,7 @@ $("btnAprsSave").onclick = async () => {
   $("aprsErr").innerHTML = $("msgErr").innerHTML;
 };
 $("toAprs").onclick = e => { e.preventDefault(); showTab("aprs"); unfold("aprs-cfg"); };
+$("toLogCfg").onclick = e => { e.preventDefault(); showTab("lokit"); unfold("log-cfg"); };
 $("btnFeedCheck").onclick = () => fetch("/api/feeds/check", {method: "POST"});
 $("btnTest").onclick = async () => {
   $("aprsErr").textContent = "";
@@ -2268,7 +2312,7 @@ function fillDevices() {
   devDraft = d.list.map(x => ({...x}));
   $("dOff").value = d.offline_min; $("dSms").checked = !!d.sms;
   $("dKeyHint").innerHTML = S.config.bm_api_key ? '<span class="ok">API-avain käytössä – hallintapainikkeet toimivat omille laitteillesi.</span>'
-    : 'Hallintapainikkeet (puheryhmien lisäys ja poisto, tyhjennys, katkaisu, nollaus) vaativat API-avaimen: Asetukset → Brandmeister API-avain.';
+    : 'Hallintapainikkeet (puheryhmien lisäys ja poisto, tyhjennys, katkaisu, nollaus) vaativat API-avaimen: BrandMeister → Asetukset → Brandmeister API-avain.';
 }
 async function saveDevices(list) {
   const j = await saveCfg({devices: {list: list || devDraft, offline_min: $("dOff").value, sms: $("dSms").checked}});
@@ -2471,7 +2515,7 @@ function renderAprs() {
   const opts = [...own].sort((x, y) => x === login ? -1 : y === login ? 1 : x.localeCompare(y)).map(c => `<option value="${esc(c)}">${esc(c)}${c === login ? " " + esc(T("(ohjelma)")) : ""}</option>`).join("");
   if ($("rFrom").dataset.opts !== opts) { const cur = $("rFrom").value; $("rFrom").innerHTML = opts; $("rFrom").dataset.opts = opts; if (cur && own.has(cur)) $("rFrom").value = cur; }
   $("aprsReply").style.display = login ? "" : "none";
-  if (TAB === "asetukset") rfState();
+  if (TAB === "aprs") rfState();
   const rf = M.rf || {};
   if ($("rRouteFld").dataset.on !== String(!!rf.enabled)) {
     $("rRouteFld").dataset.on = String(!!rf.enabled); $("rRouteFld").style.display = rf.enabled ? "" : "none";
