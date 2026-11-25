@@ -340,7 +340,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
 </head>
 <body>
 <header>
-  <h1>Monitor for Amateur Radio <span class="pill" style="vertical-align:middle">beta</span></h1>
+  <h1>Monitor for Amateur Radio <span class="pill" id="betaPill" style="vertical-align:middle;display:none">beta</span></h1>
   <div class="status"><span id="dot" class="dot"></span><span id="statusText">Yhdistetään…</span></div>
   <div class="spacer"></div>
   <span class="muted" id="watching"></span>
@@ -1681,6 +1681,7 @@ function connect() {
     offset = S.now - Date.now() / 1000;
     if (bootVersion && S.version !== bootVersion) { location.reload(); return; }   // päivitetty versio -> uusi sivu
     bootVersion = bootVersion || S.version;
+    $("betaPill").style.display = /(a|b|rc)\d+$/.test(S.version || "") ? "" : "none";
     if (firstSnapshot) { firstSnapshot = false; applyTheme(S.config.theme); initLang(); seenAlerts = lastNotified = maxAlertSeq(); showTab(TAB); }
     handleAlerts();
     render();

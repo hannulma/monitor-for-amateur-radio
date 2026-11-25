@@ -12,10 +12,10 @@ DMR radio via APRS.
 🇫🇮 **[Suomenkielinen ohje → README.fi.md](README.fi.md)**
 
 > [!NOTE]
-> **Beta.** The core features are tested against the live BrandMeister network, but some features have had
-> limited real-world testing. Bug reports and feedback are very welcome in
+> **Stable release 0.14.0.** New features arrive first in test versions (beta), which you can enable in
+> *Settings → Version and updates*. Bug reports and feedback are very welcome in
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
-> The user interface is currently in **Finnish**; an English UI is planned.
+> The user interface is available in **Finnish** and **English** (Settings → Language and units).
 
 ![Monitor view](docs/screenshot-monitor.png)
 
@@ -80,8 +80,8 @@ DMR radio via APRS.
   `NOW`/`NYT`). FMI warnings and Digitraffic bulletins stay in Finnish, their source language.
 - **Automatic updates** – the app checks GitHub for a new version once a day (can be turned off). On Windows
   (installer), macOS and Linux, **Update now** downloads the new version, verifies it against the release's
-  `SHA256SUMS.txt`, installs it and restarts the app; the window or browser tab comes back by itself. Beta users are
-  offered new betas, stable users only stable releases.
+  `SHA256SUMS.txt`, installs it and restarts the app; the window or browser tab comes back by itself. Test versions (beta) are
+  offered when *Install test versions too (beta)* is selected, otherwise only stable releases.
 
 Several services use Finnish open data and are most useful in Finland; the BrandMeister features work worldwide.
 

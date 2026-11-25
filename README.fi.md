@@ -8,8 +8,8 @@ hälytyksiä suoraan DMR-radioosi APRS:n kautta.
 🇬🇧 [English README](README.md)
 
 > [!NOTE]
-> **Beta-versio.** Ydinominaisuudet on testattu oikeaa BrandMeister-verkkoa vastaan, mutta osaa
-> ominaisuuksista on testattu vain rajoitetusti. Virheilmoitukset ja palaute:
+> **Vakaa versio 0.14.0.** Uusimmat ominaisuudet tulevat ensin testiversioihin (beta), jotka voi ottaa käyttöön
+> kohdasta *Asetukset → Versio ja päivitykset*. Virheilmoitukset ja palaute:
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
 
 ![Seuranta](docs/screenshot-monitor.png)
@@ -167,8 +167,8 @@ tai käyttöjärjestelmän mukaan), **päivitykset** ja
 - **Päivitykset:** ohjelma tarkistaa GitHubista kerran päivässä, onko uusi versio saatavilla (voi kytkeä pois).
   Windowsissa (asennusohjelmalla asennettu), macOS:ssä ja Linuxissa **Päivitä nyt** lataa uuden version,
   tarkistaa sen julkaisun `SHA256SUMS.txt`-tarkistussummaa vasten, asentaa sen ja käynnistää ohjelman uudelleen –
-  ikkuna tai selainvälilehti avautuu uudelleen itse. Beta-version käyttäjälle tarjotaan uudet betat, vakaan version käyttäjälle vain
-  vakaat versiot. Asennuksettomassa Windows-versiossa ja pip-asennuksessa näytetään latauslinkki tai komento.
+  ikkuna tai selainvälilehti avautuu uudelleen itse. Testiversiot (beta) tarjotaan, jos *Asenna myös testiversiot (beta)* on valittu,
+  muuten vain vakaat versiot. Asennuksettomassa Windows-versiossa ja pip-asennuksessa näytetään latauslinkki tai komento.
 
 | Merkintä | Tarkoittaa |
 |---|---|
