@@ -8,7 +8,7 @@ hälytyksiä suoraan DMR-radioosi APRS:n kautta.
 🇬🇧 [English README](README.md)
 
 > [!NOTE]
-> **Vakaa versio 0.14.0.** Uusimmat ominaisuudet tulevat ensin testiversioihin (beta), jotka voi ottaa käyttöön
+> **Vakaa versio 0.15.0.** Uusimmat ominaisuudet tulevat ensin testiversioihin (beta), jotka voi ottaa käyttöön
 > kohdasta *Ohjelma → Versio ja päivitykset*. Virheilmoitukset ja palaute:
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
 

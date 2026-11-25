@@ -12,7 +12,7 @@ DMR radio via APRS.
 🇫🇮 **[Suomenkielinen ohje → README.fi.md](README.fi.md)**
 
 > [!NOTE]
-> **Stable release 0.14.0.** New features arrive first in test versions (beta), which you can enable in
+> **Stable release 0.15.0.** New features arrive first in test versions (beta), which you can enable in
 > *App → Version and updates*. Bug reports and feedback are very welcome in
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
 > The user interface is available in **Finnish** and **English** (App → Language and units). Feature settings are in the *Settings* section at the bottom of each tab.
