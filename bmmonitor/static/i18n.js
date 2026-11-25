@@ -406,6 +406,11 @@
     "Radiolla viesti lähetetään uudelleen minuutin välein (enintään 3 kertaa); lähetysten väli on vähintään 5 s ja enintään 30 lähetystä 10 minuutissa. Komentoihin vastataan samaa reittiä, jota pitkin ne tulivat.": "On the radio a message is resent once a minute (at most 3 times); transmissions are at least 5 s apart and at most 30 per 10 minutes. Commands are answered by the route they came from.",
     "Asenna myös testiversiot (beta)": "Install test versions too (beta)",
     "Kirjaa yhteys (QSO) lokiin": "Log a contact (QSO)",
+    "Ulkoasu": "Appearance", "Palaute, vikailmoitukset ja tiedot": "Feedback, bug reports and information",
+    "Näytettävät välilehdet": "Visible tabs", "aina näkyvissä": "always visible",
+    "Valitse näkyvät välilehdet: Ohjelma → Ulkoasu": "Choose visible tabs: App → Appearance",
+    "Piilotettu välilehti katoaa vain näkyvistä: sen toiminnot (esim. seuranta, kaverihälytykset, APRS-viestit, syötteet ja yhteyksien tunnistus) jatkavat taustalla. Toiminnot saa pois päältä niiden omista asetuksista. Ohjelma-välilehti on aina näkyvissä, jotta piilotetut välilehdet saa takaisin.":
+      "A hidden tab only disappears from view: its functions (e.g. monitoring, friend alerts, APRS messages, feeds and contact detection) keep running in the background. Turn functions off in their own settings. The App tab is always visible so that hidden tabs can be brought back.",
     "Google-taulukon käyttöönotto": "Setting up the Google Sheet", "Kopioi Code.gs": "Copy Code.gs", "Kopioi appsscript.json": "Copy appsscript.json",
     "Ohje: taulukon luominen ja yhdistäminen": "Help: creating and connecting the sheet", "Vaiheittainen ohje": "Step-by-step guide",
     "{f} kopioitu leikepöydälle – liitä se Apps Script -editoriin.": "{f} copied to the clipboard – paste it into the Apps Script editor.",
@@ -422,8 +427,9 @@
       "– an optional word (e.g. SAA) with which you can request the feed's latest headline to your radio at any time. From your radio, send a private message to BrandMeister's APRS service number 244999 containing your own APRS-IS callsign and the command, e.g.",
     ". Ohjelma vastaa vain, kun": ". The program replies only when",
     "APRS → Asetukset → Komennot radiosta": "APRS → Settings → Commands from radio",
-    "-kohdassa on valittu Vastaa komentoihin. Komento APUA listaa kaikki käytettävissä olevat komennot.":
-      "has Reply to commands selected. The command HELP lists all available commands.",
+    "-kohdassa on valittu Vastaa komentoihin. Komento OHJE listaa kaikki käytettävissä olevat komennot.":
+      "has Reply to commands selected. The command CMD lists all available commands.",
+    "OHJE": "CMD", "(komentolista) ·": "(list of commands) ·",
     "Tila (mode)": "Mode", "Kaikki tilat": "All modes", "ADIF-tila: {m}.": "ADIF mode: {m}.", "Oletustila": "Default mode",
     "käsin lisättävät; tunnistetut aina DMR": "for manual entries; detected ones are always DMR",
     "Toimintojen asetukset ovat kunkin välilehden alimmassa Asetukset-osiossa (BrandMeister, APRS, Syötteet, Lokit). Tällä välilehdellä ovat ohjelman yleiset asetukset, päivitykset ja tiedot.": "Feature settings are in the Settings section at the bottom of each tab (BrandMeister, APRS, Feeds, Logs). This tab has the general app settings, updates and information.",

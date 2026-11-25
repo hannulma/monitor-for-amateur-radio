@@ -51,7 +51,7 @@ DEFAULT_MESSAGING = {
     "feeds": [
         {"name": "BM", "url": "https://news.brandmeister.network/feed/", "enabled": True, "cmd": "BM"},
     ],
-    "commands_enabled": True,  # vastaa radiosta lähetettyihin komentoihin (APUA, TG244, KUKA ...)
+    "commands_enabled": True,  # vastaa radiosta lähetettyihin komentoihin (OHJE, TG244, KUKA ...)
     "commands_all": False,     # False = vain vastaanottajat, oma kutsu ja sallittujen lista
     "commands_allow": [],
     "rf_tx": False,            # salli APRS-viestien lähetys radiolla Graywolfin KISS-portin kautta

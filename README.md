@@ -81,7 +81,7 @@ DMR radio via APRS.
   `Keltainen liikennesää: lumi/räntä, to 14–pe 12 (30 %)`.
 
 - **English and Finnish** – choose the language on the App tab. It covers the user interface, the program's own
-  alerts and the replies sent to your radio (radio commands work in both languages: `HELP`/`APUA`, `WHO`/`KUKA`,
+  alerts and the replies sent to your radio (radio commands work in both languages: `CMD`/`OHJE`, `WHO`/`KUKA`,
   `NOW`/`NYT`). FMI warnings and Digitraffic bulletins stay in Finnish, their source language.
 - **Automatic updates** – the app checks GitHub for a new version once a day (can be turned off). On Windows
   (installer), macOS and Linux, **Update now** downloads the new version, verifies it against the release's
@@ -109,7 +109,7 @@ The app runs a small local web server (`http://127.0.0.1:8765/`, nothing is expo
 and macOS the user interface opens in **its own window**. Closing the window keeps the app running in the
 background – monitoring and alerts continue, and the window comes back from the icon in the notification area
 (Windows) or menu bar (macOS). Quit from the icon's menu, **App → Quit**, or Cmd+Q on macOS. You can choose
-the browser instead on the **App** tab (*User interface*); on Linux the app always uses the browser.
+the browser instead on the **App** tab (*Appearance → User interface*). Tabs you don't use can be hidden there too (*Appearance → Visible tabs*); on Linux the app always uses the browser.
 Starting the app again while it is running just shows the window or page.
 
 ### First launch (unsigned builds)
@@ -151,7 +151,7 @@ Send a private text message to the BrandMeister APRS gateway of your country (*c
 
 | Command | Answer |
 |---|---|
-| `APUA` | list of commands |
+| `CMD` (`OHJE`) | list of commands |
 | `TG244` | who is talking now / talked last, when and how long |
 | `KUKA OH2ABC` | when and where the station was last heard |
 | `NYT` | active transmissions in your monitored talkgroups |

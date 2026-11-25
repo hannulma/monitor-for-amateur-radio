@@ -158,7 +158,7 @@ EN: dict[str, str] = {
     "tie {roads}": "road {roads}",
     # --- radiokomennot (vastaukset ASCII-muodossa radioon) ---
     "Komennot: TG<nro>, KUKA <kutsu>, NYT{extra}": "Commands: TG<no>, WHO <call>, NOW{extra}",
-    "Tuntematon komento. Laheta APUA": "Unknown command. Send HELP",
+    "Tuntematon komento. Laheta OHJE": "Unknown command. Send CMD",
     "Ei lahetyksia seuratuissa ryhmissa": "No transmissions in watched groups",
     "NYT: {x}": "NOW: {x}",
     "{t}: ei uutisia (syötettä ei vielä luettu)": "{t}: no news yet (feed not read yet)",

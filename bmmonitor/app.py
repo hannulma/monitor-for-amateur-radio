@@ -84,10 +84,13 @@ DEFAULT_CONFIG = {
     # "update_beta": asennetaanko myös testiversiot; puuttuessa päätetään käynnistyksessä (beta-asennus → True)
     "theme": "dark",            # "dark" / "light" / "auto" (käyttöjärjestelmän mukaan)
     "ui": "window",             # "window" = oma ikkuna (Windows/macOS), "browser" = oletusselain
+    "hidden_tabs": [],          # piilotetut välilehdet (data-tab); Ohjelma-välilehteä ei voi piilottaa
     "map_tiles": DEFAULT_TILES,           # karttatiilten osoite (haetaan paikallisen palvelimen kautta)
     "map_tiles_attr": DEFAULT_TILES_ATTR,
 }
 CALLS_LIMITS = (10, 25, 50, 100, 150)
+# välilehdet, jotka käyttäjä voi piilottaa (Ohjelma = "asetukset" on aina näkyvissä)
+HIDEABLE_TABS = ("seuranta", "tilastot", "kaverit", "laitteet", "checkin", "aprs", "viestit", "lokit", "palvelut", "satelliitit")
 
 
 def nearest_calls_limit(n) -> int:
@@ -384,6 +387,11 @@ class Monitor:
             if new["ui"] not in ("window", "browser"):
                 raise ValueError(tr("Virheellinen valinta"))
             self.cfg["ui"] = new["ui"]
+        if "hidden_tabs" in new:
+            ht = new["hidden_tabs"] or []
+            if not isinstance(ht, list) or any(t not in HIDEABLE_TABS for t in ht):
+                raise ValueError(tr("Virheellinen valinta"))
+            self.cfg["hidden_tabs"] = [t for t in HIDEABLE_TABS if t in ht]
         if "update_check" in new:
             self.cfg["update_check"] = bool(new["update_check"])
         if "update_beta" in new:

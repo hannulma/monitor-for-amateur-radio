@@ -133,6 +133,12 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   nav.tabs { display: flex; gap: 2px; padding: 0 18px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 49px; z-index: 4; overflow-x: auto; }
   nav.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 9px 14px; color: var(--muted); font-size: 13px; white-space: nowrap; }
   nav.tabs button:hover { color: var(--text); }
+  nav.tabs .tabhint { align-self: center; margin-left: 12px; font-size: 12px; color: var(--muted); white-space: nowrap; text-decoration: none; }
+  nav.tabs .tabhint:hover { color: var(--accent); text-decoration: underline; }
+  .tabpick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 6px 0 8px; }
+  .tabpick label { display: inline-flex; align-items: center; gap: 5px; margin: 0; font-size: 13px; }
+  .tabpick label.locked { color: var(--muted); }
+  .tabpick .tpsep { width: 1px; height: 18px; background: var(--line); }
   nav.tabs .tabsep { flex: none; width: 1px; align-self: center; height: 18px; background: var(--line); margin: 0 6px; }
   nav.tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
   nav.tabs .badge { background: var(--bad); color: #fff; border-radius: 9px; padding: 0 6px; font-size: 11px; margin-left: 5px; }
@@ -389,6 +395,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   <button data-tab="satelliitit">Satelliitit</button>
   <span class="tabsep" aria-hidden="true"></span>
   <button data-tab="asetukset">Ohjelma</button>
+  <a href="#" class="tabhint" id="tabHiddenHint" style="display:none">Valitse näkyvät välilehdet: Ohjelma → Ulkoasu</a>
   <span class="foldall"><button id="foldOpen" title="Avaa kaikki tämän välilehden osiot">Avaa kaikki</button><button id="foldClose" title="Pienennä kaikki tämän välilehden osiot otsikoiksi">Pienennä kaikki</button></span>
 </nav>
 
@@ -431,6 +438,28 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     </div>
     </div>
   </section>
+  <section class="cfg form" data-tab="asetukset" data-fold="cfg-look">
+    <h2>Ulkoasu</h2>
+    <div class="inner">
+    <div class="frow" style="margin:10px 0 4px">
+      <div class="fld"><label for="themeSel">Teema</label>
+        <select id="themeSel"><option value="auto">Automaattinen (käyttöjärjestelmän mukaan)</option><option value="light">Vaalea</option><option value="dark">Tumma</option></select>
+        <div class="hint">Automaattinen vaihtuu, kun käyttöjärjestelmän teema vaihtuu.</div></div>
+    </div>
+    <div class="frow" id="uiRow" style="display:none;margin:10px 0 4px">
+      <div class="fld"><label for="uiSel">Käyttöliittymä</label>
+        <select id="uiSel"><option value="window">Omassa ikkunassa</option><option value="browser">Selaimessa</option></select>
+        <div class="hint" id="uiHint">Muutos tulee voimaan, kun ohjelma käynnistetään seuraavan kerran.</div></div>
+      <div class="fld" id="uiBrowserFld" style="align-self:center"><button id="btnOpenBrowser">Avaa selaimessa</button></div>
+    </div>
+    <h3>Näytettävät välilehdet</h3>
+    <div class="tabpick" id="tabPick"></div>
+    <div class="hint" style="max-width:640px">Piilotettu välilehti katoaa vain näkyvistä: sen toiminnot (esim. seuranta, kaverihälytykset,
+      APRS-viestit, syötteet ja yhteyksien tunnistus) jatkavat taustalla. Toiminnot saa pois päältä niiden omista asetuksista.
+      Ohjelma-välilehti on aina näkyvissä, jotta piilotetut välilehdet saa takaisin.</div>
+    <div class="err" id="tabPickErr"></div>
+    </div>
+  </section>
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-update">
     <h2>Versio ja päivitykset</h2>
     <div class="inner">
@@ -444,24 +473,13 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     </div>
   </section>
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-program">
-    <h2>Ulkoasu, palaute ja tiedot</h2>
+    <h2>Palaute, vikailmoitukset ja tiedot</h2>
     <div class="inner">
     <div class="about" id="aboutLine"></div>
     <div class="frow" style="margin:10px 0 4px;align-items:center">
       <b style="min-width:90px">Palaute</b>
       <button class="primary" id="btnFb">Lähetä palaute / lokit</button>
       <span class="hint" style="margin:0">Lähettää viestisi ja ohjelman lokin ylläpidolle vian selvittämistä varten.</span>
-    </div>
-    <div class="frow" style="margin:10px 0 4px">
-      <div class="fld"><label for="themeSel">Teema</label>
-        <select id="themeSel"><option value="auto">Automaattinen (käyttöjärjestelmän mukaan)</option><option value="light">Vaalea</option><option value="dark">Tumma</option></select>
-        <div class="hint">Automaattinen vaihtuu, kun käyttöjärjestelmän teema vaihtuu.</div></div>
-    </div>
-    <div class="frow" id="uiRow" style="display:none;margin:10px 0 4px">
-      <div class="fld"><label for="uiSel">Käyttöliittymä</label>
-        <select id="uiSel"><option value="window">Omassa ikkunassa</option><option value="browser">Selaimessa</option></select>
-        <div class="hint" id="uiHint">Muutos tulee voimaan, kun ohjelma käynnistetään seuraavan kerran.</div></div>
-      <div class="fld" id="uiBrowserFld" style="align-self:center"><button id="btnOpenBrowser">Avaa selaimessa</button></div>
     </div>
     <div class="row"><div><button id="btnQuit">Sulje ohjelma</button></div>
       <div class="hint" style="max-width:520px"><span id="quitHint">Sulkee taustalla toimivan ohjelman. Ohjelman voi avata uudelleen käynnistämällä sen; jos se on jo käynnissä,
@@ -626,7 +644,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="inner">
         <div class="note">Lähetä radiosta tekstiviesti Brandmeisterin APRS-palvelunumeroon <b>244999</b> (yksityisviesti) muodossa
           <code>&lt;oma APRS-IS-tunnus&gt; &lt;komento&gt;</code>, esim. <code id="cmdExample">OH2ABC-13 TG244</code>. Ohjelma vastaa radioosi.<br>
-          Komennot: <b>APUA</b> · <b>TG244</b> (kuka puhui viimeksi) · <b>KUKA OH2ABC</b> (milloin ja missä kuultu) ·
+          Komennot: <b>OHJE</b> (komentolista) · <b>TG244</b> (kuka puhui viimeksi) · <b>KUKA OH2ABC</b> (milloin ja missä kuultu) ·
           <b>NYT</b> (lähetykset seuratuissa ryhmissä) · syötteiden komennot (esim. <b>SAA</b> = uusin otsikko).</div>
         <div class="frow" style="margin-top:14px">
           <div class="fld checks">
@@ -684,7 +702,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
           <li><b>Komento</b> – vapaaehtoinen sana (esim. SAA), jolla voit pyytää syötteen uusimman otsikon radioosi milloin tahansa.
             Lähetä radiosta Brandmeisterin APRS-palvelunumeroon 244999 yksityisviesti, jossa on oma APRS-IS-tunnuksesi ja komento, esim. <code>OH2ABC-13 SAA</code>.
             Ohjelma vastaa vain, kun <a href="#" id="toCmdCfg">APRS → Asetukset → Komennot radiosta</a> -kohdassa on valittu Vastaa komentoihin.
-            Komento APUA listaa kaikki käytettävissä olevat komennot.</li>
+            Komento OHJE listaa kaikki käytettävissä olevat komennot.</li>
         </ul>
         <div class="frow" style="margin-top:14px; align-items:center">
           <button class="primary" id="btnMsgSave">Tallenna</button>
@@ -2237,12 +2255,62 @@ function connect() {
 }
 
 let TAB = "seuranta";
+// Välilehtien piilotus (Ohjelma → Ulkoasu). Linkki piilotetulle välilehdelle näyttää sen tilapäisesti.
+let tabTemp = null;
+function hiddenTabs() { return new Set((S && S.config && S.config.hidden_tabs) || []); }
+function applyHiddenTabs() {
+  const hid = hiddenTabs(), nav = $("tabs");
+  let groupVis = false; const seps = [];
+  for (const el of nav.children) {
+    if (el.matches("button[data-tab]")) {
+      const v = !hid.has(el.dataset.tab) || el.dataset.tab === tabTemp;
+      el.style.display = v ? "" : "none";
+      if (v) { groupVis = true; seps.forEach(s => { if (s.pending) { s.el.style.display = ""; s.pending = false; } }); }
+    } else if (el.classList.contains("tabsep")) {
+      el.style.display = "none";
+      if (groupVis) seps.push({el, pending: true});
+      groupVis = false;
+    }
+  }
+  $("tabHiddenHint").style.display = hid.size ? "" : "none";
+}
+function firstVisibleTab() {
+  const hid = hiddenTabs();
+  const b = [...document.querySelectorAll("#tabs button[data-tab]")].find(x => !hid.has(x.dataset.tab));
+  return b ? b.dataset.tab : "asetukset";
+}
+function fillTabPick() {
+  const hid = hiddenTabs(); let h = "";
+  for (const el of $("tabs").children) {
+    if (el.classList.contains("tabsep")) h += '<span class="tpsep" aria-hidden="true"></span>';
+    else if (el.matches("button[data-tab]")) {
+      const id = el.dataset.tab, name = esc(el.firstChild.textContent.trim());
+      h += id === "asetukset"
+        ? `<label class="locked"><input type="checkbox" checked disabled> ${name} <span class="muted">(${esc(T("aina näkyvissä"))})</span></label>`
+        : `<label><input type="checkbox" data-tp="${id}"${hid.has(id) ? "" : " checked"}> ${name}</label>`;
+    }
+  }
+  if ($("tabPick").dataset.h !== h) { $("tabPick").innerHTML = h; $("tabPick").dataset.h = h; }
+}
+$("tabPick").addEventListener("change", async e => {
+  const cb = e.target.closest("input[data-tp]"); if (!cb) return;
+  const hidden = [...$("tabPick").querySelectorAll("input[data-tp]")].filter(x => !x.checked).map(x => x.dataset.tp);
+  $("tabPickErr").textContent = "";
+  const j = await saveCfg({hidden_tabs: hidden});
+  if (!j.ok) { $("tabPickErr").textContent = j.error; return; }
+  S.config = j.config; applyHiddenTabs(); fillTabPick();
+});
+$("tabHiddenHint").onclick = e => { e.preventDefault(); showTab("asetukset"); unfold("cfg-look"); };
 function showTab(tab) {
+  // uudelleenpiirto (sama välilehti) piilotetulle välilehdelle → ensimmäinen näkyvä; linkit avaavat piilotetun tilapäisesti
+  if (S && hiddenTabs().has(tab) && tab === TAB && tab !== tabTemp) tab = firstVisibleTab();
+  tabTemp = S && hiddenTabs().has(tab) ? tab : null;
   TAB = tab;
+  if (S) applyHiddenTabs();
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll("main > section, main > .svcgrid, main > .cigrid").forEach(s => { s.style.display = s.dataset.tab === tab ? "" : "none"; });
   if (!S) return;
-  if (tab === "asetukset") fillSettings();
+  if (tab === "asetukset") { fillSettings(); fillTabPick(); }
   if (tab === "viestit" || tab === "aprs") fillMsg();
   if (tab === "aprs") { fillRx(); fillRf(); covShow(); }
   if (tab === "seuranta") { netsShow(); fillBmCfg(); }

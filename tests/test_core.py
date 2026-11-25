@@ -121,7 +121,8 @@ def test_server_ping_and_commands():
         info = json.loads(body)
         assert info == {"app": APP_ID, "version": __version__}
         c = Commands(mon)
-        assert c.handle("OH2ABC-7", "apua").startswith("Komennot:")
+        assert c.handle("OH2ABC-7", "ohje").startswith("Komennot:")
+        assert c.handle("OH2ABC-7", "apua").startswith("Tuntematon")
         assert "ei liikennettä" in c.handle("OH2ABC-7", "TG244")
         assert c.handle("OH9EVIL", "TG244") is None   # ei sallittu lähettäjä
 
@@ -793,3 +794,19 @@ def test_i18n_keys_for_new_ui():
     js = (Path(__file__).resolve().parent.parent / "bmmonitor" / "static" / "i18n.js").read_text(encoding="utf-8")
     for k in ("Kirjaa yhteys (QSO) lokiin", "Tila (mode)", "Kaikki tilat", "Google-taulukon käyttöönotto"):
         assert f'"{k}"' in js, k
+
+
+def test_radio_help_commands():
+    from bmmonitor import features
+    src = Path(features.__file__).read_text(encoding="utf-8")
+    m = re.search(r'if t in \(([^)]*)\):\s+# ei APUA', src)
+    words = set(re.findall(r'"([A-Z]*)"', m.group(1)))
+    assert {"OHJE", "CMD"} <= words and not {"APUA", "HELP"} & words
+
+
+def test_hidden_tabs_config():
+    from bmmonitor import app
+    assert "asetukset" not in app.HIDEABLE_TABS
+    html = (Path(app.__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
+    tabs = set(re.findall(r'<button data-tab="([a-z]+)"', html))
+    assert tabs - {"asetukset"} == set(app.HIDEABLE_TABS)

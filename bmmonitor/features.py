@@ -457,7 +457,7 @@ class Commands:
     def answer(self, text: str) -> str:
         t = re.sub(r"\s+", " ", text.upper()).strip(" ?!.")
         feeds = self.feed_cmds()
-        if t in ("", "APUA", "HELP", "OHJE", "KOMENNOT"):
+        if t in ("", "OHJE", "CMD", "KOMENNOT", "COMMANDS"):   # ei APUA/HELP: voisi sekoittua hätäliikenteeseen
             extra = " ".join(sorted(feeds))
             return tr("Komennot: TG<nro>, KUKA <kutsu>, NYT{extra}", extra=(", " + extra) if extra else "")
         m = re.fullmatch(r"TG ?(\d{1,9})", t)
@@ -475,7 +475,7 @@ class Commands:
             return f"{f.get('name') or t}: {latest}" if latest else tr("{t}: ei uutisia (syötettä ei vielä luettu)", t=t)
         if CALL_OR_ID.fullmatch(t) and not t.isdigit() and re.search(r"\d", t):
             return self.who_info(t)
-        return tr("Tuntematon komento. Laheta APUA")
+        return tr("Tuntematon komento. Laheta OHJE")
 
     def tg_info(self, tg: int) -> str:
         h = self.mon.heard

@@ -30,7 +30,7 @@ Ohjelma käynnistää koneellesi pienen paikallisen palvelimen (`http://127.0.0.
 Windowsissa ja macOS:ssä käyttöliittymä avautuu **omaan ikkunaansa**. Ikkunan sulkeminen jättää ohjelman taustalle:
 seuranta ja hälytykset jatkuvat, ja ikkunan saa takaisin kuvakkeesta (Windows: ilmaisinalue, macOS: valikkorivi).
 Kokonaan ohjelma suljetaan kuvakkeen valikosta, kohdasta **Ohjelma → Sulje ohjelma** tai macOS:ssä Cmd+Q:lla.
-Selaimessa käyttämisen voi valita kohdassa **Ohjelma → Ulkoasu, palaute ja tiedot → Käyttöliittymä**; Linuxissa ohjelma avautuu
+Selaimessa käyttämisen voi valita kohdassa **Ohjelma → Ulkoasu → Käyttöliittymä**; Linuxissa ohjelma avautuu
 aina selaimeen. Jos ohjelma on jo käynnissä, uusi käynnistys vain avaa ikkunan tai sivun.
 
 ### Ensimmäinen käynnistys
@@ -169,7 +169,7 @@ RSS-, Atom- ja JSON Feed -syötteet (esim. BrandMeisterin uutiset, SRAL): uuden 
 radioon APRS-välilehdellä asetetuille vastaanottajille. Syötteiden tila ja viestiloki; syötteet ja viestiasetukset ovat välilehden alimpana Asetukset-osiossa.
 Kullakin syötteellä on **etuliite** (näkyy viestin alussa), **osoite** ja valinnainen **komento**: kun lähetät radiosta
 Brandmeisterin numeroon 244999 yksityisviestin `<oma APRS-IS-tunnus> <komento>`, ohjelma vastaa syötteen uusimmalla
-otsikolla (vaatii *APRS → Asetukset → Komennot radiosta → Vastaa komentoihin*; `APUA` listaa komennot).
+otsikolla (vaatii *APRS → Asetukset → Komennot radiosta → Vastaa komentoihin*; `OHJE` listaa komennot).
 
 ### Asetukset ja Ohjelma
 Toimintojen asetukset ovat kunkin välilehden alimmassa, pienennettävässä **Asetukset**-osiossa:
@@ -178,11 +178,12 @@ Toimintojen asetukset ovat kunkin välilehden alimmassa, pienennettävässä **A
 - **Syötteet:** syötteet ja viestit radioon.
 - **Lokit:** oma asema, oletustila ja tunnistus, QRZ Logbook.
 
-**Ohjelma**-välilehdellä ovat **kieli**, **teema** (vaalea, tumma tai käyttöjärjestelmän mukaan), **päivitykset**,
-palaute ja **Sulje ohjelma**.
+**Ohjelma**-välilehdellä ovat **kieli**, **Ulkoasu** (teema: vaalea, tumma tai käyttöjärjestelmän mukaan;
+käyttöliittymä omassa ikkunassa tai selaimessa; **näytettävät välilehdet**), **päivitykset** sekä palaute, vikailmoitukset ja
+**Sulje ohjelma**. Käyttämättömät välilehdet voi piilottaa; niiden toiminnot jatkavat taustalla, ja Ohjelma-välilehti on aina näkyvissä.
 
 - **Kieli (suomi / English)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
-  Radiokomennot toimivat kummallakin kielellä (`APUA`/`HELP`, `KUKA`/`WHO`, `NYT`/`NOW`). Ilmatieteen laitoksen
+  Radiokomennot toimivat kummallakin kielellä (`OHJE`/`CMD`, `KUKA`/`WHO`, `NYT`/`NOW`). Ilmatieteen laitoksen
   varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).
 - **Palaute / lokit** (Ohjelma-välilehti) lähettää viestin ja zip-paketin ylläpidolle. Salaisuudet (API-avain, passcode,
   check-in-avain) poistetaan ja sijainti pyöristetään lokaattoriksi; paketin voi ladata ja tarkistaa ennen lähetystä.
@@ -224,7 +225,7 @@ muodossa `<ohjelman APRS-IS-tunnus> <komento>`, esim. `OH2ABC-13 TG244`.
 
 | Komento | Vastaus |
 |---|---|
-| `APUA` | komentolista |
+| `OHJE` | komentolista |
 | `TG244` | kuka puhuu nyt tai puhui viimeksi, milloin ja kauanko |
 | `KUKA OH2ABC` (tai pelkkä kutsu) | milloin ja missä asema viimeksi kuultiin |
 | `NYT` | käynnissä olevat lähetykset seuratuissa ryhmissä |
