@@ -819,7 +819,6 @@ def test_html_texts_have_english_translation():
     html = (root / "index.html").read_text(encoding="utf-8")
     js = (root / "i18n.js").read_text(encoding="utf-8")
     keys = {json.loads('"' + k + '"') for k in re.findall(r'"((?:[^"\\]|\\.)*)"\s*:', js)}
-    body = re.sub(r"<script[\s\S]*?</script>|<style[\s\S]*?</style>", "", html)
     void = {"input", "br", "img", "meta", "link", "hr", "source"}
 
     class P(HTMLParser):
@@ -829,7 +828,7 @@ def test_html_texts_have_english_translation():
 
         def handle_starttag(self, t, a):
             a = dict(a)
-            skip = (t == "code" or "data-noi18n" in a or (a.get("lang") == "fi" and t != "html")
+            skip = (t in ("code", "script", "style") or "data-noi18n" in a or (a.get("lang") == "fi" and t != "html")
                     or bool(self.stack and self.stack[-1][1]))
             if not skip:
                 self.out += [a[k] for k in ("placeholder", "title", "aria-label") if a.get(k)]
@@ -846,7 +845,7 @@ def test_html_texts_have_english_translation():
                 self.out.append(d)
 
     p = P()
-    p.feed(body)
+    p.feed(html)
     fi = re.compile(r"[äöÄÖ]|\b(ja|tai|ei|kun|jos|on|osio|ohje|Tallenna|Poista|Lisää|Avaa|Kutsu|Nimi|Aika)\b")
     allowed = {"KUNTA", "Lisätietoja"}   # taulukon sarakenimet
     missing = sorted({t for t in p.out if fi.search(t) and t not in keys and t not in allowed})
