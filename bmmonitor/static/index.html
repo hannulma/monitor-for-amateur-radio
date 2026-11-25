@@ -1614,9 +1614,12 @@ function bmLiveTab() {
 let aprsSeen = 0, aprsNotified = null;
 try { aprsSeen = +localStorage.getItem("bmm.aprsSeen") || 0; } catch (e) { aprsSeen = 0; }
 function aprsIncoming() {
-  const bases = new Set([S.config.messaging.login, ...(S.config.messaging.aprs_watch || [])].filter(Boolean).map(c => c.toUpperCase().split("-")[0]));
+  // saapuneet omille kutsuille; myös oman kutsun toiselta SSID:ltä (esim. radio → ohjelman tunnus), ei täsmälleen omalta tunnukselta
+  const login = (S.config.messaging.login || "").toUpperCase();
+  const bases = new Set([login, ...(S.config.messaging.aprs_watch || [])].filter(Boolean).map(c => c.toUpperCase().split("-")[0]));
   return ((S.messaging && S.messaging.aprs_msgs) || []).filter(m => m.dir === "in" && !m.cmd
-    && bases.has((m.to || "").split("-")[0]) && !bases.has((m.from || "").split("-")[0]));
+    && bases.has((m.to || "").toUpperCase().split("-")[0]) && (m.from || "").toUpperCase() !== login
+    && (m.from || "").toUpperCase() !== (m.to || "").toUpperCase());
 }
 function aprsMsgBadge() {
   const msgs = aprsIncoming(), newest = msgs.reduce((t, m) => Math.max(t, m.time), 0);

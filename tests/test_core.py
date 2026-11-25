@@ -1033,3 +1033,21 @@ def test_serial_tnc_kiss_init(monkeypatch):
         with pytest.raises(OSError):
             asyncio.run(ln.session())
         assert first in written and written[-2:] == [radios.KISS_EXIT, "closed"] and got == [b"X" * 20]
+
+
+def test_aprs_unknown_command_counts_as_message(tmp_path):
+    """Tavallinen viesti omalle tunnukselle (esim. oman kutsun toiselta SSID:ltä) ei ole botin komento,
+    vaikka botti vastaa "Tuntematon komento"; tunnettu komento merkitään (cmd), jottei se näy uutena viestinä."""
+    from types import SimpleNamespace
+    from bmmonitor.features import Commands
+    from bmmonitor.messaging import DEFAULT_MESSAGING, MessagingHub
+    cfg = {**DEFAULT_MESSAGING, "login": "OH2BEA-10", "commands_enabled": True}
+    hub = MessagingHub(cfg, tmp_path, lambda: None)
+    mon = SimpleNamespace(cfg={"messaging": cfg}, hub=hub)
+    hub.command_handler = Commands(mon).handle
+    hub.handle_message("OH2BEA-7", "OH2BEA-10", "Testiviesti radiosta{1", "is")
+    first = [m for m in hub.aprs_msgs if m["dir"] == "in"][0]
+    assert first["text"] == "Testiviesti radiosta" and not first.get("cmd")
+    hub.handle_message("OH2BEA-7", "OH2BEA-10", "OHJE{2", "is")
+    last = [m for m in hub.aprs_msgs if m["dir"] == "in"][0]
+    assert last["text"] == "OHJE" and last.get("cmd") is True

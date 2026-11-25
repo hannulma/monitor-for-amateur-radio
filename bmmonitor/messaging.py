@@ -599,8 +599,9 @@ class MessagingHub:
                 log.warning("Komennon käsittely: %s", e)
                 reply = None
             if reply:
-                if self.aprs_msgs and self.aprs_msgs[0].get("dir") == "in" and self.aprs_msgs[0]["from"] == src:
-                    self.aprs_msgs[0]["cmd"] = True     # botin komento: ei lasketa uudeksi viestiksi
+                known = getattr(getattr(self.command_handler, "__self__", None), "last_known", True)
+                if known and self.aprs_msgs and self.aprs_msgs[0].get("dir") == "in" and self.aprs_msgs[0]["from"] == src:
+                    self.aprs_msgs[0]["cmd"] = True     # tunnettu botin komento: ei lasketa uudeksi viestiksi
                 text = clean_text(reply, bool(self.cfg.get("ascii")))
                 # vastaus samaa reittiä kuin komento tuli (radiosta → radioon, jos lähetys sallittu)
                 r = "rf" if route == "rf" and self.rf_ready() else "is"

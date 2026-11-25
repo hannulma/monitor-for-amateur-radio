@@ -418,6 +418,7 @@ class Commands:
     def __init__(self, mon):
         self.mon = mon
         self.recent: dict[str, deque] = {}
+        self.last_known = False      # oliko viimeksi käsitelty teksti tunnettu komento
 
     @property
     def cfg(self):
@@ -435,6 +436,7 @@ class Commands:
         return base in allow
 
     def handle(self, src: str, text: str) -> str | None:
+        self.last_known = False
         if not self.cfg.get("commands_enabled", True):
             return None
         if not self.allowed(src):
@@ -444,7 +446,9 @@ class Commands:
         if len(q) == self.RATE and time.time() - q[0] < 60:
             return None
         q.append(time.time())
-        return self.answer(text.strip())
+        reply = self.answer(text.strip())
+        self.last_known = reply != tr("Tuntematon komento. Laheta OHJE")
+        return reply
 
     def feed_cmds(self) -> dict[str, dict]:
         out = {}
