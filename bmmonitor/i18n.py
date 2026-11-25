@@ -163,7 +163,7 @@ EN: dict[str, str] = {
     "Virheellinen sarjaportti: {x}": "Invalid serial port: {x}", "Virheellinen nopeus: {x}": "Invalid speed: {x}",
     "simuloitu": "simulated", "sarjaportti valitsematta": "no serial port chosen", "Radio {n} ei ole yhteydessä": "Radio {n} is not connected",
     "Ei yhteyttä {h}:{p} ({e})": "No connection to {h}:{p} ({e})", "Yhteys suljettiin ({h}:{p})": "Connection closed ({h}:{p})",
-    "Sarjaporttia {p} ei voi avata ({e})": "Cannot open serial port {p} ({e})", "Valitse sarjaportti": "Choose a serial port", "yhteys estetty – onko ohjelma käynnissä ja portti oikein?": "connection refused – is the program running and the port correct?", "aikakatkaisu": "timeout",
+    "Sarjaporttia {p} ei voi avata ({e})": "Cannot open serial port {p} ({e})", "Valitse sarjaportti": "Choose a serial port", "Sarjaportti {p} katkesi ({e})": "Serial port {p} disconnected ({e})", "yhteys estetty – onko ohjelma käynnissä ja portti oikein?": "connection refused – is the program running and the port correct?", "aikakatkaisu": "timeout",
     "Sarjaporttituki puuttuu (pyserial)": "Serial port support is missing (pyserial)",
     "Ei radiota, jolla voi lähettää": "No radio that can transmit", "Yhtään radiota ei ole käytössä": "No radio is in use",
     "Ei lahetyksia seuratuissa ryhmissa": "No transmissions in watched groups",

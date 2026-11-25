@@ -370,8 +370,11 @@ class Monitor:
             self.cfg["nets"] = normalize_nets(new["nets"] or {}, self.cfg["nets"])
             self.nets.reconfigure()
         if "aprsrx" in new:
+            old_km = self.cfg["aprsrx"].get("is_km")
             self.cfg["aprsrx"] = normalize_aprsrx(new["aprsrx"] or {}, self.cfg["aprsrx"])
             self.aprsrx.reconfigure()
+            if self.cfg["aprsrx"].get("is_km") != old_km:
+                self.hub.reconfigure(self.cfg["messaging"])      # APRS-IS-suodatin muuttuu → uusi yhteys
         if "map_tiles" in new:
             t = str(new["map_tiles"] or "").strip() or DEFAULT_TILES
             if not re.match(r"^https?://[^\s]+$", t) or not all(k in t for k in ("{z}", "{x}", "{y}")):
@@ -1226,6 +1229,11 @@ def make_app(mon: Monitor) -> web.Application:
         loc = mon.cfg["services"]["location"]
         return (loc["lat"], loc["lon"]) if loc.get("lat") is not None else None
 
+    async def aprsrx_extra(request):
+        q = request.query
+        mon.aprsrx._commit()
+        return web.json_response(await in_thread(mon.aprsrx.extra, q.get("layer", ""), q.get("period", "24h"), home()))
+
     async def aprsrx_serialports(_):
         from .radios import serial_ports
         return web.json_response({"ports": await in_thread(serial_ports)})
@@ -1386,6 +1394,7 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_get("/api/aprsrx/cells", aprsrx_cells)
     app.router.add_get("/api/aprsrx/stations", aprsrx_stations)
     app.router.add_get("/api/aprsrx/serialports", aprsrx_serialports)
+    app.router.add_get("/api/aprsrx/extra", aprsrx_extra)
     app.router.add_get("/api/log", log_list)
     app.router.add_post("/api/log", log_save)
     app.router.add_delete("/api/log/{id:\\d+}", log_delete)

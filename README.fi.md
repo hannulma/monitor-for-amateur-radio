@@ -82,17 +82,21 @@ Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · 
 
 ### APRS
 - **APRS-viestit:** kutsusi kaikkien SSID:iden saapuvat ja lähtevät APRS-viestit, myös BrandMeisterin kautta
-  DMR-radiosta lähtevät. Viestiä klikkaamalla voit vastata suoraan (valittavissa millä SSID:llä).
+  DMR-radiosta lähtevät. Viestiä klikkaamalla voit vastata suoraan (valittavissa millä SSID:llä). Uusien viestien
+  määrä näkyy APRS-välilehden nimen perässä; työpöytäilmoituksen voi ottaa käyttöön APRS-asetuksista.
   Halutessasi viestit, kuittaukset ja komentojen vastaukset lähtevät myös radiolla
   (APRS → Asetukset → APRS-viestit radiolla; reitti automaattinen / APRS-IS / radio / radio ja APRS-IS, oletuksena pois).
 - **Radiot ja TNC:t:** yksi tai useampi radio yhtä aikaa (APRS → Asetukset → Radiot ja TNC:t): **KISS TCP** (Graywolf,
   Dire Wolf; oletus `127.0.0.1:8001`), **KISS TNC sarjaportissa** (USB tai Bluetooth, esim. Mobilinkd, Kenwood TH-D74/D75
-  KISS-tilassa), **AGWPE** (Dire Wolf, soundmodem) ja **simuloitu radio** testaukseen. Äänikortin kautta liitetylle radiolle
+  KISS-tilassa), **Kenwood TM-D710 / TH-D72** ja **Kantronics KPC-3+** (kokeellinen: TNC kytketään KISS-tilaan
+  automaattisesti), **AGWPE** (Dire Wolf, soundmodem) ja **simuloitu radio** testaukseen. Äänikortin kautta liitetylle radiolle
   käytä Graywolfia tai Dire Wolfia. Lähetykseen käytetään ensimmäistä yhdistettyä radiota, jolle lähetys on sallittu.
 - **APRS-kartta:** radioiden kuulemista paketeista.
   Kartan tasot (24 h / 7 vrk / 30 vrk): **RF-kuuluvuus** – lämpökartta siitä, mistä asemasi kuulee paketteja
-  suoraan ja mistä digipiitterien kautta; **APRS-asemat** – radiolla kuultujen asemien viimeisin sijainti;
-  **Digipiitterit** – digiä klikkaamalla näkyy sen kautta kuultu alue. Taulukoissa digien osuudet ja yleisimmät polut. Hälytys, kun tuttu digi tai valitsemasi asema
+  suoraan ja mistä digipiitterien kautta; **APRS-asemat** – radiolla kuultujen asemien viimeisin sijainti (iGaten radioon välittämät asemat näkyvät onttoina
+  eivätkä ole mukana RF-kuuluvuudessa); **Digipiitterit** – digiä klikkaamalla näkyy sen kautta kuultu alue;
+  **Sääasemat** – lämpötila, tuuli, kosteus, ilmanpaine ja sade; **Objektit** – objektit ja itemit (esim. toistimet);
+  **APRS-IS-asemat** – valinnainen, APRS-IS:n asemat kotisijaintisi ympäriltä (säde asetuksissa). Taulukoissa digien osuudet ja yleisimmät polut. Hälytys, kun tuttu digi tai valitsemasi asema
   (esim. iGate) hiljenee – vain silloin, kun oma vastaanotto toimii. Paketit säilytetään koneella 30 vrk.
   Karttapohja: OpenStreetMap (© OpenStreetMap contributors), tiilet haetaan ohjelman kautta omalla
   tunnisteella ja välimuistitetaan; osoitteen voi vaihtaa.

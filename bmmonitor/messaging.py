@@ -54,6 +54,7 @@ DEFAULT_MESSAGING = {
     "commands_enabled": True,  # vastaa radiosta lähetettyihin komentoihin (OHJE, TG244, KUKA ...)
     "commands_all": False,     # False = vain vastaanottajat, oma kutsu ja sallittujen lista
     "commands_allow": [],
+    "notify_msgs": False,      # työpöytäilmoitus uudesta APRS-viestistä
     "rf_tx": False,            # salli APRS-viestien lähetys radiolla Graywolfin KISS-portin kautta
     "route": "auto",           # oletusreitti: auto (RF, jos vastaanottaja kuultu radiolla äskettäin) / is / rf / both
     "rf_path": "WIDE1-1,WIDE2-1",
@@ -217,8 +218,9 @@ class AprsClient:
                                     int(self.cfg.get("port") or 14580)), 20)
         from . import __version__
         pats = "/".join(f"{b}*" for b in sorted(self.hub.watch_bases()))
-        self.writer.write(f"user {login} pass {passcode} vers BMMonitor {__version__} filter g/{pats} b/{pats}\r\n"
-                          .encode())
+        area = self.hub.rf.is_filter() if self.hub.rf is not None else ""     # APRS-kartan APRS-IS-taso
+        self.writer.write(f"user {login} pass {passcode} vers BMMonitor {__version__} filter g/{pats} b/{pats}"
+                          f"{' ' + area if area else ''}\r\n".encode())
         await self.writer.drain()
         self.connected = True
         self.error = None
@@ -253,6 +255,12 @@ class AprsClient:
                     self.error = tr("Passcode ei kelpaa (unverified) – viestejä ei välitetä")
                 self.hub.touch()
             return
+        if self.hub.rf is not None and ":" in line and not line.startswith(("#",)):
+            try:
+                if self.hub.rf.cfg.get("is_km"):
+                    self.hub.rf.handle_is_line(line)
+            except Exception:  # noqa: BLE001
+                log.debug("APRS-IS-kartta", exc_info=True)
         # APRS-viesti:  SRC>DST,PATH::ADDRESSEE:ackNN / rejNN / teksti{NN
         m = re.match(r"^([^>]+)>[^:]*::([^:]{9}):(.*)$", line)
         if m:
@@ -591,6 +599,8 @@ class MessagingHub:
                 log.warning("Komennon käsittely: %s", e)
                 reply = None
             if reply:
+                if self.aprs_msgs and self.aprs_msgs[0].get("dir") == "in" and self.aprs_msgs[0]["from"] == src:
+                    self.aprs_msgs[0]["cmd"] = True     # botin komento: ei lasketa uudeksi viestiksi
                 text = clean_text(reply, bool(self.cfg.get("ascii")))
                 # vastaus samaa reittiä kuin komento tuli (radiosta → radioon, jos lähetys sallittu)
                 r = "rf" if route == "rf" and self.rf_ready() else "is"
@@ -666,7 +676,7 @@ class MessagingHub:
             "log": list(self.log)[:100],
             "rf": {"enabled": bool(self.cfg.get("rf_tx")), "ready": self.rf_ready(),
                    "connected": bool(self.rf and self.rf.can_transmit())},
-            "aprs_msgs": [{k: e.get(k) for k in ("time", "dir", "from", "to", "text", "msgid", "status", "tries", "copies", "route")}
+            "aprs_msgs": [{k: e.get(k) for k in ("time", "dir", "from", "to", "text", "msgid", "status", "tries", "copies", "route", "cmd")}
                           for e in list(self.aprs_msgs)[:150]],
             "watch_bases": sorted(self.watch_bases()),
         }
@@ -721,7 +731,7 @@ def normalize_messaging(new: dict, old: dict) -> dict:
         out["rf_path"] = ",".join(path)
     if "rf_heard_min" in new:
         out["rf_heard_min"] = min(1440, max(5, int(float(new["rf_heard_min"] or 30))))
-    for k in ("ascii", "no_ack", "commands_enabled", "commands_all", "rf_tx"):
+    for k in ("ascii", "no_ack", "commands_enabled", "commands_all", "rf_tx", "notify_msgs"):
         if k in new:
             out[k] = bool(new[k])
     for k, lo, hi in (("max_parts", 1, 5), ("max_per_check", 1, 20), ("feed_interval", 60, 86400)):

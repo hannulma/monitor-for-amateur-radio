@@ -20,7 +20,15 @@ from .i18n import tr
 
 log = logging.getLogger("bmmonitor.radios")
 
-TYPES = ("kiss_tcp", "kiss_serial", "agwpe", "sim")
+TYPES = ("kiss_tcp", "kiss_serial", "kenwood", "kpc3", "agwpe", "sim")
+SERIAL_TYPES = ("kiss_serial", "kenwood", "kpc3")
+# TNC KISS-tilaan käynnistyksessä ja takaisin suljettaessa (kokeellinen: ei testattu oikeilla laitteilla)
+KISS_INIT = {
+    "kenwood": [b"\r", b"TC 1\r", b"TN 2,0\r", b"KISS ON\r", b"RESTART\r"],     # TM-D710 / TH-D72: sisäinen TNC
+    "kpc3": [b"\r", b"INTFACE KISS\r", b"RESET\r"],                               # Kantronics KPC-3+
+}
+INIT_DELAY = 0.6                                         # TNC:n käskyjen väli (s)
+KISS_EXIT = bytes([0xC0, 0xFF, 0xC0])                    # KISS-tilasta pois (TNC palaa komentotilaan)
 DEFAULT_PORTS = {"kiss_tcp": 8001, "agwpe": 8000}
 BAUDS = (1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200)
 NAME_MAX = 40
@@ -158,7 +166,7 @@ def normalize_radios(items, old: list[dict] | None = None) -> list[dict]:
             if not 1 <= p <= 65535:
                 raise ValueError(tr("Arvon pitää olla {a}–{b}", a=1, b=65535))
             r["host"], r["port"] = h, p
-        elif kind == "kiss_serial":
+        elif kind in SERIAL_TYPES:
             s = str(it.get("serial") or "").strip()
             if s and not SERIAL_RE.match(s):
                 raise ValueError(tr("Virheellinen sarjaportti: {x}", x=s))
@@ -177,7 +185,7 @@ def describe(r: dict) -> str:
     k = r.get("type")
     if k in ("kiss_tcp", "agwpe"):
         return f"{r.get('host')}:{r.get('port')}"
-    if k == "kiss_serial":
+    if k in SERIAL_TYPES:
         return f"{r.get('serial')} {r.get('baud')} bit/s" if r.get("serial") else tr("sarjaportti valitsematta")
     return tr("simuloitu")
 
@@ -353,6 +361,8 @@ class KissSerialLink(RadioLink):
     def explain(self, e):
         name = e.__class__.__name__
         if name == "SerialException" or isinstance(e, OSError):
+            if self.status.get("connected"):
+                return tr("Sarjaportti {p} katkesi ({e})", p=self.cfg.get("serial") or "–", e=str(e) or name)
             return tr("Sarjaporttia {p} ei voi avata ({e})", p=self.cfg.get("serial") or "–", e=str(e) or name)
         return super().explain(e)
 
@@ -367,6 +377,11 @@ class KissSerialLink(RadioLink):
         ser = await asyncio.to_thread(serial.Serial, port, int(self.cfg.get("baud") or 9600), timeout=0.5)
         self.ser = ser
         try:
+            for cmd in KISS_INIT.get(self.cfg.get("type"), []):      # TNC KISS-tilaan
+                await asyncio.to_thread(ser.write, cmd)
+                await asyncio.sleep(INIT_DELAY)
+            if self.cfg.get("type") in KISS_INIT:
+                await asyncio.to_thread(ser.reset_input_buffer)
             log.info("Radio %s yhdistetty (%s)", self.name, describe(self.cfg))
             self._set(connected=True, error=None, since=time.time())
             dec = KissDecoder()
@@ -376,6 +391,11 @@ class KissSerialLink(RadioLink):
                     self._got(fr)
         finally:
             self.ser = None
+            if self.cfg.get("type") in KISS_INIT:
+                try:
+                    await asyncio.to_thread(ser.write, KISS_EXIT)
+                except Exception:  # noqa: BLE001
+                    pass
             await asyncio.to_thread(ser.close)
 
     def transmit(self, ax25: bytes):
@@ -387,6 +407,8 @@ class KissSerialLink(RadioLink):
     def close(self):
         if self.ser:
             try:
+                if self.cfg.get("type") in KISS_INIT:
+                    self.ser.write(KISS_EXIT)
                 self.ser.close()
             except Exception:  # noqa: BLE001
                 pass
@@ -418,7 +440,17 @@ class SimLink(RadioLink):
             h = pos if v >= 0 else neg
             v = abs(v)
             return f"{int(v):0{w}d}{(v - int(v)) * 60:05.2f}{h}"
-        info = f"!{dm(lat, 'N', 'S', 2)}/{dm(lon, 'E', 'W', 3)}{sym}Simuloitu asema".encode()
+        pos = f"{dm(lat, 'N', 'S', 2)}/{dm(lon, 'E', 'W', 3)}"
+        if n % 7 == 6:            # iGaten radioon välittämä paketti
+            info = f"}}OH0NET-9>APRS,TCPIP,OH0IGT*:!{pos}>Simuloitu APRS-IS-asema".encode()
+            return encode_ax25("OH0IGT", "APRS", ["WIDE1-1"], info)
+        if n % 9 == 7:            # objekti
+            info = f";SIM-REP  *111111z{pos.replace('/', 'R')}&145.000 Simuloitu toistin".encode()
+        elif sym == "_":          # sääasema
+            t = int(self.rand.uniform(20, 60))
+            info = f"!{pos}_{self.rand.randint(0, 359):03d}/{self.rand.randint(0, 15):03d}g{self.rand.randint(5, 25):03d}t{t:03d}h{self.rand.randint(40, 99):02d}b{self.rand.randint(9900, 10300):05d}".encode()
+        else:
+            info = f"!{pos}{sym}Simuloitu asema".encode()
         r = self.rand.random()
         if r < 0.4:
             path = []                                           # kuultu suoraan
@@ -444,4 +476,5 @@ class SimLink(RadioLink):
         self.status["tx"] += 1
 
 
-LINKS = {"kiss_tcp": KissTcpLink, "agwpe": AgwpeLink, "kiss_serial": KissSerialLink, "sim": SimLink}
+LINKS = {"kiss_tcp": KissTcpLink, "agwpe": AgwpeLink, "kiss_serial": KissSerialLink, "kenwood": KissSerialLink,
+         "kpc3": KissSerialLink, "sim": SimLink}

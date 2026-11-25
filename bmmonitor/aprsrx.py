@@ -10,6 +10,7 @@ digipiitterien osuudet, yleisimmät polut ja hälytys, kun tuttu digi tai iGate 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import math
 import re
@@ -32,6 +33,7 @@ DEFAULT_APRSRX = {
     "min_heard": 5,            # digin pitää olla välittänyt vähintään näin monta pakettia (7 vrk) ennen seurantaa
     "watch": [],               # lisäksi seurattavat kutsut (esim. iGatet, majakat)
     "sms": False,
+    "is_km": 0,                # APRS-IS-asemat kartalle tältä säteeltä kotisijainnista (km); 0 = pois
     # "radios": radiolista (radios.normalize_radios); puuttuessa tehdään host/port-asetuksesta (ennen 0.16)
 }
 DEFAULT_TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -176,6 +178,8 @@ def parse_position(dest: str, info: bytes):
     try:
         if t in "`'\x1c\x1d":
             pos = _mic_e(dest, info)
+        elif t == "$":
+            pos = parse_nmea(info)
         elif t in "!=/@":
             s = info.decode("latin-1")
             body = s[8:] if t in "/@" else s[1:]
@@ -209,6 +213,153 @@ def parse_symbol(dest: str, info: bytes) -> str | None:
                 return body[0] + body[9]
     except Exception:  # noqa: BLE001
         return None
+    return None
+
+
+# --------------------------------------------------------------------------
+# Sää, objektit, itemit, kolmannen osapuolen paketit ja NMEA (0.16.0b2)
+# --------------------------------------------------------------------------
+def _pos_sym(body: str):
+    """Sijaintikenttä (tavallinen tai pakattu) → (lat, lon, symboli, loppuosa) tai None."""
+    p = _uncompressed(body)
+    if p and len(body) >= 19:
+        return p[0], p[1], body[8] + body[18], body[19:]
+    p = _compressed(body)
+    if p and len(body) >= 13:
+        return p[0], p[1], body[0] + body[9], body[13:]
+    return None
+
+
+def _valid(lat, lon) -> bool:
+    return -90 <= lat <= 90 and -180 <= lon <= 180 and not (abs(lat) < 0.01 and abs(lon) < 0.01)
+
+
+WX_LEN = {"c": 3, "s": 3, "g": 3, "t": 3, "r": 3, "p": 3, "P": 3, "h": 2, "b": 5, "L": 3, "l": 3}
+
+
+def parse_weather(text: str) -> dict | None:
+    """APRS-säätiedot (esim. "220/004g005t041r000p000P000h85b10115") → metriset arvot.
+
+    Palauttaa avaimet: wind_dir (°), wind (m/s), gust (m/s), temp (°C), rain_1h / rain_24h / rain_mid (mm),
+    humidity (%), pressure (hPa), lum (W/m²). Puuttuvat arvot jätetään pois.
+    """
+    out: dict = {}
+    m = re.match(r"^(\d{3}|\.{3}| {3})/(\d{3}|\.{3}| {3})", text)
+    if m:
+        if m[1].strip(". "):
+            out["wind_dir"] = int(m[1]) % 360
+        if m[2].strip(". "):
+            out["wind"] = round(int(m[2]) * 0.44704, 1)
+        text = text[7:]
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        n = WX_LEN.get(ch)
+        if not n:
+            break
+        val = text[i + 1:i + 1 + n]
+        i += 1 + n
+        if not val.strip(". ") or not re.fullmatch(r"-?\d+", val.strip()):
+            continue
+        v = int(val)
+        if ch == "c":
+            out["wind_dir"] = v % 360
+        elif ch == "s":
+            out["wind"] = round(v * 0.44704, 1)
+        elif ch == "g":
+            out["gust"] = round(v * 0.44704, 1)
+        elif ch == "t":
+            out["temp"] = round((v - 32) * 5 / 9, 1)
+        elif ch == "r":
+            out["rain_1h"] = round(v * 0.254, 1)
+        elif ch == "p":
+            out["rain_24h"] = round(v * 0.254, 1)
+        elif ch == "P":
+            out["rain_mid"] = round(v * 0.254, 1)
+        elif ch == "h":
+            out["humidity"] = 100 if v == 0 else v
+        elif ch == "b":
+            out["pressure"] = round(v / 10, 1)
+        elif ch == "L":
+            out["lum"] = v
+        elif ch == "l":
+            out["lum"] = v + 1000
+    if not ({"temp", "wind", "pressure", "humidity", "rain_1h"} & out.keys()):
+        return None
+    return out
+
+
+def _nmea_deg(v: str, h: str, w: int) -> float:
+    d = int(v[:w]) + float(v[w:]) / 60
+    return -d if h in "SW" else d
+
+
+def parse_nmea(info: bytes):
+    """$GPRMC / $GPGGA (myös $GN…) → (lat, lon) tai None."""
+    try:
+        s = info.decode("ascii", "replace").split("*")[0]
+        f = s.split(",")
+        if f[0][3:] == "RMC" and len(f) > 6 and f[2] == "A":
+            lat, lon = _nmea_deg(f[3], f[4], 2), _nmea_deg(f[5], f[6], 3)
+        elif f[0][3:] == "GGA" and len(f) > 6 and f[6] not in ("", "0"):
+            lat, lon = _nmea_deg(f[2], f[3], 2), _nmea_deg(f[4], f[5], 3)
+        else:
+            return None
+    except (ValueError, IndexError):
+        return None
+    return (round(lat, 5), round(lon, 5)) if _valid(lat, lon) else None
+
+
+def parse_object(info: bytes) -> dict | None:
+    """Objekti (;NIMI_____*111111z…) tai item ()NIMI!…) → {name, kind, alive, lat, lon, sym, comment, wx}."""
+    s = info.decode("latin-1")
+    if s[:1] == ";" and len(s) >= 18 and s[10] in "*_":
+        name, alive, body, kind = s[1:10].strip(), s[10] == "*", s[18:], "obj"
+    elif s[:1] == ")":
+        m = re.match(r"^\)([^!_]{3,9})([!_])", s)
+        if not m:
+            return None
+        name, alive, body, kind = m[1].strip(), m[2] == "!", s[m.end():], "item"
+    else:
+        return None
+    ps = _pos_sym(body)
+    if not ps or not name:
+        return None
+    lat, lon, sym, rest = ps
+    if not _valid(lat, lon):
+        return None
+    wx = parse_weather(rest) if sym[1:] == "_" else None
+    return {"name": name, "kind": kind, "alive": alive, "lat": round(lat, 5), "lon": round(lon, 5), "sym": sym,
+            "comment": rest.strip()[:120] if not wx else "", "wx": wx}
+
+
+def parse_third_party(info: bytes) -> dict | None:
+    """}LÄHETTÄJÄ>KOHDE,POLKU:SISÄLTÖ → {src, dest, path, info} (iGaten radioon välittämä paketti)."""
+    if info[:1] != b"}":
+        return None
+    try:
+        head, _, payload = info[1:].partition(b":")
+        h = head.decode("ascii")
+    except UnicodeDecodeError:
+        return None
+    m = re.match(r"^([A-Z0-9]{1,6}(?:-[0-9A-Z]{1,2})?)>([A-Z0-9-]{1,9})((?:,[A-Za-z0-9*-]{1,10})*)$", h)
+    if not m or not payload:
+        return None
+    return {"src": m[1], "dest": m[2], "path": [p for p in m[3].split(",") if p], "info": payload}
+
+
+def station_weather(dest: str, info: bytes) -> dict | None:
+    """Aseman oma sääpaketti: sijainniton (_MMDDhhmm…) tai sijainti, jossa sääsymboli."""
+    if not info:
+        return None
+    t = chr(info[0])
+    s = info.decode("latin-1")
+    if t == "_" and len(s) > 9:
+        return parse_weather(s[9:])
+    if t in "!=/@":
+        ps = _pos_sym(s[8:] if t in "/@" else s[1:])
+        if ps and ps[2][1:] == "_":
+            return parse_weather(ps[3])
     return None
 
 
@@ -247,7 +398,7 @@ def normalize_aprsrx(new: dict, old: dict) -> dict:
         if not re.match(r"^[A-Za-z0-9._:-]{1,253}$", h):
             raise ValueError(tr("Virheellinen palvelin: {x}", x=h))
         out["host"] = h
-    for k, lo, hi in (("port", 1, 65535), ("silence_min", 5, 7 * 24 * 60), ("min_heard", 1, 1000)):
+    for k, lo, hi in (("port", 1, 65535), ("silence_min", 5, 7 * 24 * 60), ("min_heard", 1, 1000), ("is_km", 0, 500)):
         if k in new:
             try:
                 v = int(new[k])
@@ -288,6 +439,10 @@ class AprsRx:
         self.db.execute("""CREATE TABLE IF NOT EXISTS packets (ts REAL, src TEXT, via TEXT, direct INTEGER,
                            path TEXT, lat REAL, lon REAL)""")
         self.db.execute("CREATE INDEX IF NOT EXISTS packets_ts ON packets(ts)")
+        # muut kartan kohteet (0.16.0b2): sääasemat, objektit/itemit, iGaten välittämät ja APRS-IS:n asemat
+        self.db.execute("""CREATE TABLE IF NOT EXISTS extra (kind TEXT, name TEXT, source TEXT, ts REAL, lat REAL,
+                           lon REAL, sym TEXT, reporter TEXT, via TEXT, direct INTEGER, data TEXT, alive INTEGER,
+                           PRIMARY KEY (kind, name, source))""")
         if "sym" not in {r[1] for r in self.db.execute("PRAGMA table_info(packets)")}:
             self.db.execute("ALTER TABLE packets ADD COLUMN sym TEXT")     # APRS-symboli (0.14.0b14 alkaen)
         self.db.commit()
@@ -421,6 +576,59 @@ class AprsRx:
             self.status.update(kw)
             self.mon.touch()
 
+    def _extra(self, kind, name, source, ts, lat=None, lon=None, sym=None, reporter="", via="", direct=False,
+               data=None, alive=True):
+        """Päivittää kohteen viimeisimmän tiedon (sijainti säilyy, jos uudessa paketissa ei ole sitä)."""
+        self.db.execute("""INSERT INTO extra (kind, name, source, ts, lat, lon, sym, reporter, via, direct, data, alive)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                           ON CONFLICT(kind, name, source) DO UPDATE SET ts=excluded.ts,
+                             lat=COALESCE(excluded.lat, lat), lon=COALESCE(excluded.lon, lon), sym=COALESCE(excluded.sym, sym),
+                             reporter=excluded.reporter, via=excluded.via, direct=excluded.direct,
+                             data=COALESCE(excluded.data, data), alive=excluded.alive""",
+                        (kind, name, source, ts, lat, lon, sym, reporter, via, 1 if direct else 0,
+                         json.dumps(data) if data is not None else None, 1 if alive else 0))
+        self.pending += 1
+
+    def _extras(self, src: str, dest: str, info: bytes, source: str, now: float, via="", direct=False, reporter=""):
+        """Objektit, sääasemat ja (iGaten / APRS-IS:n) asemat yhdestä APRS-sisällöstä."""
+        ob = parse_object(info)
+        if ob:
+            self._extra("obj", ob["name"], source, now, ob["lat"], ob["lon"], ob["sym"], reporter or src, via, direct,
+                        {"comment": ob["comment"], "type": ob["kind"]}, ob["alive"])
+            if ob["wx"]:
+                self._extra("wx", ob["name"], source, now, ob["lat"], ob["lon"], ob["sym"], reporter or src, via, direct, ob["wx"])
+            return
+        wx = station_weather(dest, info)
+        pos = parse_position(dest, info)
+        if wx:
+            self._extra("wx", src, source, now, pos[0] if pos else None, pos[1] if pos else None,
+                        parse_symbol(dest, info) if pos else None, reporter, via, direct, wx)
+        if source != "rf" and pos:
+            self._extra("sta", src, source, now, pos[0], pos[1], parse_symbol(dest, info), reporter, via, direct)
+
+    def is_filter(self) -> str:
+        """APRS-IS-aluesuodatin (r/lat/lon/km) kartan APRS-IS-tasolle, jos käytössä."""
+        k = int(self.cfg.get("is_km") or 0)
+        home = self._home()
+        return f"r/{home[0]:.3f}/{home[1]:.3f}/{k}" if k and home else ""
+
+    def handle_is_line(self, line: str):
+        """APRS-IS:n paketti (aluesuodattimen asemat kartalle; ei vaikuta RF-tilastoihin)."""
+        m = re.match(r"^([A-Z0-9]{1,6}(?:-[0-9A-Z]{1,2})?)>([A-Z0-9-]{1,9})([^:]*):(.+)$", line)
+        if not m:
+            return
+        src, dest, path, info = m[1], m[2], m[3], m[4].encode("latin-1", "replace")
+        if info[:1] == b"}":
+            tp = parse_third_party(info)
+            if not tp:
+                return
+            src, dest, info = tp["src"], tp["dest"], tp["info"]
+        gate = re.search(r",qA.,([A-Z0-9-]+)", path)
+        try:
+            self._extras(src, dest, info, "is", time.time(), reporter=gate[1] if gate else "")
+        except sqlite3.Error as e:
+            log.debug("APRS-IS-tallennus: %s", e)
+
     def handle_frame(self, frame: bytes, now: float | None = None):
         p = parse_ax25(frame)
         if not p:
@@ -441,6 +649,14 @@ class AprsRx:
             self.last_heard[p["src"]] = now
         self.heard_src[p["src"]] = now
         info = p["info"]
+        try:
+            tp = parse_third_party(info)
+            if tp:          # iGaten radioon välittämä: alkuperäinen asema ei kuulunut radiotiellä
+                self._extras(tp["src"], tp["dest"], tp["info"], "gate", now, via, direct, reporter=p["src"])
+            else:
+                self._extras(p["src"], p["dest"], info, "rf", now, via, direct)
+        except Exception:  # noqa: BLE001
+            log.exception("APRS-kohteen jäsennys")
         if info[:1] == b":" and len(info) >= 11 and info[10:11] == b":":    # APRS-viesti tai kuittaus
             hub = getattr(self.mon, "hub", None)
             if hub is not None:
@@ -472,6 +688,7 @@ class AprsRx:
             if time.time() - last_prune > 6 * 3600:
                 last_prune = time.time()
                 self.db.execute("DELETE FROM packets WHERE ts < ?", (time.time() - KEEP_DAYS * 86400,))
+                self.db.execute("DELETE FROM extra WHERE ts < ?", (time.time() - KEEP_DAYS * 86400,))
                 self.db.commit()
 
     # ---------------- hiljaisuushälytykset ----------------
@@ -665,6 +882,42 @@ class AprsRx:
                         "km": round(km(home[0], home[1], lat, lon), 1) if home else None})
         out.sort(key=lambda x: -x["last"])
         return {"stations": out[:2000]}
+
+    def extra(self, layer: str, period: str, home) -> dict:
+        """Kartan lisätasot: wx (sääasemat), obj (objektit ja itemit), gate (iGaten välittämät), is (APRS-IS)."""
+        since = self._since(period)
+        kind, sources = {"wx": ("wx", None), "obj": ("obj", ("rf", "gate")), "gate": ("sta", ("gate",)),
+                         "is": ("sta", ("is",))}.get(layer, (None, None))
+        if not kind:
+            return {"items": []}
+        db = self._reader()
+        try:
+            cond, args = "kind = ? AND ts > ?", [kind, since]
+            if sources:
+                cond += f" AND source IN ({','.join('?' * len(sources))})"
+                args += list(sources)
+            rows = db.execute(f"SELECT name, source, ts, lat, lon, sym, reporter, via, direct, data, alive FROM extra "
+                              f"WHERE {cond} ORDER BY ts DESC LIMIT 3000", args).fetchall()
+            pos = self.positions(db) if layer == "wx" else {}
+        finally:
+            db.close()
+        out, seen = [], set()
+        for name, source, ts, lat, lon, sym, rep_, via, direct, data, alive in rows:
+            if layer == "obj" and not alive:
+                seen.add(name)
+                continue
+            if name in seen:
+                continue
+            seen.add(name)
+            if lat is None and name in pos:
+                lat, lon = pos[name]
+            if lat is None:
+                continue
+            out.append({"name": name, "source": source, "time": ts, "lat": lat, "lon": lon, "sym": sym,
+                        "kind": symbol_kind(sym), "reporter": rep_ or "", "via": via or "", "direct": bool(direct),
+                        "data": json.loads(data) if data else None,
+                        "km": round(km(home[0], home[1], lat, lon), 1) if home else None})
+        return {"items": out}
 
     def _query(self, sql, args):
         db = self._reader()

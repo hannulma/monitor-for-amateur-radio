@@ -884,10 +884,9 @@ def test_radio_config_and_protocols():
     assert [x for i in range(0, len(agw), 7) for x in dec.feed(agw[i:i + 7])] == [fr, fr]
     # simuloitu radio tuottaa jäsentyviä sijaintipaketteja kodin ympärille
     sim = SimLink(new_radio("sim"), lambda f, ln: None, lambda: None, home=lambda: (61.0, 25.0))
-    for n in range(10):
-        p = parse_ax25(sim.frame(n))
-        lat, lon = parse_position(p["dest"], p["info"])
-        assert abs(lat - 61.0) < 1 and abs(lon - 25.0) < 2
+    pos = [parse_position(p["dest"], p["info"]) for p in (parse_ax25(sim.frame(n)) for n in range(20))]
+    assert sum(1 for x in pos if x) >= 14         # loput: objekti ja iGaten välittämä paketti
+    assert all(abs(lat - 61.0) < 1 and abs(lon - 25.0) < 2 for lat, lon in filter(None, pos))
 
 
 def test_multiple_radios_tcp(tmp_path):
@@ -954,3 +953,83 @@ def test_multiple_radios_tcp(tmp_path):
         s2.close()
 
     asyncio.run(scenario())
+
+
+def test_aprs_weather_objects_gate_is(tmp_path):
+    from types import SimpleNamespace
+    from bmmonitor.aprsrx import (DEFAULT_APRSRX, AprsRx, encode_ax25, normalize_aprsrx, parse_nmea, parse_object,
+                                  parse_weather, station_weather)
+    w = parse_weather("220/004g005t-05r001p002P003h00b10115")
+    assert w == {"wind_dir": 220, "wind": 1.8, "gust": 2.2, "temp": -20.6, "rain_1h": 0.3, "rain_24h": 0.5,
+                 "rain_mid": 0.8, "humidity": 100, "pressure": 1011.5}
+    assert parse_weather("...") is None and parse_weather("c...s...t...") is None
+    assert station_weather("APRS", b"_11251200c220s004g005t041h85b10115")["temp"] == 5.0
+    assert parse_object(b";REP-HKI  _111111z6012.34NR02456.78E&")["alive"] is False
+    assert parse_object(b")AID#2!4903.50N/07201.75WA")["kind"] == "item"
+    assert parse_nmea(b"$GPRMC,123519,V,6012.340,N,02456.780,E,0,0,230394,,*00") is None    # ei paikannusta
+
+    cfg = normalize_aprsrx({"enabled": True, "is_km": 50}, DEFAULT_APRSRX)
+    mon = SimpleNamespace(cfg={"aprsrx": cfg, "services": {"location": {"lat": 60.2, "lon": 24.9}}},
+                          touch=lambda: None, hub=None, watcher=SimpleNamespace(seq=0, alerts=[]))
+    rx = AprsRx(mon, tmp_path / "rx.sqlite")
+    assert rx.is_filter() == "r/60.200/24.900/50"
+    # sääasema radiolla (sijainti + sää), objekti, poistettu objekti, iGaten välittämä asema
+    rx.handle_frame(encode_ax25("OH2WX", "APRS", ["OH2RCH-1*"], b"!6012.34N/02456.78E_220/004g005t041h85b10115"))
+    rx.handle_frame(encode_ax25("OH2ABC", "APRS", [], b";REP-HKI  *111111z6012.34NR02456.78E&145.725 T103"))
+    rx.handle_frame(encode_ax25("OH2ABC", "APRS", [], b";OLD      _111111z6012.34NR02456.78E&"))
+    rx.handle_frame(encode_ax25("OH2IGT-10", "APRS", ["WIDE1-1"], b"}OH9XX-9>APRS,TCPIP,OH2IGT-10*:!6112.34N/02556.78E>moi"))
+    rx.handle_is_line("OH7ZZ>APRS,TCPIP*,qAC,T2FINLAND:!6212.34N/02656.78E-is-asema")
+    rx.handle_is_line("# comment")
+    rx._commit()
+    wx = rx.extra("wx", "24h", (60.2, 24.9))["items"]
+    assert len(wx) == 1 and wx[0]["name"] == "OH2WX" and wx[0]["data"]["temp"] == 5.0 and not wx[0]["direct"]
+    objs = rx.extra("obj", "24h", None)["items"]
+    assert [o["name"] for o in objs] == ["REP-HKI"] and objs[0]["data"]["comment"].startswith("145.725")
+    gate = rx.extra("gate", "24h", None)["items"]
+    assert [(g["name"], g["reporter"]) for g in gate] == [("OH9XX-9", "OH2IGT-10")] and abs(gate[0]["lat"] - 61.2057) < 0.01
+    isl = rx.extra("is", "24h", None)["items"]
+    assert [(i["name"], i["reporter"]) for i in isl] == [("OH7ZZ", "T2FINLAND")]
+    # iGaten välittämä asema ei näy radiolla kuultuna asemana eikä RF-tilastoissa
+    sta = {s["call"] for s in rx.stations("24h", "all", None, None)["stations"]}
+    assert "OH9XX-9" not in sta and "OH7ZZ" not in sta and "OH2WX" in sta
+
+
+def test_serial_tnc_kiss_init(monkeypatch):
+    """KPC-3+ / Kenwood: TNC KISS-tilaan avattaessa ja pois suljettaessa (valesarjaportilla)."""
+    import sys
+    import types
+    from bmmonitor import radios
+    written, got = [], []
+
+    class FakeSer:
+        def __init__(self, *a, **k):
+            self.n = 0
+
+        def write(self, b):
+            written.append(b)
+
+        def read(self, n):
+            self.n += 1
+            if self.n == 2:
+                return radios.kiss_frame(b"X" * 20)
+            if self.n > 3:
+                raise OSError("irti")
+            return b""
+
+        def reset_input_buffer(self):
+            pass
+
+        def close(self):
+            written.append("closed")
+
+    fake = types.ModuleType("serial")
+    fake.Serial = FakeSer
+    monkeypatch.setitem(sys.modules, "serial", fake)
+    monkeypatch.setattr(radios, "INIT_DELAY", 0)
+    for kind, first in (("kpc3", b"INTFACE KISS\r"), ("kenwood", b"TC 1\r")):
+        written.clear()
+        got.clear()
+        ln = radios.KissSerialLink(radios.new_radio(kind, serial="COM1"), lambda f, l: got.append(f), lambda: None)
+        with pytest.raises(OSError):
+            asyncio.run(ln.session())
+        assert first in written and written[-2:] == [radios.KISS_EXIT, "closed"] and got == [b"X" * 20]

@@ -19,7 +19,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     --rowline: #1f2933; --overlay: rgba(15,20,25,.85); --shadow: rgba(0,0,0,.45); --bar: #3987e5;
     --map: #0b1a26; --land: #1f2d3a; --landline: #33465a; --mapgrid: rgba(255,255,255,.06); --night: rgba(0,0,0,.38);
     --covmap: #0c1116; --covland: #1a2632; --axis: #3a4754;
-    --sta-fixed: #e6edf3; --sta-mobile: #c792ff; --sta-igate: #4fe0d0; --sta-wx: #9fd36b;
+    --sta-fixed: #e6edf3; --sta-mobile: #c792ff; --sta-igate: #4fe0d0; --sta-wx: #9fd36b; --sta-obj: #ffb454; --sta-is: #8aa4bd;
     color-scheme: dark;
   }
   html[data-theme="light"] {
@@ -29,7 +29,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     --rowline: #e3e8ed; --overlay: rgba(255,255,255,.9); --shadow: rgba(20,30,40,.18); --bar: #2a73c9;
     --map: #cfe3f2; --land: #eef1ea; --landline: #b9c4b3; --mapgrid: rgba(0,0,0,.07); --night: rgba(10,20,40,.18);
     --covmap: #dfe9f1; --covland: #eef1ea; --axis: #b8c2cc;
-    --sta-fixed: #2b3640; --sta-mobile: #7b3fc4; --sta-igate: #0d8a7d; --sta-wx: #4c7a12;
+    --sta-fixed: #2b3640; --sta-mobile: #7b3fc4; --sta-igate: #0d8a7d; --sta-wx: #4c7a12; --sta-obj: #a65d00; --sta-is: #5a6f84;
     color-scheme: light;
   }
   html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -142,6 +142,10 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .tabpick label { display: inline-flex; align-items: center; gap: 5px; margin: 0; font-size: 13px; }
   .tabpick label.locked { color: var(--muted); }
   .tabpick .tpsep { width: 1px; height: 18px; background: var(--line); }
+  nav.tabs .livetab { display: inline-flex; margin-left: 5px; vertical-align: -2px; }
+  nav.tabs .livetab svg { width: 13px; height: 13px; fill: var(--live); animation: livepulse 1.6s ease-in-out infinite; }
+  @keyframes livepulse { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { nav.tabs .livetab svg { animation: none; } }
   nav.tabs .tabsep { flex: none; width: 1px; align-self: center; height: 18px; background: var(--line); margin: 0 6px; }
   nav.tabs button.active { color: var(--text); border-bottom-color: var(--accent); }
   nav.tabs .badge { background: var(--bad); color: #fff; border-radius: 9px; padding: 0 6px; font-size: 11px; margin-left: 5px; }
@@ -383,13 +387,13 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   <span id="aprsBadge" class="muted"></span>
 </header>
 <nav class="tabs" id="tabs">
-  <button data-tab="seuranta" class="active">BrandMeister</button>
+  <button data-tab="seuranta" class="active">BrandMeister<span class="livetab" id="bmLive" role="img" style="display:none"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a2 2 0 0 0-1 3.7V22h2v-7.3A2 2 0 0 0 12 11zm-4.2-1.8-1.4-1.4a8 8 0 0 0 0 11.3l1.4-1.4a6 6 0 0 1 0-8.5zm8.4 0a6 6 0 0 1 0 8.5l1.4 1.4a8 8 0 0 0 0-11.3zM4.9 6.3 3.5 4.9a12 12 0 0 0 0 17l1.4-1.4a10 10 0 0 1 0-14.2zm14.2 0a10 10 0 0 1 0 14.2l1.4 1.4a12 12 0 0 0 0-17z"/></svg></span></button>
   <button data-tab="tilastot">Tilastot</button>
   <button data-tab="kaverit">Kaverit<span class="badge" id="alertBadge" style="display:none"></span></button>
   <button data-tab="laitteet">Laitteet</button>
   <button data-tab="checkin">Check-in</button>
   <span class="tabsep" aria-hidden="true"></span>
-  <button data-tab="aprs">APRS</button>
+  <button data-tab="aprs">APRS<span class="badge" id="aprsMsgBadge" style="display:none"></span></button>
   <button data-tab="viestit">Syötteet</button>
   <span class="tabsep" aria-hidden="true"></span>
   <button data-tab="lokit">Lokit</button>
@@ -398,7 +402,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   <button data-tab="satelliitit">Satelliitit</button>
   <span class="tabsep" aria-hidden="true"></span>
   <button data-tab="asetukset">Ohjelma</button>
-  <a href="#" class="tabhint" id="tabHiddenHint" style="display:none">Valitse näkyvät välilehdet: Ohjelma → Ulkoasu</a>
+  <a href="#" class="tabhint" id="tabHiddenHint" style="display:none" title="Ohjelma → Ulkoasu">Valitse näkyvät välilehdet</a>
   <span class="foldall"><button id="foldOpen" title="Avaa kaikki tämän välilehden osiot">Avaa kaikki</button><button id="foldClose" title="Pienennä kaikki tämän välilehden osiot otsikoiksi">Pienennä kaikki</button></span>
 </nav>
 
@@ -576,6 +580,13 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
           <div class="fld" style="flex:1;min-width:240px"><label for="rxWatch">Seuraa lisäksi (esim. iGatet)</label><input type="text" id="rxWatch" placeholder="OH2RCH-10 OH2ABC-1" style="width:100%">
             <div class="hint">Hälytys tulee vain, kun oma vastaanotto toimii: muuta liikennettä on kuultu hiljaisuuden aikana.</div></div>
         </div>
+        <h3>APRS-IS-asemat kartalle</h3>
+        <div class="frow">
+          <div class="fld"><label for="rxIsKm">Säde kotisijainnista (km)</label><input type="number" id="rxIsKm" min="0" max="500" style="width:110px">
+            <div class="hint">0 = pois</div></div>
+          <div class="fld" style="flex:1;min-width:260px"><div class="hint" style="margin-top:22px">APRS-IS:n kautta saadut asemat näkyvät APRS-kartan omalla tasollaan (APRS-IS-asemat).
+            Ne eivät vaikuta RF-kuuluvuuteen, digitilastoihin eivätkä hälytyksiin. Vaatii APRS-IS-yhteyden ja kotisijainnin (Palvelut-välilehti).</div></div>
+        </div>
         <h3>Karttapohja</h3>
         <div class="frow">
           <div class="fld" style="flex:2;min-width:280px"><label for="rxTiles">Karttatiilten osoite</label><input type="text" id="rxTiles" style="width:100%">
@@ -634,7 +645,9 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <div class="frow">
           <div class="fld checks">
             <label><input type="checkbox" id="mNoAck"> Älä odota kuittausta</label>
-            <div class="hint">Viesti lähetetään kerran eikä tule koskaan kahdesti, mutta perillemenoa ei voi seurata.</div></div>
+            <div class="hint">Viesti lähetetään kerran eikä tule koskaan kahdesti, mutta perillemenoa ei voi seurata.</div>
+            <label style="margin-top:8px"><input type="checkbox" id="mNotifyMsgs"> Työpöytäilmoitus uudesta APRS-viestistä</label>
+            <div class="hint">Ilmoituksessa näkyvät lähettäjä ja viestin alku; klikkaus avaa APRS-välilehden. Uusien viestien määrä näkyy aina APRS-välilehden nimen perässä.</div></div>
         </div>
         <div class="frow svcsave"><button class="primary" id="btnAprsSave">Tallenna</button><span class="err" id="aprsErr"></span></div>
         <h3>Testiviesti</h3>
@@ -1590,7 +1603,41 @@ function who(c) {
   return `<span class="call clk"${q(c.call, c.id)}>${esc(call)}</span>` + (c.name ? ` <span class="muted">${esc(c.name)}</span>` : "");
 }
 
+// BrandMeister-välilehden antennikuvake: lähetys käynnissä jossakin seuratussa puheryhmässä
+function bmLiveTab() {
+  const act = (S.talkgroups || []).filter(r => r.active).map(r => "TG " + r.tg);
+  const el = $("bmLive"), t = act.length ? T("Lähetys käynnissä: {tg}", {tg: act.join(", ")}) : "";
+  el.style.display = act.length ? "" : "none";
+  if (el.title !== t) { el.title = t; el.setAttribute("aria-label", t); }
+}
+// APRS-välilehden uusien viestien merkki ja työpöytäilmoitus
+let aprsSeen = 0, aprsNotified = null;
+try { aprsSeen = +localStorage.getItem("bmm.aprsSeen") || 0; } catch (e) { aprsSeen = 0; }
+function aprsIncoming() {
+  const bases = new Set([S.config.messaging.login, ...(S.config.messaging.aprs_watch || [])].filter(Boolean).map(c => c.toUpperCase().split("-")[0]));
+  return ((S.messaging && S.messaging.aprs_msgs) || []).filter(m => m.dir === "in" && !m.cmd
+    && bases.has((m.to || "").split("-")[0]) && !bases.has((m.from || "").split("-")[0]));
+}
+function aprsMsgBadge() {
+  const msgs = aprsIncoming(), newest = msgs.reduce((t, m) => Math.max(t, m.time), 0);
+  if (TAB === "aprs" && newest > aprsSeen) { aprsSeen = newest; try { localStorage.setItem("bmm.aprsSeen", String(aprsSeen)); } catch (e) { /* */ } }
+  const n = msgs.filter(m => m.time > aprsSeen).length;
+  $("aprsMsgBadge").style.display = n && TAB !== "aprs" ? "" : "none"; $("aprsMsgBadge").textContent = n;
+  if (aprsNotified === null) { aprsNotified = newest; return; }          // käynnistyksessä ei ilmoiteta vanhoista
+  const fresh = msgs.filter(m => m.time > aprsNotified).sort((a, b) => a.time - b.time);
+  if (!fresh.length) return;
+  aprsNotified = newest;
+  if (!S.config.messaging.notify_msgs) return;
+  fresh.slice(-3).forEach(m => {
+    const title = T("APRS-viesti: {c}", {c: m.from}), body = (m.text || "").slice(0, 120);
+    if (desk()) desk().notify(title, body);
+    else if ("Notification" in window && Notification.permission === "granted") {
+      try { const n = new Notification(title, {body, tag: "aprs-" + m.time}); n.onclick = () => { window.focus(); showTab("aprs"); }; } catch (e) { /* */ }
+    }
+  });
+}
 function render() {
+  bmLiveTab(); aprsMsgBadge();
   if (!S) return;
   const st = S.status;
   $("dot").className = "dot" + (st.connected ? " ok" : "");
@@ -1702,7 +1749,7 @@ function fillMsg() {
   const m = S.config.messaging;
   $("mEnabled").checked = !!m.enabled; $("mEnabledTxt").textContent = T(m.enabled ? "Päällä" : "Pois"); $("mLogin").value = m.login || ""; $("mPass").value = m.passcode || "";
   $("mServer").value = m.server || ""; $("mRecip").value = (m.recipients || []).join(" ");
-  $("mParts").value = m.max_parts; $("mInterval").value = Math.round(m.feed_interval / 60); $("mAscii").checked = !!m.ascii; $("mNoAck").checked = !!m.no_ack; $("mAprsWatch").value = (m.aprs_watch || []).join(" ");
+  $("mParts").value = m.max_parts; $("mInterval").value = Math.round(m.feed_interval / 60); $("mAscii").checked = !!m.ascii; $("mNoAck").checked = !!m.no_ack; $("mNotifyMsgs").checked = !!m.notify_msgs; $("mAprsWatch").value = (m.aprs_watch || []).join(" ");
   $("feedRows").innerHTML = ""; (m.feeds || []).forEach(f => $("feedRows").append(feedRow(f)));
   $("mCmd").checked = m.commands_enabled !== false; $("mCmdAll").checked = !!m.commands_all;
   $("mCmdAllow").value = (m.commands_allow || []).join(" ");
@@ -1711,7 +1758,7 @@ function fillMsg() {
 function collectMsg() {
   return {enabled: $("mEnabled").checked, login: $("mLogin").value, passcode: $("mPass").value, server: $("mServer").value,
     recipients: $("mRecip").value, max_parts: $("mParts").value, feed_interval: Number($("mInterval").value || 10) * 60,
-    ascii: $("mAscii").checked, no_ack: $("mNoAck").checked, aprs_watch: $("mAprsWatch").value,
+    ascii: $("mAscii").checked, no_ack: $("mNoAck").checked, notify_msgs: $("mNotifyMsgs").checked, aprs_watch: $("mAprsWatch").value,
     feeds: [...document.querySelectorAll("#feedRows .feedrow")].map(d => ({enabled: d.querySelector(".fen").checked,
       name: d.querySelector(".fname").value, url: d.querySelector(".furl").value, cmd: d.querySelector(".fcmd").value})),
     commands_enabled: $("mCmd").checked, commands_all: $("mCmdAll").checked, commands_allow: $("mCmdAllow").value};
@@ -2313,7 +2360,7 @@ function showTab(tab) {
   if (S && hiddenTabs().has(tab) && tab === TAB && tab !== tabTemp) tab = firstVisibleTab();
   tabTemp = S && hiddenTabs().has(tab) ? tab : null;
   TAB = tab;
-  if (S) applyHiddenTabs();
+  if (S) { applyHiddenTabs(); aprsMsgBadge(); }
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll("main > section, main > .svcgrid, main > .cigrid").forEach(s => { s.style.display = s.dataset.tab === tab ? "" : "none"; });
   if (!S) return;
@@ -3472,18 +3519,22 @@ $("netEnabled").onchange = async () => { $("netEnabledTxt").textContent = T($("n
 // ---------------- APRS-kuuluvuus (radiot) ----------------
 let covMap = null, covTiles = null, covCells = null, covMarks = null, covVia = null, covRes = 0, covTimer = null, covSum = null;
 let covStations = null, covDigis = null, covStaData = null, covLabels = false;
+let covWx = null, covObj = null, covIs = null, covGateData = [], covWxData = [], covObjData = [], covIsData = [];
 const COV_LAYERS_KEY = "bmm.covLayers";
 // asemien merkit: muoto + väri (ei pelkkä väri): kiinteä ●, liikkuva ▲, iGate ◆, sää ■
 const STA_KIND = {fixed: ["Kiinteä", "--sta-fixed", "M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1z"],
   mobile: ["Liikkuva", "--sta-mobile", "M6 0.5L11.5 10.5H0.5z"], igate: ["iGate", "--sta-igate", "M6 0L12 6L6 12L0 6z"],
-  wx: ["Sää", "--sta-wx", "M1.5 1.5h9v9h-9z"], digi: ["Digi", "--warn", "M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1z"]};
-function staIcon(kind, sel) {
+  wx: ["Sää", "--sta-wx", "M1.5 1.5h9v9h-9z"], digi: ["Digi", "--warn", "M6 1a5 5 0 1 0 0 10A5 5 0 0 0 6 1z"],
+  obj: ["Objekti", "--sta-obj", "M6 0.8l1.6 3.4 3.7.4-2.8 2.5.8 3.7L6 8.9 2.7 10.8l.8-3.7L.7 4.6l3.7-.4z"],
+  is: ["APRS-IS", "--sta-is", "M6 2.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z"]};
+function staIcon(kind, sel, hollow) {
   const k = STA_KIND[kind] || STA_KIND.fixed;
+  const paint = hollow ? `fill="none" stroke="${col(k[1])}" stroke-width="1.8"` : `fill="${col(k[1])}" stroke="${col("--bg")}" stroke-width="${sel ? 2.5 : 1.5}"`;
   return L.divIcon({className: "stamark", iconSize: [12, 12], iconAnchor: [6, 6],
-    html: `<svg width="12" height="12" viewBox="0 0 12 12"><path d="${k[2]}" fill="${col(k[1])}" stroke="${col("--bg")}" stroke-width="${sel ? 2.5 : 1.5}"/></svg>`});
+    html: `<svg width="12" height="12" viewBox="0 0 12 12"><path d="${k[2]}" ${paint}/></svg>`});
 }
 function covLayersSaved() { try { return JSON.parse(localStorage.getItem(COV_LAYERS_KEY) || "null") || {}; } catch (e) { return {}; } }
-function covLayerOn(name) { const v = covLayersSaved()[name]; return v !== false; }
+function covLayerOn(name) { const v = covLayersSaved()[name]; return name === "is" ? v === true : v !== false; }
 const COV_DARK = ["#16405a", "#1f5f86", "#2c82b6", "#4fb3ff", "#b3e0ff"];    // vähän → paljon (yksi sävy, tumma pohja)
 const COV_LIGHT = ["#c6e0f4", "#8fc2ea", "#4f9cd9", "#1f6fb5", "#0b3f75"];   // vaalea pohja: vähän = vaalea
 const covColors = () => isLight() ? COV_LIGHT : COV_DARK;
@@ -3501,17 +3552,20 @@ async function covInit() {
   } catch (e) { /* ei pohjakarttaa */ }
   covSetTiles();
   covCells = L.layerGroup(); covStations = L.layerGroup(); covDigis = L.layerGroup(); covMarks = L.layerGroup().addTo(covMap);
-  const layers = {cells: covCells, stations: covStations, digis: covDigis};
+  covWx = L.layerGroup(); covObj = L.layerGroup(); covIs = L.layerGroup();
+  const layers = {cells: covCells, stations: covStations, digis: covDigis, wx: covWx, obj: covObj, is: covIs};
   Object.entries(layers).forEach(([k, l]) => { if (covLayerOn(k)) l.addTo(covMap); });
-  L.control.layers(null, {"RF-kuuluvuus": covCells, "APRS-asemat": covStations, "Digipiitterit": covDigis},
+  L.control.layers(null, {"RF-kuuluvuus": covCells, "APRS-asemat": covStations, "Digipiitterit": covDigis,
+    "Sääasemat": covWx, "Objektit": covObj, "APRS-IS-asemat": covIs},
     {collapsed: false, position: "topright"}).addTo(covMap);
   const remember = () => { const o = {}; Object.entries(layers).forEach(([k, l]) => { o[k] = covMap.hasLayer(l); });
     try { localStorage.setItem(COV_LAYERS_KEY, JSON.stringify(o)); } catch (e) { /* ei tallennusta */ } };
-  covMap.on("overlayadd", e => { remember(); if (e.layer === covStations) covLoadStations(); if (e.layer === covCells) covLoadCells(); });
+  covMap.on("overlayadd", e => { remember(); if (e.layer === covStations || e.layer === covWx) covLoadStations();
+    if (e.layer === covCells) covLoadCells(); if ([covWx, covObj, covIs].includes(e.layer)) covLoadExtra(); });
   covMap.on("overlayremove", remember);
   covMap.on("zoomend", () => {
     if (covResFor(covMap.getZoom()) !== covRes) covLoadCells();
-    if ((covMap.getZoom() >= 10) !== covLabels) renderStations();
+    if ((covMap.getZoom() >= 10) !== covLabels) { renderStations(); renderExtra(); }
   });
 }
 function covSetTiles() {
@@ -3525,12 +3579,76 @@ function covShow() {
   covInit().then(() => { setTimeout(() => covMap && covMap.invalidateSize(), 50); covRefresh(); });
   clearInterval(covTimer); covTimer = setInterval(() => { if (TAB === "aprs") covRefresh(); }, 60000);
 }
-async function covRefresh() { await Promise.all([covLoadSummary(), covLoadCells(), covLoadStations()]); }
+async function covRefresh() { await Promise.all([covLoadSummary(), covLoadCells(), covLoadStations(), covLoadExtra()]); }
+async function covExtra(layer) {
+  try { return (await (await fetchT(`/api/aprsrx/extra?layer=${layer}&period=${$("covPeriod").value}`, 30000)).json()).items || []; }
+  catch (e) { return null; }
+}
 async function covLoadStations() {
-  if (!covMap || !covMap.hasLayer(covStations)) return;
+  if (!covMap || !(covMap.hasLayer(covStations) || covMap.hasLayer(covWx))) return;
   const q = new URLSearchParams({period: $("covPeriod").value, mode: $("covMode").value, via: covVia || ""});
   let j; try { j = await (await fetchT("/api/aprsrx/stations?" + q, 30000)).json(); } catch (e) { return; }
-  covStaData = j.stations || []; renderStations();
+  covStaData = j.stations || [];
+  // iGaten radioon välittämät asemat vain, kun suodattimena on "Kaikki paketit" eikä digiä ole valittu
+  covGateData = $("covMode").value === "all" && !covVia ? (await covExtra("gate")) || [] : [];
+  renderStations(); renderExtra();
+}
+async function covLoadExtra() {
+  if (!covMap) return;
+  const [wx, obj, is] = await Promise.all([covMap.hasLayer(covWx) ? covExtra("wx") : [], covMap.hasLayer(covObj) ? covExtra("obj") : [],
+    covMap.hasLayer(covIs) ? covExtra("is") : []]);
+  covWxData = wx || []; covObjData = obj || []; covIsData = is || [];
+  renderExtra();
+}
+// säätiedot asetusten yksiköissä
+function wxText(d, short) {
+  if (!d) return "";
+  const imp = IMPERIAL(), r = [];
+  const temp = d.temp != null ? (imp ? Math.round(d.temp * 9 / 5 + 32) + " °F" : dec(d.temp.toFixed(1)) + " °C") : null;
+  if (short) return temp || (d.wind != null ? (imp ? Math.round(d.wind / 0.44704) + " mph" : dec(d.wind.toFixed(1)) + " m/s") : "");
+  const sp = v => imp ? Math.round(v / 0.44704) + " mph" : dec(v.toFixed(1)) + " m/s";
+  const mm = v => imp ? dec((v / 25.4).toFixed(2)) + " in" : dec(v.toFixed(1)) + " mm";
+  if (temp) r.push([T("Lämpötila"), temp]);
+  if (d.wind != null) r.push([T("Tuuli"), sp(d.wind) + (d.wind_dir != null ? ` (${d.wind_dir}°)` : "") + (d.gust != null ? ", " + T("puuskat {g}", {g: sp(d.gust)}) : "")]);
+  if (d.humidity != null) r.push([T("Kosteus"), d.humidity + " %"]);
+  if (d.pressure != null) r.push([T("Ilmanpaine"), imp ? dec((d.pressure * 0.02953).toFixed(2)) + " inHg" : dec(d.pressure.toFixed(1)) + " hPa"]);
+  if (d.rain_1h != null) r.push([T("Sade 1 h"), mm(d.rain_1h)]);
+  if (d.rain_24h != null) r.push([T("Sade 24 h"), mm(d.rain_24h)]);
+  if (d.rain_mid != null) r.push([T("Sade keskiyöstä"), mm(d.rain_mid)]);
+  return r.map(([k, v]) => `${esc(k)}: ${esc(v)}`).join("<br>");
+}
+function extraHow(it) {
+  if (it.source === "is") return T("APRS-IS") + (it.reporter ? " · " + T("iGate {r}", {r: it.reporter}) : "");
+  if (it.source === "gate") return T("iGaten {r} kautta (APRS-IS)", {r: it.reporter});
+  return it.direct ? T("suoraan") : T("digin {d} kautta", {d: it.via});
+}
+function renderExtra() {
+  if (!covWx) return;
+  covWx.clearLayers(); covObj.clearLayers(); covIs.clearLayers();
+  // sääasemat: säätiedot + radiolla kuullut sääsymbolin asemat, joilta ei ole säätietoja
+  const wxNames = new Set(covWxData.map(w => w.name));
+  const wxList = covWxData.concat((covStaData || []).filter(st => st.kind === "wx" && !wxNames.has(st.call))
+    .map(st => ({name: st.call, lat: st.lat, lon: st.lon, time: st.last, source: "rf", direct: st.via_direct, via: st.via, data: null, km: st.km})));
+  wxList.forEach(w => {
+    const t = wxText(w.data, true);
+    L.marker([w.lat, w.lon], {icon: staIcon("wx"), keyboard: false})
+      .bindTooltip(covLabels ? `${w.name}${t ? " · " + t : ""}` : t || w.name, {permanent: covLabels || !!t, direction: "right", offset: [6, 0], className: "covlbl"})
+      .bindPopup(`<b>${esc(w.name)}</b> <span class="muted">${esc(T("Sääasema"))}</span><br>${wxText(w.data) || esc(T("Ei säätietoja"))}<br>`
+        + `<span class="muted">${esc(T("Havainto {a}", {a: ago(w.time)}))} · ${esc(extraHow(w))}${w.km != null ? " · " + esc(D(w.km)) : ""}</span>`).addTo(covWx);
+  });
+  covObjData.forEach(o => {
+    L.marker([o.lat, o.lon], {icon: staIcon("obj"), keyboard: false})
+      .bindTooltip(o.name, {permanent: covLabels, direction: "right", offset: [6, 0], className: "covlbl"})
+      .bindPopup(`<b>${esc(o.name)}</b> <span class="muted">${esc(T(o.data && o.data.type === "item" ? "Item" : "Objekti"))}${o.sym ? " · " + esc(o.sym) : ""}</span><br>`
+        + (o.data && o.data.comment ? esc(o.data.comment) + "<br>" : "")
+        + `${esc(T("Ilmoittaja"))}: ${esc(o.reporter)}<br><span class="muted">${esc(T("Päivitetty {a}", {a: ago(o.time)}))} · ${esc(extraHow(o))}</span>`).addTo(covObj);
+  });
+  covIsData.forEach(st => {
+    L.marker([st.lat, st.lon], {icon: staIcon("is"), keyboard: false})
+      .bindTooltip(st.name, {permanent: covLabels, direction: "right", offset: [6, 0], className: "covlbl"})
+      .bindPopup(`<b>${esc(st.name)}</b> <span class="muted">APRS-IS${st.sym ? " · " + esc(st.sym) : ""}</span><br>`
+        + `<span class="muted">${esc(T("Sijainti ilmoitettu {a}", {a: ago(st.time)}))} · ${esc(extraHow(st))}${st.km != null ? " · " + esc(D(st.km)) : ""}</span>`).addTo(covIs);
+  });
 }
 function staPopup(st) {
   const k = STA_KIND[st.kind] || STA_KIND.fixed;
@@ -3547,14 +3665,25 @@ function renderStations() {
   covStations.clearLayers();
   covLabels = covMap.getZoom() >= 10;
   const digiCalls = new Set(((covSum && covSum.digis) || []).filter(d => d.lat != null).map(d => d.call));
-  (covStaData || []).filter(st => !digiCalls.has(st.call)).forEach(st => {
+  const shown = (covStaData || []).filter(st => !digiCalls.has(st.call) && st.kind !== "wx");
+  shown.forEach(st => {
     L.marker([st.lat, st.lon], {icon: staIcon(st.kind), keyboard: false})
       .bindTooltip(st.call, {permanent: covLabels, direction: "right", offset: [6, 0], className: "covlbl"})
       .bindPopup(staPopup(st)).addTo(covStations);
   });
-  $("covStaLegend").innerHTML = `<span class="stalegend">` + ["fixed", "mobile", "igate", "wx"].map(k =>
+  const rf = new Set(shown.map(st => st.call));
+  const gate = covGateData.filter(g => !rf.has(g.name) && g.kind !== "wx");
+  gate.forEach(g => {      // iGaten radioon välittämä: ontto merkki
+    L.marker([g.lat, g.lon], {icon: staIcon(g.kind, false, true), keyboard: false})
+      .bindTooltip(g.name, {permanent: covLabels, direction: "right", offset: [6, 0], className: "covlbl"})
+      .bindPopup(`<b>${esc(g.name)}</b> <span class="muted">${esc(T((STA_KIND[g.kind] || STA_KIND.fixed)[0]))}${g.sym ? " · " + esc(g.sym) : ""}</span><br>`
+        + `${esc(extraHow(g))}<br>${g.km != null ? esc(T("Etäisyys")) + ": " + esc(D(g.km)) + "<br>" : ""}`
+        + `<span class="muted">${esc(T("Sijainti ilmoitettu {a}", {a: ago(g.time)}))} · ${esc(T("ei mukana RF-kuuluvuudessa"))}</span>`).addTo(covStations);
+  });
+  $("covStaLegend").innerHTML = `<span class="stalegend">` + ["fixed", "mobile", "igate", "wx", "obj", ...(covMap && covMap.hasLayer(covIs) ? ["is"] : [])].map(k =>
     `<span><svg width="10" height="10" viewBox="0 0 12 12"><path d="${STA_KIND[k][2]}" fill="${col(STA_KIND[k][1])}"/></svg>${esc(T(STA_KIND[k][0]))}</span>`).join("")
-    + `</span><span class="muted">${esc(T("{n} asemaa kartalla", {n: (covStaData || []).length}))}</span>`;
+    + `<span><svg width="10" height="10" viewBox="0 0 12 12"><path d="${STA_KIND.fixed[2]}" fill="none" stroke="${col("--sta-fixed")}" stroke-width="1.8"/></svg>${esc(T("iGaten kautta"))}</span>`
+    + `</span><span class="muted">${esc(T("{n} asemaa kartalla", {n: shown.length + gate.length}))}</span>`;
 }
 async function covLoadSummary() {
   let j; try { j = await (await fetchT(`/api/aprsrx/summary?period=${$("covPeriod").value}`, 30000)).json(); } catch (e) { return; }
@@ -3623,6 +3752,7 @@ $("covMode").onchange = () => { covLoadCells(); covLoadStations(); };
 $("digiBody").addEventListener("click", e => { const r = e.target.closest("tr[data-via]"); if (r) covPick(r.dataset.via); });
 // Radiolista (KISS TCP, KISS sarjaportti, AGWPE, simuloitu). Luonnos säilyy, kunnes tallennetaan.
 const RADIO_TYPES = [["kiss_tcp", "KISS TCP (Graywolf, Direwolf)"], ["kiss_serial", "KISS TNC sarjaportissa (USB, Bluetooth)"],
+  ["kenwood", "Kenwood TM-D710 / TH-D72 (kokeellinen)"], ["kpc3", "Kantronics KPC-3+ (kokeellinen)"],
   ["agwpe", "AGWPE (Direwolf, soundmodem)"], ["sim", "Simuloitu radio (testaukseen)"]];
 const RADIO_PORTS = {kiss_tcp: 8001, agwpe: 8000};
 const BAUDS = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200];
@@ -3643,7 +3773,7 @@ function renderRadios() {
     if (r.type === "kiss_tcp" || r.type === "agwpe")
       conn = `<div class="fld"><label>${esc(T("Palvelin"))}</label><input type="text" data-k="host" value="${esc(r.host || "127.0.0.1")}" style="width:150px"></div>
         <div class="fld"><label>${esc(T("Portti"))}</label><input type="number" data-k="port" min="1" max="65535" value="${esc(r.port || RADIO_PORTS[r.type])}" style="width:90px"></div>`;
-    else if (r.type === "kiss_serial")
+    else if (["kiss_serial", "kenwood", "kpc3"].includes(r.type))
       conn = `<div class="fld"><label>${esc(T("Sarjaportti"))}</label><input type="text" data-k="serial" list="serialList" value="${esc(r.serial || "")}" placeholder="COM5 / /dev/tty.usbmodem…" style="width:200px"></div>
         <div class="fld"><label>${esc(T("Nopeus"))}</label><select data-k="baud">${BAUDS.map(b => `<option${b === (+r.baud || 9600) ? " selected" : ""}>${b}</option>`).join("")}</select></div>
         <div class="fld" style="align-self:end"><button data-act="ports" title="${esc(T("Päivitä porttilista"))}">↻</button></div>`;
@@ -3662,7 +3792,7 @@ function renderRadios() {
   }).join("") || `<div class="empty">${esc(T("Ei radioita. Lisää radio alta."))}</div>`;
   $("radioList").innerHTML = h;
   radioStates();
-  if (radioDraft.some(r => r.type === "kiss_serial") && serialPorts === null) loadSerialPorts();
+  if (radioDraft.some(r => ["kiss_serial", "kenwood", "kpc3"].includes(r.type)) && serialPorts === null) loadSerialPorts();
 }
 async function loadSerialPorts() {
   serialPorts = [];
@@ -3711,12 +3841,12 @@ function fillRx() {
   $("rxEnabled").checked = !!c.enabled; $("rxEnabledTxt").textContent = T(c.enabled ? "Päällä" : "Pois");
   if (!radioDirty) { radioDraft = (c.radios || []).map(r => ({...r})); renderRadios(); }
   $("rxAlerts").checked = !!c.alerts; $("rxAuto").checked = !!c.auto_digis; $("rxSms").checked = !!c.sms;
-  $("rxSilence").value = c.silence_min; $("rxMinHeard").value = c.min_heard; $("rxWatch").value = (c.watch || []).join(" ");
+  $("rxSilence").value = c.silence_min; $("rxIsKm").value = c.is_km || 0; $("rxMinHeard").value = c.min_heard; $("rxWatch").value = (c.watch || []).join(" ");
   $("rxTiles").value = S.config.map_tiles || ""; $("rxTilesAttr").value = S.config.map_tiles_attr || "";
 }
 function collectRx() {
   return {aprsrx: {enabled: $("rxEnabled").checked, radios: collectRadios(), alerts: $("rxAlerts").checked,
-    auto_digis: $("rxAuto").checked, sms: $("rxSms").checked, silence_min: $("rxSilence").value, min_heard: $("rxMinHeard").value,
+    auto_digis: $("rxAuto").checked, sms: $("rxSms").checked, silence_min: $("rxSilence").value, is_km: $("rxIsKm").value, min_heard: $("rxMinHeard").value,
     watch: $("rxWatch").value}, map_tiles: $("rxTiles").value, map_tiles_attr: $("rxTilesAttr").value};
 }
 async function saveRx() {
