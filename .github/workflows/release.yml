@@ -408,6 +408,8 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: Monitor for Amateur Radio ${{ needs.version.outputs.version }}
           prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
-          generate_release_notes: true
+          # GitHubin automaattinen muutosloki vertaa edelliseen vakaaseen julkaisuun; ensimmäisessä vakaassa se
+          # kattaisi koko historian ja julkaisun luonti kaatui (HTTP 500). Vakaaseen oma teksti, betoihin muutosloki.
+          generate_release_notes: ${{ needs.version.outputs.prerelease == 'true' }}
           body_path: ${{ needs.version.outputs.prerelease == 'true' && '.github/release-notes.md' || '.github/release-notes-stable.md' }}
           files: artifacts/*
