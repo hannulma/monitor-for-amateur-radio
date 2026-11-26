@@ -110,7 +110,7 @@ EN: dict[str, str] = {
     "APRS-IS sulki yhteyden": "APRS-IS closed the connection",
     "Rekisteri: {e}": "Registry: {e}",
     "Laitteet: {e}": "Devices: {e}",
-    "Monitor for BrandMeister: testiviesti {t}": "Monitor for BrandMeister: test message {t}",
+    "Monitor for Amateur Radio: testiviesti {t}": "Monitor for Amateur Radio: test message {t}",
     "Testihälytys": "Test alert",
     "Vapaata porttia ei löytynyt": "No free port found",
     # --- BM API ---

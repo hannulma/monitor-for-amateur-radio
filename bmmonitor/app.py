@@ -1,4 +1,4 @@
-"""Monitor for BrandMeister - BrandMeister-puheryhmien ja APRS/DMR-viestien seuranta.
+"""Monitor for Amateur Radio (sisäinen nimi Monitor for BrandMeister) – BrandMeister-, APRS-, loki- ja palveluseuranta.
 
 Kuuntelee Brandmeisterin julkista Last Heard -virtaa (socket.io,
 https://api.brandmeister.network/lh/socket.io) ja näyttää valittujen
@@ -977,7 +977,7 @@ def make_app(mon: Monitor) -> web.Application:
             body = await request.json()
         except Exception:  # noqa: BLE001
             body = {}
-        text = (body.get("text") or "").strip() or tr("Monitor for BrandMeister: testiviesti {t}", t=time.strftime("%H:%M"))
+        text = (body.get("text") or "").strip() or tr("Monitor for Amateur Radio: testiviesti {t}", t=time.strftime("%H:%M"))
         m = mon.cfg["messaging"]
         if not m.get("enabled"):
             return web.json_response({"ok": False, "error": tr("Lähetys ei ole päällä")}, status=400)
@@ -1604,7 +1604,7 @@ async def _run(args, mon, cfg_path, ui):
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="bmmonitor", description=f"{APP_NAME} – BrandMeister-puheryhmien seuranta")
+    ap = argparse.ArgumentParser(prog="bmmonitor", description=f"{APP_NAME} – BrandMeister, APRS, loki, check-in, satelliitit ja hälytykset")
     ap.add_argument("--port", type=int, default=0, help="paikallinen portti (oletus 8765)")
     ap.add_argument("--no-browser", action="store_true",
                     help="älä avaa selainta automaattisesti (omassa ikkunassa: käynnisty taustalle)")

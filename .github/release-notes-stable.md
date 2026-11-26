@@ -1,17 +1,17 @@
-**Vakaa versio 0.15.0.** Tämän version tärkein uutuus on yhteysloki ja sen synkronointi QRZ.comiin. Lisäksi asetukset löytyvät nyt sieltä, missä niitä käytetään.
-*Stable release 0.15.0 – contact log with QRZ.com sync, settings moved to the tabs where they are used, and more.*
+**Vakaa versio 0.16.0.** Tämän version tärkeimmät uutuudet ovat useat APRS-radiot ja TNC:t, monipuolisempi APRS-kartta ja saksankielinen käyttöliittymä.
+*Stable release 0.16.0 – several APRS radios and TNCs, a richer APRS map and a German user interface.*
 
-### Uutta 0.14.0:n jälkeen / New since 0.14.0
+### Uutta 0.15.0:n jälkeen / New since 0.15.0
 
-- **Loki (uusi Lokit-välilehti):** BrandMeister-puheluista tunnistetaan yhteysehdokkaat (vuorottelu samassa puheryhmässä tai yksityispuhelu), ja ne voi kirjata lokiin yhdellä painalluksella. Yhteyksiä voi lisätä myös käsin millä tahansa tilalla (SSB, CW, FM, FT8, D-STAR, C4FM, DMR …). Lokissa on haku, suodatus tilan mukaan sekä ADIF- ja CSV-vienti.
-- **QRZ Logbook:** lokiin lisätyt yhteydet voi synkronoida QRZ.comin lokikirjaan (vaatii maksullisen QRZ.com-tilauksen). Loki tallentuu aina ensin omalle koneelle.
-- **Asetukset välilehdillä:** BrandMeisterin, APRS:n, Syötteiden ja Lokien asetukset ovat kunkin välilehden alimmassa Asetukset-osiossa. Ohjelma-välilehdellä ovat kieli, ulkoasu, päivitykset sekä palaute ja vikailmoitukset.
-- **Välilehtien piilotus:** käyttämättömät välilehdet voi piilottaa kohdassa Ohjelma → Ulkoasu. Niiden toiminnot jatkavat taustalla.
-- **Välilehdet ryhmiteltyinä:** BrandMeister · Tilastot · Kaverit · Laitteet · Check-in │ APRS · Syötteet │ Lokit │ Palvelut · Satelliitit │ Ohjelma.
-- **Check-in:** vaiheittainen ohje Google-taulukon käyttöönottoon ja painikkeet skriptitiedostojen kopiointiin.
-- **Radiokomennot:** komentolistan saa komennolla **OHJE** (englanniksi **CMD**). APUA ja HELP on poistettu, koska ne voisivat sekoittua hätäliikenteeseen.
+- **Radiot ja TNC:t:** useita radioita yhtä aikaa (APRS → Asetukset → Radiot ja TNC:t): KISS TCP (Graywolf, Dire Wolf), KISS TNC sarjaportissa (USB tai Bluetooth), AGWPE (Dire Wolf, soundmodem), Kenwood TM-D710 / TH-D72 ja Kantronics KPC-3+ (kokeellinen) sekä simuloitu radio testaukseen. Aiempi Graywolf-yhteys siirtyy listan ensimmäiseksi radioksi automaattisesti.
+- **APRS-kartan uudet tasot:** sääasemat (lämpötila, tuuli, kosteus, ilmanpaine, sade), objektit ja itemit sekä valinnaiset APRS-IS-asemat kotisijainnin ympäriltä. iGaten radioon välittämät asemat näkyvät onttoina, eivätkä ne vaikuta RF-kuuluvuuteen.
+- **APRS-viestien merkki:** uusien viestien määrä näkyy APRS-välilehden nimen perässä; työpöytäilmoituksen voi ottaa käyttöön APRS-asetuksista.
+- **Liikennemerkki:** BrandMeister-välilehden perässä näkyy antennikuvake, kun jossakin seuratussa puheryhmässä on lähetys käynnissä.
+- **Deutsch:** käyttöliittymä, hälytykset, radioon menevät vastaukset ja Google-taulukon ohje saksaksi (konekäännös – korjausehdotukset palautetoiminnolla). Kieli valitaan ensimmäisellä käynnistyksellä käyttöjärjestelmän mukaan.
+- **Ohjelman kuvaus** ja README:t päivitetty vastaamaan nykyistä ohjelmaa; näkyvä nimi on kaikkialla *Monitor for Amateur Radio*.
+- Korjauksia: palautelomakkeen tekstikentän ohje käännetään, oman kutsun toiselta SSID:ltä tullut viesti näkyy uutena viestinä.
 
-*Contact log: contact candidates detected from BrandMeister calls, manual entries for any mode, search, mode filter, ADIF/CSV export and optional QRZ Logbook sync (paid QRZ.com subscription). Settings now live at the bottom of each tab; the App tab has language, appearance, updates and feedback. Unused tabs can be hidden (App → Appearance). Step-by-step guide for the check-in Google Sheet. Radio command list is now OHJE / CMD (APUA and HELP removed to avoid confusion with emergency traffic).*
+*Several radios and TNCs at the same time: KISS TCP, KISS TNC on a serial port (USB/Bluetooth), AGWPE, Kenwood TM-D710 / TH-D72 and Kantronics KPC-3+ (experimental) and a simulated radio; the previous Graywolf connection becomes the first radio automatically. New APRS map layers: weather stations, objects and items, and optional APRS-IS stations around your home; stations relayed by an iGate are shown hollow and do not affect RF coverage. New-message count after the APRS tab name with an optional desktop notification, and an antenna icon on the BrandMeister tab while a monitored talkgroup is on the air. German user interface (machine translation – corrections welcome via the feedback function). Updated program description and READMEs. Fixes: feedback form placeholder translated; messages from another SSID of your own callsign count as new.*
 
 ### Lataa / Download
 

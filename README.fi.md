@@ -1,14 +1,18 @@
-# Monitor for BrandMeister
+# Monitor for Amateur Radio
 
-**Epävirallinen työpöytäsovellus [BrandMeister](https://brandmeister.network)-DMR-verkon seurantaan.**
-Seuraa puheryhmien liikennettä reaaliajassa, kuuntele ryhmiä, saa hälytys kun kaveri tulee taajuudelle,
-valvo toistimia ja hotspotteja sekä vastaanota sää-, avaruussää-, liikenne- ja muita avoimen datan
-hälytyksiä suoraan DMR-radioosi APRS:n kautta.
+**Työpöytäsovellus radioamatöörin asemalle** – samassa ohjelmassa [BrandMeister](https://brandmeister.network)-DMR-verkon
+seuranta, **APRS** omien radioiden ja TNC:iden kautta (viestit, kartta asemasi kuulemista asemista, RF-kuuluvuus ja digit),
+**yhteysloki** QRZ Logbook -synkronoinnilla, **check-in-netit** yhteiseen Google-taulukkoon, **satelliittien ylilennot** sekä
+avoimen datan **hälytykset** (säävaroitukset, avaruussää, revontulet, salamat, säteily, tieliikenne) tekstiviesteinä radioosi.
+Windows, macOS ja Linux; kaikki toimii omalla koneellasi.
+
+Ohjelma sai alkunsa BrandMeister-puheryhmien seurannasta (*Monitor for BrandMeister*); julkaisutiedostot ja ohjelman
+sisäiset nimet käyttävät edelleen sitä, jotta päivitykset ja tallennetut asetukset toimivat.
 
 🇬🇧 [English README](README.md)
 
 > [!NOTE]
-> **Vakaa versio 0.15.0.** Uusimmat ominaisuudet tulevat ensin testiversioihin (beta), jotka voi ottaa käyttöön
+> **Vakaa versio 0.16.0.** Uusimmat ominaisuudet tulevat ensin testiversioihin (beta), jotka voi ottaa käyttöön
 > kohdasta *Ohjelma → Versio ja päivitykset*. Virheilmoitukset ja palaute:
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
 
@@ -60,7 +64,8 @@ Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · 
 
 ### BrandMeister
 - **Puheryhmät:** lähetys juuri nyt (vihreä LÄHETYS), viimeisin yhteys, puhuja, kesto, toistin/hotspot,
-  avausten määrä ja yhteenlaskettu puheaika. Kaiutinpainike aloittaa ryhmän **kuuntelun** (useita ryhmiä
+  avausten määrä ja yhteenlaskettu puheaika. Välilehden nimen perässä näkyy antennikuvake, kun jossakin seuratussa
+  ryhmässä on lähetys käynnissä. Kaiutinpainike aloittaa ryhmän **kuuntelun** (useita ryhmiä
   voi kuunnella yhtä aikaa; ryhmiä 1–90 ei voi kuunnella).
 - **Viimeisimmät puhelut:** 10, 25, 50, 100 tai 150 viimeisintä, suodatettavissa puheryhmän mukaan.
 - **Kirjaa yhteys (QSO) lokiin:** kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai

@@ -652,7 +652,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <div class="frow svcsave"><button class="primary" id="btnAprsSave">Tallenna</button><span class="err" id="aprsErr"></span></div>
         <h3>Testiviesti</h3>
         <div class="frow" style="align-items:center">
-          <input type="text" id="mTest" maxlength="134" placeholder="Monitor for BrandMeister: testiviesti" style="flex:1;min-width:240px" aria-label="Testiviesti">
+          <input type="text" id="mTest" maxlength="134" placeholder="Monitor for Amateur Radio: testiviesti" style="flex:1;min-width:240px" aria-label="Testiviesti">
           <button id="btnTest">Lähetä testiviesti</button>
         </div>
         <div id="aprsStatus" style="margin-top:12px"></div>
@@ -2610,7 +2610,7 @@ $("btnTest").onclick = async () => {
 $("tgBody").addEventListener("pointerdown", e => { const b = e.target.closest(".listen"); if (b) listen(Number(b.dataset.tg)); });
 $("dockClose").onclick = () => listen(null);
 $("btnQuit").onclick = async () => {
-  if (!confirm(T("Suljetaanko Monitor for BrandMeister? Seuranta ja hälytykset loppuvat, kunnes käynnistät ohjelman uudelleen."))) return;
+  if (!confirm(T("Suljetaanko Monitor for Amateur Radio? Seuranta ja hälytykset loppuvat, kunnes käynnistät ohjelman uudelleen."))) return;
   quitting = true; await fetch("/api/shutdown", {method: "POST"});
 };
 $("btnClear").onclick = () => fetch("/api/clear", {method: "POST"});

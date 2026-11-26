@@ -1,18 +1,22 @@
-# Monitor for BrandMeister
+# Monitor for Amateur Radio
 
 [![Release](https://img.shields.io/github/v/release/hannulma/monitor-for-amateur-radio?include_prereleases&label=release)](https://github.com/hannulma/monitor-for-amateur-radio/releases)
 [![CI](https://github.com/hannulma/monitor-for-amateur-radio/actions/workflows/ci.yml/badge.svg)](https://github.com/hannulma/monitor-for-amateur-radio/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**An unofficial desktop monitor for the [BrandMeister](https://brandmeister.network) DMR network** – follow
-talkgroup activity in real time, listen to talkgroups, get alerts when friends come on the air, watch your
-repeaters and hotspots, and receive weather, space-weather, traffic and other open-data alerts on your
-DMR radio via APRS.
+**A desktop companion for the radio amateur** – one app for the [BrandMeister](https://brandmeister.network) DMR network,
+**APRS** through your own radios and TNCs (messaging, a map of what your station hears, RF coverage and digipeaters),
+a **contact log** with QRZ Logbook sync, **check-in nets** with a shared Google Sheet, **satellite passes**, and
+open-data **alerts** (weather, space weather, aurora, lightning, radiation, road traffic) delivered to your radio
+as text messages. Windows, macOS and Linux; everything runs on your own computer.
+
+The program started as a BrandMeister talkgroup monitor (*Monitor for BrandMeister*); the release files and
+internal names still use that name so that updates and saved settings keep working.
 
 🇫🇮 **[Suomenkielinen ohje → README.fi.md](README.fi.md)**
 
 > [!NOTE]
-> **Stable release 0.15.0.** New features arrive first in test versions (beta), which you can enable in
+> **Stable release 0.16.0.** New features arrive first in test versions (beta), which you can enable in
 > *App → Version and updates*. Bug reports and feedback are very welcome in
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
 > The user interface is available in **English**, **Finnish** and **German** (App → Language and units). Feature settings are in the *Settings* section at the bottom of each tab.
@@ -21,14 +25,18 @@ DMR radio via APRS.
 
 ## Features
 
+The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Check-in │ APRS · Feeds │ Logs │ Services · Satellites │ App**. Tabs you don't use can be hidden (*App → Appearance*); their functions keep running in the background.
+
+### BrandMeister DMR
+
 - **Talkgroup monitor** – watch talkgroups by number or wildcard (`244*`, `2441?`): who is talking right now,
-  last activity, duration, via which repeater/hotspot, number of calls and total airtime.
+  last activity, duration, via which repeater/hotspot, number of calls and total airtime. An antenna icon after the
+  BrandMeister tab name shows when a monitored talkgroup is on the air.
 - **Live audio** – listen to one or several talkgroups directly in the app (Hoseline audio stream), with the
   current talker, talker alias and level meter.
-- **Contact log** – contacts (QSOs) are recognised from BrandMeister calls when you and another station take turns
-  on a talkgroup or have a private call; add them to the log with one click. Manual entries for any mode (SSB, CW, FM, FT8, D-STAR, C4FM, …;
-  quick buttons plus all ADIF modes, RST defaults 59/599). Logs tab: search, filter by mode, edit, ADIF/CSV export.
-  The log is stored locally; optional sync to **QRZ Logbook** (requires a QRZ subscription, XML level or higher).
+- **Nets today and tomorrow** – the FinDMR round ([6kw.fi](https://6kw.fi/findmr/)), W0WC's BrandMeister net
+  calendar, your own ICS calendars and a list of your own; shown in your local time, marked when the net's talkgroup
+  has traffic, with listen / check-in buttons and a reminder for nets in monitored talkgroups.
 - **Friend alerts** – desktop notification, sound and/or a DMR text message when a station on your list
   keys up anywhere on the network.
 - **Station card** – click any callsign for registry data, APRS SSID, repeaters/hotspots and where and when
@@ -36,6 +44,8 @@ DMR radio via APRS.
 - **Repeater & hotspot watch** – online/offline alerts, static and dynamic talkgroups, last traffic. With a
   BrandMeister API key you can also add/remove static talkgroups, drop dynamic groups, drop the current call
   or reset the connection of *your own* devices.
+- **Statistics** – activity per hour/day, top talkers, busiest talkgroups, and BrandMeister's own per-talkgroup
+  user history.
 - **Check-in nets** – log weekly check-in nets (e.g. FinDMR TG 244, Estonia TG 248, Worldwide TG 91). Stations
   keying up in the net talkgroup appear in order of arrival and **rows never move**, even when traffic overlaps;
   overlapping keyups are marked, and a notice above the log shows when an already logged station transmits again. Click **Heard – log** (or type part of the callsign and press Enter) to give the
@@ -45,8 +55,9 @@ DMR radio via APRS.
   Check-in → Google Sheet → Help) entries go straight into the shared sheet and several operators can
   log at once (personal keys via one-time pairing codes, signed requests); without it, **Copy new rows** puts
   the rows on the clipboard ready to paste. Finished rounds are saved as CSV.
-- **Statistics** – activity per hour/day, top talkers, busiest talkgroups, and BrandMeister's own per-talkgroup
-  user history.
+
+### APRS
+
 - **APRS messaging** – see all APRS messages to and from every SSID of your callsign (including DMR ↔ APRS
   messages through the BrandMeister APRS gateway) and reply directly from the app. The number of new messages is
   shown after the APRS tab name; a desktop notification can be turned on in the APRS settings.
@@ -66,13 +77,19 @@ DMR radio via APRS.
   common paths, and an alert when a known digipeater or a station you choose (e.g. an iGate) goes silent –
   only while your own reception works. Base map © OpenStreetMap contributors (tiles fetched through the app
   with its own User-Agent and cached; the tile URL can be changed).
-- **Nets today and tomorrow** – the FinDMR round ([6kw.fi](https://6kw.fi/findmr/)), W0WC's BrandMeister net
-  calendar, your own ICS calendars and a list of your own; shown in your local time, marked when the net's talkgroup
-  has traffic, with listen / check-in buttons and a reminder for nets in monitored talkgroups.
-- **Light, dark or automatic theme** (follows the operating system).
-- **Radio commands** – send `TG244`, `WHO`-style queries (`KUKA OH2ABC`), `NYT` (now active) or feed commands
-  from your DMR radio and get the answer back as a text message.
+- **Radio commands** – send `CMD`, `TG244`, `WHO OH2ABC`, `NOW` or a feed command from your DMR radio and get the
+  answer back as a text message (in Finnish also `OHJE`, `KUKA`, `NYT`).
 - **News feeds → DMR SMS** – new RSS/Atom/JSON Feed items sent to your radio as short text messages.
+
+### Logs
+
+- **Contact log** – contacts (QSOs) are recognised from BrandMeister calls when you and another station take turns
+  on a talkgroup or have a private call; add them to the log with one click. Manual entries for any mode (SSB, CW, FM, FT8, D-STAR, C4FM, …;
+  quick buttons plus all ADIF modes, RST defaults 59/599). Logs tab: search, filter by mode, edit, ADIF/CSV export.
+  The log is stored locally; optional sync to **QRZ Logbook** (requires a QRZ subscription, XML level or higher).
+
+### Services and satellites
+
 - **Open-data alert services** (each with its own on/off switch):
 
   | Service | Source |
@@ -87,12 +104,18 @@ DMR radio via APRS.
   Messages are condensed to fit a single 67-character APRS/DMR text message, e.g.
   `Tie 101 Espoo, Kalevalantie: Liikennevalot, epäkunnossa` or
   `Keltainen liikennesää: lumi/räntä, to 14–pe 12 (30 %)`.
+- **Satellite passes** – upcoming passes of the ISS and active amateur radio satellites (CelesTrak orbits, SatNOGS DB
+  frequencies, SGP4) with visible ISS passes and alerts before rise. The *Satellites* tab shows them on a world map
+  (position, ground track, coverage circle, day/night) with a sky plot of the next pass.
+
+### App
 
 - **English, Finnish and German (Deutsch)** – choose the language on the App tab; on first start it follows the
   operating system language (English otherwise). It covers the user interface, the program's own alerts and the
   replies sent to your radio (radio commands: `CMD`, `WHO`, `NOW`, in Finnish also `OHJE`, `KUKA`, `NYT`). The German
   translation is machine-made – corrections are welcome through the feedback function. FMI warnings and Digitraffic
   bulletins stay in Finnish, their source language.
+- **Light, dark or automatic theme** (follows the operating system).
 - **Automatic updates** – the app checks GitHub for a new version once a day (can be turned off). On Windows
   (installer), macOS and Linux, **Update now** downloads the new version, verifies it against the release's
   `SHA256SUMS.txt`, installs it and restarts the app; the window or browser tab comes back by itself. Test versions (beta) are
@@ -147,12 +170,15 @@ BrandMeister), `-v` (verbose).
 1. **Talkgroups:** *BrandMeister* tab → *Settings* (at the bottom) → enter talkgroups separated by spaces, e.g. `244* 91 3100`.
    `*` matches any digits, `?` exactly one.
 2. **Listen:** click the speaker button next to a talkgroup.
-3. **Friends:** *Kaverit* → add callsigns or DMR IDs, allow desktop notifications.
-4. **Devices:** *Laitteet* → add your hotspot/repeater by ID or search by callsign.
-5. **Alerts on your radio (optional):** *APRS* tab → set an APRS-IS login (your callsign with an
+3. **Friends:** *Friends* → add callsigns or DMR IDs, allow desktop notifications.
+4. **Devices:** *Devices* → add your hotspot/repeater by ID or search by callsign.
+5. **Alerts on your radio (optional):** *APRS* tab → *Settings* → set an APRS-IS login (your callsign with an
    unused SSID, e.g. `OH2ABC-13`) and the recipient = your radio's APRS SSID configured in
    BrandMeister SelfCare (e.g. `OH2ABC-7`), then *Send test message*.
-6. **Services:** *Palvelut* → set your location (coordinates or Maidenhead locator) and switch on the services you want. Weather warnings can come from the Finnish Meteorological Institute or MeteoAlarm (38 European countries), and the aurora alert from FMI magnetometers or the NOAA OVATION forecast (worldwide). Satellite passes lists upcoming passes of the ISS and active amateur radio satellites (CelesTrak orbits, SatNOGS DB frequencies, SGP4) with visible ISS passes and alerts before rise. The *Satelliitit* tab shows the satellites chosen for alerts on a world map (position, ground track, coverage circle, day/night, next in-range window in the name tag) and a sky plot of the next pass. Base map: Natural Earth (public domain).
+6. **Services:** *Services* → set your location (coordinates or Maidenhead locator) and switch on the services you want. Weather warnings can come from the Finnish Meteorological Institute or MeteoAlarm (38 European countries), and the aurora alert from FMI magnetometers or the NOAA OVATION forecast (worldwide). Satellite passes lists upcoming passes of the ISS and active amateur radio satellites (CelesTrak orbits, SatNOGS DB frequencies, SGP4) with visible ISS passes and alerts before rise. The *Satellites* tab shows the satellites chosen for alerts on a world map (position, ground track, coverage circle, day/night, next in-range window in the name tag) and a sky plot of the next pass. Base map: Natural Earth (public domain).
+7. **APRS radios (optional):** *APRS* tab → *Settings* → *Radios and TNCs* → add Graywolf/Dire Wolf (KISS TCP or AGWPE),
+   a KISS TNC on a serial port or a Kenwood/Kantronics TNC.
+8. **Log:** *Logs* tab → *Settings* → own callsign and locator; optionally the QRZ Logbook API key.
 
 ### Commands from your radio
 
@@ -163,8 +189,8 @@ Send a private text message to the BrandMeister APRS gateway of your country (*c
 |---|---|
 | `CMD` (`OHJE`) | list of commands |
 | `TG244` | who is talking now / talked last, when and how long |
-| `KUKA OH2ABC` | when and where the station was last heard |
-| `NYT` | active transmissions in your monitored talkgroups |
+| `WHO OH2ABC` (`KUKA`) | when and where the station was last heard |
+| `NOW` (`NYT`) | active transmissions in your monitored talkgroups |
 | feed command, e.g. `SAA` | latest item of that feed |
 
 Only your own callsign and the configured recipients may send commands by default.

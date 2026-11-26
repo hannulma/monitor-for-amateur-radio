@@ -1,4 +1,4 @@
-/* Monitor for BrandMeister – deutsche Übersetzung der Benutzeroberfläche.
+/* Monitor for Amateur Radio – deutsche Übersetzung der Benutzeroberfläche.
  *
  * Schlüssel ist der englische Text aus i18n.js (EN-Wörterbuch), Wert die deutsche Übersetzung.
  * Fehlt ein Eintrag, wird Englisch angezeigt. Muss vor i18n.js geladen werden.
@@ -398,7 +398,7 @@ window.I18N_LANGS.de = {
     "Mode: DIGITALVOICE / DMR.": "Betriebsart: DIGITALVOICE / DMR.",
     "Mon": "Mo",
     "Monitor": "Monitor",
-    "Monitor for BrandMeister: test message": "Monitor for BrandMeister: Testnachricht",
+    "Monitor for Amateur Radio: test message": "Monitor for Amateur Radio: Testnachricht",
     "Monitored talkgroups only": "Nur überwachte Sprechgruppen",
     "Monitoring and history": "Überwachung und Verlauf",
     "Monitoring: {list}": "Überwacht: {list}",
@@ -507,7 +507,7 @@ window.I18N_LANGS.de = {
     "QRZ": "QRZ",
     "QRZ: {s}": "QRZ: {s}",
     "Queued": "In Warteschlange",
-    "Quit Monitor for BrandMeister? Monitoring and alerts stop until you start the program again.": "Monitor for BrandMeister beenden? Überwachung und Alarme stoppen, bis du das Programm erneut startest.",
+    "Quit Monitor for Amateur Radio? Monitoring and alerts stop until you start the program again.": "Monitor for Amateur Radio beenden? Überwachung und Alarme stoppen, bis du das Programm erneut startest.",
     "Quit program": "Programm beenden",
     "Quit the program, open the disk image and drag the app to the Applications folder (Replace).": "Beende das Programm, öffne das Disk-Image und ziehe die App in den Ordner „Programme“ (Ersetzen).",
     "RF coverage": "HF-Abdeckung",

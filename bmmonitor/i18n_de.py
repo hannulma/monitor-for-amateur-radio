@@ -88,7 +88,7 @@ DE: dict[str, str] = {
     "Lithuania": "Litauen",
     "Luxembourg": "Luxemburg",
     "Magnetic activity at the nearest magnetometer ({name}, {km}). VHF aurora propagation possible.": "Magnetische Aktivität am nächstgelegenen Magnetometer ({name}, {km}). Polarlicht-Ausbreitung auf VHF möglich.",
-    "Monitor for BrandMeister: test message {t}": "Monitor for BrandMeister: Testnachricht {t}",
+    "Monitor for Amateur Radio: test message {t}": "Monitor for Amateur Radio: Testnachricht {t}",
     "My list": "Meine Liste",
     "NOAA OVATION forecast: probability of visible aurora within {r}. VHF aurora propagation possible.": "NOAA-OVATION-Vorhersage: Wahrscheinlichkeit sichtbarer Polarlichter im Umkreis von {r}. Polarlicht-Ausbreitung auf VHF möglich.",
     "NOAA forecast": "NOAA-Vorhersage",

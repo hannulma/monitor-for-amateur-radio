@@ -1,4 +1,4 @@
-/* Monitor for BrandMeister – käyttöliittymän kieliversiot (suomi / englanti / saksa).
+/* Monitor for Amateur Radio – käyttöliittymän kieliversiot (suomi / englanti / saksa).
  *
  * Sivu kirjoitetaan suomeksi. Kieltä vaihdettaessa jokainen sivun tekstisolmu ja
  * placeholder/title-attribuutti käännetään: suomenkielinen teksti (välilyönnit normalisoituina)
@@ -152,8 +152,8 @@
     "Sulkee taustalla toimivan ohjelman. Ohjelman voi avata uudelleen käynnistämällä sen; jos se on jo käynnissä, käynnistys avaa vain tämän sivun.":
       "Stops the program running in the background. Start it again to reopen; if it is already running, starting it just opens this page.",
     "Puheluloki": "Call log", "SMS/data-loki": "SMS/data log", "Datan raakatapahtumat": "Raw data events",
-    "Suljetaanko Monitor for BrandMeister? Seuranta ja hälytykset loppuvat, kunnes käynnistät ohjelman uudelleen.":
-      "Quit Monitor for BrandMeister? Monitoring and alerts stop until you start the program again.",
+    "Suljetaanko Monitor for Amateur Radio? Seuranta ja hälytykset loppuvat, kunnes käynnistät ohjelman uudelleen.":
+      "Quit Monitor for Amateur Radio? Monitoring and alerts stop until you start the program again.",
     "Ohjelma on suljettu. Voit sulkea tämän välilehden.": "The program has been closed. You can close this tab.",
     "Sovellus ei vastaa – onko se suljettu? Yritetään uudelleen…": "The program is not responding – has it been closed? Retrying…",
 
@@ -212,7 +212,7 @@
       "The Command field (e.g. WX) lets you request the feed's latest headline from your radio. When a new feed is added, current items are skipped and a message is sent from the next new item. The prefix is shown at the start of the message, e.g.",
     "Tarkista syötteet nyt": "Check feeds now",
     "Testiviesti": "Test message",
-    "Monitor for BrandMeister: testiviesti": "Monitor for BrandMeister: test message",
+    "Monitor for Amateur Radio: testiviesti": "Monitor for Amateur Radio: test message",
     "Lähetä testiviesti": "Send test message",
     "Komennot radiosta": "Commands from your radio",
     "APRS-IS-yhteys ja vastaanottajat": "APRS-IS connection and recipients",
