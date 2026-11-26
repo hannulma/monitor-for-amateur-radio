@@ -1085,3 +1085,12 @@ def test_german_translation_complete():
         assert clean_text("Pöytä", True) == "Poyta"
     finally:
         i18n.set_lang("fi")
+
+
+def test_sheet_guide_languages():
+    """Check-in-taulukon ohjeikkunassa on oma lohko jokaiselle kielelle (fi, en, de)."""
+    html = (Path(__file__).resolve().parent.parent / "bmmonitor" / "static" / "index.html").read_text(encoding="utf-8")
+    guide = html[html.index('id="shBg"'):html.index('id="modalBg"')]
+    for lang in ("fi", "en", "de"):
+        assert guide.count(f'<div lang="{lang}" data-noi18n>') == 1, lang
+        assert f'.guide.{lang} [lang="{lang}"]' in html

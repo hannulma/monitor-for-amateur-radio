@@ -211,7 +211,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .guide dl.faq dt { font-weight: 600; margin-top: 8px; }
   .guide dl.faq dd { margin: 2px 0 0 14px; color: var(--muted); }
   .guide [lang] { display: none; }
-  .guide.fi [lang="fi"], .guide.en [lang="en"] { display: block; }
+  .guide.fi [lang="fi"], .guide.en [lang="en"], .guide.de [lang="de"] { display: block; }
   .about { font-size: 14px; color: var(--text); margin: 4px 0 6px; }
   .about b { font-weight: 700; }
   .fbform textarea, .fbform input[type=text], .fbform input[type=email] { background: var(--bg); color: var(--text); border: 1px solid var(--line);
@@ -1486,6 +1486,95 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       </dl>
       <p class="muted">Script source code and a more detailed security description: <a href="https://github.com/hannulma/monitor-for-amateur-radio/tree/main/sheets" target="_blank" rel="noopener">GitHub → sheets</a>.</p>
     </div>
+    <div lang="de" data-noi18n>
+      <p>Ist eine Tabelle verbunden, gehen Check-in-Einträge direkt in Google Sheets. Die Tabelle vergibt die Protokollnummer,
+        sodass mehrere Netzleiter gleichzeitig erfassen können, ohne dass Nummern doppelt vorkommen.</p>
+      <p class="who"><b>Wer macht was?</b> Der <b>Besitzer</b> der Tabelle führt die Schritte 1–9 einmal aus. Weitere <b>Netzleiter</b> erledigen nur Schritt 10:
+        Sie brauchen weder ein Google-Konto noch Bearbeitungsrechte für die Tabelle.</p>
+
+      <h3>A. Skript installieren (Besitzer)</h3>
+      <ol class="steps">
+        <li><b>Tabelle öffnen.</b> Melde dich im Browser mit dem Google-Konto an, dem die Tabelle gehört, und öffne sie.
+          <div class="tip">Tipp: Probiere es zuerst an einer Kopie aus (<b>Datei → Kopie erstellen</b>). Wenn alles funktioniert, wiederhole die Schritte an der echten Tabelle.
+          Die Tabelle braucht ein Vorlagenblatt, dessen Name mit <code>LOGIPOHJA</code> beginnt (FinDMR-Tabelle v0.68).</div></li>
+        <li><b>Skripteditor öffnen.</b> Wähle im Tabellenmenü <b>Erweiterungen → Apps Script</b>. Der Editor öffnet sich in einem neuen Browser-Tab.
+          Oben links kannst du dem Projekt einen Namen geben, z. B. <i>Check-in</i>.</li>
+        <li><b>Code.gs einfügen.</b> Drücke oben in diesem Fenster <b>Code.gs kopieren</b>. Wähle im linken Bereich des Editors <b>Dateien → Code.gs</b>,
+          markiere den gesamten Inhalt (<kbd>Strg</kbd>+<kbd>A</kbd>, auf dem Mac <kbd>Cmd</kbd>+<kbd>A</kbd>) und ersetze ihn durch den kopierten Text
+          (<kbd>Strg</kbd>+<kbd>V</kbd> / <kbd>Cmd</kbd>+<kbd>V</kbd>).</li>
+        <li><b>appsscript.json anzeigen.</b> Wähle im linken Bereich <b>Projekteinstellungen</b> (Zahnrad) und setze das Häkchen bei
+          <b>Manifestdatei „appsscript.json“ im Editor anzeigen</b>. Kehre zum Editor zurück (Symbol <b>&lt;&gt;</b>).</li>
+        <li><b>appsscript.json einfügen.</b> Drücke <b>appsscript.json kopieren</b>, öffne im Editor die Datei <b>appsscript.json</b> und ersetze
+          ihren gesamten Inhalt wie in Schritt 3. Speichern (<kbd>Strg</kbd>+<kbd>S</kbd> / <kbd>Cmd</kbd>+<kbd>S</kbd> oder das Diskettensymbol).
+          <div class="tip">Diese Datei beschränkt den Zugriff des Skripts auf <b>nur diese Tabelle</b>. Auf andere Dateien des Besitzers hat es keinen Zugriff.</div></li>
+        <li><b>Einstellungen prüfen.</b> Am Anfang von <code>Code.gs</code> steht ein <code>CONFIG</code>-Block. Die Standardwerte passen zur FinDMR-Tabelle:
+          Vorlagenblatt <code>LOGIPOHJA</code>, Rundenblätter <code>Kierros &lt;Nummer&gt; &lt;ttmmjj&gt;</code>, Daten ab Zeile 3 in den Spalten A–F
+          (NRO, Rufzeichen, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper), Datum in D1, Rundennummer in F1 und Operator in G2.
+          Weicht deine Tabelle ab, ändere die Werte und speichere. Andernfalls lass sie unverändert.</li>
+        <li><b>Als Web-App bereitstellen.</b> Wähle oben rechts <b>Bereitstellen → Neue Bereitstellung</b>. Drücke das Zahnrad neben
+          <b>Typ auswählen</b> und wähle <b>Web-App</b>. Stelle ein:
+          <ul><li><b>Ausführen als:</b> Ich (deine Adresse)</li>
+              <li><b>Zugriff:</b> Jeder</li></ul>
+          und drücke <b>Bereitstellen</b>.
+          <div class="tip">„Jeder“ bedeutet nur, dass Anfragen ohne Anmeldung an die Adresse gesendet werden können. Das Skript nimmt trotzdem nur
+          Anfragen an, die mit dem eigenen Schlüssel eines hinzugefügten Netzleiters signiert sind. Ohne diese Einstellung kann sich das Programm nicht verbinden.</div></li>
+        <li><b>Autorisieren.</b> Google fragt nach einer Autorisierung: drücke <b>Zugriff autorisieren</b> und wähle dein Konto.
+          Da das Skript dein eigenes ist und nicht von Google geprüft wurde, erscheint die Warnung <i>„Google hat diese App nicht überprüft“</i>.
+          Wähle <b>Erweitert → … öffnen (unsicher)</b> und dann <b>Zulassen</b>.</li>
+        <li><b>Adresse kopieren.</b> Kopiere die angezeigte <b>Web-App-URL</b>. Sie sieht so aus:
+          <code>https://script.google.com/macros/s/…/exec</code>. Verwende die Adresse mit <code>/exec</code> am Ende, nicht <code>/dev</code>.
+          Lade danach die Tabelle im Browser neu: in der Menüleiste erscheint (nach einigen Sekunden) das Menü <b>Check-in</b>.</li>
+      </ol>
+
+      <h3>B. Netzleiter hinzufügen und verbinden</h3>
+      <ol class="steps" start="10">
+        <li><b>Kopplungscode erstellen und verbinden.</b> Der Besitzer wählt in der Tabelle <b>Check-in → Lisää ylläpitäjä / uusi parituskoodi</b> (Netzleiter hinzufügen)
+          und gibt das Rufzeichen des Netzleiters ein (auch das eigene, wenn er selbst erfasst). Beim ersten Mal fragt Google eventuell erneut nach einer
+          Autorisierung wie in Schritt 8. Die Tabelle zeigt einen Code, z. B. <code>K7M-42Q</code>. Der Code gilt 15 Minuten und funktioniert einmal.
+          <ul><li>Gib dem Netzleiter den Code und die Adresse der Web-App.</li>
+              <li>Der Netzleiter trägt sie auf diesem Tab im Bereich <b>Google-Tabelle</b> in die Felder <b>Skriptadresse</b> und <b>Kopplungscode</b> ein und drückt <b>Verbinden</b>.</li>
+              <li>Das Programm tauscht den Code gegen einen eigenen Schlüssel, der im Passwortspeicher des Betriebssystems abgelegt wird. Der Schlüssel wird nie
+                über das Netz gesendet; jede Anfrage wird damit signiert.</li></ul></li>
+      </ol>
+
+      <h3>Netzleiter verwalten</h3>
+      <ul>
+        <li><b>Check-in → Poista ylläpitäjä</b> (entfernen): das Programm des Netzleiters kann nicht mehr in die Tabelle schreiben.</li>
+        <li><b>Check-in → Näytä ylläpitäjät</b> (anzeigen): hinzugefügte Netzleiter und wann sie die Tabelle zuletzt genutzt haben.</li>
+        <li>Wechselt ein Netzleiter auf einen anderen Computer, erstelle für ihn einen neuen Kopplungscode. Der alte Schlüssel funktioniert dann nicht mehr.</li>
+        <li>Alle Ereignisse (Kopplungen, Einträge, Änderungen) werden im ausgeblendeten Blatt <i>Check-in-tapahtumat</i> protokolliert.</li>
+      </ul>
+
+      <h3>Während des Netzes</h3>
+      <p>Starte die Runde wie gewohnt im Programm. Gibt es das Blatt der Runde noch nicht, erstellt das Skript es aus der Vorlage, stellt es an den Anfang und
+        trägt Datum, Rundennummer und Operator ein. Hat ein anderer Netzleiter dieselbe Runde bereits gestartet, erfassen alle in dasselbe Blatt.
+        Das Programm liest die Tabelle alle 5 Sekunden, sodass auch die Einträge der anderen bei dir erscheinen.</p>
+
+      <h3>Skript aktualisieren</h3>
+      <p>Wenn das Programm eine neue Skriptversion mitbringt: Code.gs erneut kopieren, einfügen und speichern. Wähle dann <b>Bereitstellen → Bereitstellungen verwalten</b>,
+        drücke das Stiftsymbol, wähle <b>Version: Neue Version</b> und <b>Bereitstellen</b>. Die Adresse bleibt gleich, die Netzleiter müssen nichts tun.
+        <span class="warnline">Verwende für Updates nicht „Neue Bereitstellung“: dabei entsteht eine neue Adresse, und alle müssten sich neu verbinden.</span></p>
+
+      <h3>Häufige Probleme</h3>
+      <dl class="faq">
+        <dt>„Die Tabelle antwortete unerwartet (HTTP …)“</dt>
+        <dd>Die Adresse ist falsch oder der Zugriff steht nicht auf „Jeder“. Prüfe, dass die Adresse auf <code>/exec</code> endet, und korrigiere die Einstellung unter
+          Bereitstellen → Bereitstellungen verwalten → Stift.</dd>
+        <dt>„Parituskoodi ei kelpaa tai se on jo käytetty“ / „Parituskoodi on vanhentunut“ (Kopplungscode ungültig, bereits verwendet oder abgelaufen)</dt>
+        <dd>Ein Code funktioniert einmal und 15 Minuten lang. Erstelle über das Check-in-Menü der Tabelle einen neuen.</dd>
+        <dt>„Authentifizierung fehlgeschlagen“</dt>
+        <dd>Der Zugriff wurde entfernt, oder für dich wurde auf einem anderen Computer ein neuer Code erstellt. Bitte den Besitzer um einen neuen Kopplungscode und verbinde dich erneut.</dd>
+        <dt>„Die Uhr des Computers geht falsch“</dt>
+        <dd>Anfragen werden abgelehnt, wenn die Uhr um mehr als 5 Minuten abweicht. Schalte im Betriebssystem die automatische Uhrzeit ein.</dd>
+        <dt>„Pohjavälilehteä "LOGIPOHJA…" ei löytynyt“ (Vorlagenblatt nicht gefunden)</dt>
+        <dd>Die Tabelle hat kein Vorlagenblatt oder es heißt anders. Füge das Blatt hinzu oder ändere <code>TEMPLATE_PREFIX</code> in CONFIG.</dd>
+        <dt>Das Check-in-Menü erscheint nicht in der Tabelle</dt>
+        <dd>Lade die Tabelle neu und warte einen Moment. Prüfe, dass Code.gs gespeichert ist.</dd>
+        <dt>Eine Änderung am Skript wirkt nicht</dt>
+        <dd>Eine gespeicherte Änderung wirkt erst, wenn du eine neue Version bereitstellst (siehe Skript aktualisieren).</dd>
+      </dl>
+      <p class="muted">Meldungen des Skripts erscheinen auf Finnisch, da die Vorlage (FinDMR) finnisch ist. Quellcode des Skripts und eine ausführlichere Sicherheitsbeschreibung: <a href="https://github.com/hannulma/monitor-for-amateur-radio/tree/main/sheets" target="_blank" rel="noopener">GitHub → sheets</a>.</p>
+    </div>
   </div>
 </div></div>
 
@@ -2492,7 +2581,8 @@ $("toAprs").onclick = e => { e.preventDefault(); showTab("aprs"); unfold("aprs-c
 $("toLogCfg").onclick = e => { e.preventDefault(); showTab("lokit"); unfold("log-cfg"); };
 function openSheetHelp(e) {
   if (e) e.preventDefault();
-  const g = document.querySelector("#shBg .guide"); g.classList.toggle("fi", LANG === "fi"); g.classList.toggle("en", LANG !== "fi");   // muilla kielillä englanninkielinen ohje
+  const g = document.querySelector("#shBg .guide"); const gl = g.querySelector(`[lang="${LANG}"]`) ? LANG : "en";   // ohje kielellä, jos sellainen on, muuten englanniksi
+  for (const l of ["fi", "en", "de"]) g.classList.toggle(l, l === gl);
   $("shCopied").textContent = ""; $("shBg").classList.add("open"); $("shBg").scrollTop = 0;
 }
 $("ciSheetHelp").onclick = openSheetHelp; $("ciSheetHelp2").onclick = openSheetHelp;
