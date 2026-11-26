@@ -3902,7 +3902,7 @@ async function fbRefresh() {
     const kb = Math.max(1, Math.round(fbInfo.size / 1024));
     $("fbZip").textContent = `monitor-support-${(($("fbCall").value || fbInfo.call || "anon").toUpperCase())}.zip`;
     $("fbZip").title = T("Sisältö: {f}", {f: fbInfo.files.join(", ")});
-    $("fbSize").textContent = `${kb} kt · ${fbInfo.files.length} ${T("tiedostoa")}`;
+    $("fbSize").textContent = `${kb} ${T("kt")} · ${fbInfo.files.length} ${T("tiedostoa")}`;
     if (!fbInfo.enabled) $("fbErr").textContent = T("Palautteen lähetys ei ole vielä käytössä – tallenna paketti ja lähetä se itse.");
   } catch (e) { $("fbErr").textContent = String(e); }
 }

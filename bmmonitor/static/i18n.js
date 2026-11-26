@@ -124,6 +124,7 @@
     "Lähetä palaute / lokit": "Send feedback / logs",
     "Lähettää viestisi ja ohjelman lokin ylläpidolle vian selvittämistä varten.": "Sends your message and the program log to the maintainer for troubleshooting.",
     "Viestisi": "Your message",
+    "nimi@esimerkki.fi": "name@example.com", "kt": "KB",
     "Kerro, mitä teit ja mitä tapahtui. Esim. ”Satelliittikartta ei päivity, kun…”": "Tell what you did and what happened. E.g. “The satellite map does not update when…”",
     "Vastausosoite (vapaaehtoinen)": "Reply address (optional)",
     "Liitä myös puhelu- ja SMS-lokit": "Also attach the call and SMS logs",
@@ -795,7 +796,8 @@
   }
 
   function doAttrs(el) {
-    if (skipped(el)) return;
+    // textarea-kentän sisältöä ei käännetä, mutta sen placeholder/title käännetään
+    if (el.tagName === "TEXTAREA" ? skipped(el.parentElement) : skipped(el)) return;
     let rec = origAttr.get(el);
     for (const a of ATTRS) {
       if (!el.hasAttribute(a)) continue;

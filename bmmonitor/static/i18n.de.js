@@ -6,6 +6,8 @@
  */
 window.I18N_LANGS = window.I18N_LANGS || {};
 window.I18N_LANGS.de = {
+    "KB": "KB",
+    "name@example.com": "name@beispiel.de",
     " (oldest {t})": " (älteste {t})",
     " ({n} parts)": " ({n} Teile)",
     " on the radio": " per Funk",
