@@ -27,7 +27,7 @@ import aiohttp
 import socketio
 from aiohttp import web
 
-from .i18n import set_lang, set_units, tr
+from .i18n import LANGS, set_lang, set_units, tr
 from .updater import Updater
 from .checkin import CheckIn
 from .sheetsync import SheetError
@@ -78,7 +78,7 @@ DEFAULT_CONFIG = {
     "log_csv": True,
     "calls_limit": 10,          # Viimeisimmät puhelut -listan pituus (10/25/50/100/150)
     "bm_api_key": "",           # BM SelfCare API-avain (vain laitteen hallintaan)
-    "language": "",             # "fi" / "en"; tyhjä = valitaan selaimen kielen mukaan
+    "language": "",             # "fi" / "en" / "de"; tyhjä = valitaan selaimen kielen mukaan
     "units": "metric",          # "metric" (km) / "imperial" (mailit); asetukset tallennetaan aina kilometreinä
     "update_check": True,       # tarkista uudet versiot GitHubista kerran päivässä
     # "update_beta": asennetaanko myös testiversiot; puuttuessa päätetään käynnistyksessä (beta-asennus → True)
@@ -350,7 +350,7 @@ class Monitor:
             self.services.reconfigure(changed)
         if "language" in new:
             lang = str(new["language"] or "")
-            if lang not in ("fi", "en"):
+            if lang not in LANGS:
                 raise ValueError(tr("Virheellinen kieli"))
             self.cfg["language"] = lang
             set_lang(lang)

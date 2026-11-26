@@ -1051,3 +1051,37 @@ def test_aprs_unknown_command_counts_as_message(tmp_path):
     hub.handle_message("OH2BEA-7", "OH2BEA-10", "OHJE{2", "is")
     last = [m for m in hub.aprs_msgs if m["dir"] == "in"][0]
     assert last["text"] == "OHJE" and last.get("cmd") is True
+
+
+def test_german_translation_complete():
+    """Saksa: jokaisella englanninkielisellä tekstillä (i18n.js ja i18n.py) on saksankielinen käännös
+    samoilla paikkamerkeillä; tr() ja num() toimivat saksaksi; radioon menevät ä/ö/ü/ß ASCII-muodossa."""
+    from bmmonitor import i18n
+    from bmmonitor.i18n_de import DE
+    from bmmonitor.messaging import clean_text
+    root = Path(__file__).resolve().parent.parent / "bmmonitor" / "static"
+    ph = re.compile(r"\{(\w*)\}")
+    pairs = re.findall(r'"((?:[^"\\]|\\.)*)":\s*\n?\s*"((?:[^"\\]|\\.)*)"', (root / "i18n.js").read_text("utf-8"))
+    en_ui = {json.loads('"' + en + '"') for en in dict(pairs).values()}   # sama avain myöhemmin = voimassa oleva
+    de_pairs = re.findall(r'"((?:[^"\\]|\\.)*)":\s*"((?:[^"\\]|\\.)*)"', (root / "i18n.de.js").read_text("utf-8"))
+    de_ui = {json.loads('"' + k + '"'): json.loads('"' + v + '"') for k, v in de_pairs}
+    missing = sorted(en_ui - set(de_ui))
+    assert not missing, missing[:10]
+    for en, de in de_ui.items():
+        assert sorted(ph.findall(en)) == sorted(ph.findall(de)), en
+    missing = sorted(set(i18n.EN.values()) - set(DE))
+    assert not missing, missing[:10]
+    for en, de in DE.items():
+        assert sorted(ph.findall(en)) == sorted(ph.findall(de)), en
+    try:
+        i18n.set_lang("de")
+        assert i18n.tr("Anna puheryhmä") == "Gib eine Sprechgruppe ein"
+        assert i18n.tr("Virheellinen kutsu tai DMR-ID: {x}", x="X") == "Ungültiges Rufzeichen oder ungültige DMR-ID: X"
+        assert i18n.tr("Tuntematon komento. Laheta OHJE") == "Unbekannter Befehl. Sende CMD"
+        assert i18n.tr("Tätä tekstiä ei ole sanakirjassa") == "Tätä tekstiä ei ole sanakirjassa"
+        assert i18n.num(1.25, 2) == "1,25" and i18n.bearing(1) == "NO"
+        assert clean_text("Größe über Öl", True) == "Groesse ueber Oel"
+        i18n.set_lang("fi")
+        assert clean_text("Pöytä", True) == "Poyta"
+    finally:
+        i18n.set_lang("fi")

@@ -190,9 +190,11 @@ Toimintojen asetukset ovat kunkin välilehden alimmassa, pienennettävässä **A
 käyttöliittymä omassa ikkunassa tai selaimessa; **näytettävät välilehdet**), **päivitykset** sekä palaute, vikailmoitukset ja
 **Sulje ohjelma**. Käyttämättömät välilehdet voi piilottaa; niiden toiminnot jatkavat taustalla, ja Ohjelma-välilehti on aina näkyvissä.
 
-- **Kieli (suomi / English)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
-  Radiokomennot toimivat kummallakin kielellä (`OHJE`/`CMD`, `KUKA`/`WHO`, `NYT`/`NOW`). Ilmatieteen laitoksen
-  varoitukset ja Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).
+- **Kieli (suomi / English / Deutsch)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
+  Ensimmäisellä käynnistyksellä kieli valitaan käyttöjärjestelmän kielen mukaan (muuten englanti). Radiokomennot toimivat
+  suomeksi ja englanniksi (`OHJE`/`CMD`, `KUKA`/`WHO`, `NYT`/`NOW`; saksaksi käytetään englanninkielisiä). Saksankielinen
+  käännös on konekäännös – korjausehdotukset ovat tervetulleita palautetoiminnolla. Ilmatieteen laitoksen varoitukset ja
+  Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).
 - **Palaute / lokit** (Ohjelma-välilehti) lähettää viestin ja zip-paketin ylläpidolle. Salaisuudet (API-avain, passcode,
   check-in-avain) poistetaan ja sijainti pyöristetään lokaattoriksi; paketin voi ladata ja tarkistaa ennen lähetystä.
 - **Mittayksiköt (km / mailit)** koskevat kaikkia näytettyjä etäisyyksiä ja nopeuksia sekä hälytyksiä. Asetukset

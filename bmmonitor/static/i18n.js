@@ -1,8 +1,10 @@
-/* Monitor for BrandMeister – käyttöliittymän kieliversiot (suomi / englanti).
+/* Monitor for BrandMeister – käyttöliittymän kieliversiot (suomi / englanti / saksa).
  *
- * Sivu kirjoitetaan suomeksi. Englanniksi vaihdettaessa jokainen sivun tekstisolmu ja
- * placeholder/title-attribuutti käännetään tästä sanakirjasta (avaimena suomenkielinen teksti,
- * välilyönnit normalisoituina). MutationObserver kääntää myös myöhemmin piirretyt osat.
+ * Sivu kirjoitetaan suomeksi. Kieltä vaihdettaessa jokainen sivun tekstisolmu ja
+ * placeholder/title-attribuutti käännetään: suomenkielinen teksti (välilyönnit normalisoituina)
+ * → englanti tästä sanakirjasta → muut kielet omista tiedostoistaan (i18n.<kieli>.js, avaimena
+ * englanninkielinen teksti). Puuttuva käännös → englanti. MutationObserver kääntää myös
+ * myöhemmin piirretyt osat.
  * Vaihtelevat lauseet tehdään koodissa T("… {n} …", {n})-kutsulla.
  */
 (function () {
@@ -743,26 +745,44 @@
   const orig = new WeakMap();       // tekstisolmu -> {fi, out}
   const origAttr = new WeakMap();   // elementti -> {attr: {fi, out}}
 
+  const OTHER = window.I18N_LANGS || {};            // {de: {englanti: saksa}, …}
+  const LANGS = ["fi", "en", ...Object.keys(OTHER)];
+  window.I18N_SUPPORTED = LANGS;
+  window.sysLang = function () {                    // käyttöjärjestelmän / selaimen kieli, oletus englanti
+    const nl = (navigator.language || "").toLowerCase().slice(0, 2);
+    return LANGS.includes(nl) ? nl : "en";
+  };
   let lang = null;
   try { lang = localStorage.getItem("bmm-lang"); } catch (e) { /* ei tallennusta */ }
-  if (lang !== "fi" && lang !== "en") lang = (navigator.language || "").toLowerCase().startsWith("fi") ? "fi" : "en";
+  if (!LANGS.includes(lang)) lang = window.sysLang();
   window.LANG = lang;
+
+  function tx(key) {                                // suomenkielinen avain → valittu kieli (null = ei käännöstä)
+    if (window.LANG === "fi") return null;
+    const en = EN[key];
+    if (en == null) return null;
+    if (window.LANG === "en") return en;
+    const d = OTHER[window.LANG];
+    return d && d[en] != null ? d[en] : en;
+  }
 
   function lookup(raw) {
     const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(raw);
     const key = m[2].replace(/\s+/g, " ");
     if (!key) return raw;
-    const t = EN[key];
+    const t = tx(key);
     return t == null ? raw : m[1] + t + m[3];
   }
 
   window.T = function (s, vars) {
-    let out = window.LANG === "en" && EN[s] != null ? EN[s] : s;
+    const t = tx(s);
+    let out = t != null ? t : s;
     if (vars) out = out.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
     return out;
   };
-  window.LOC = () => (window.LANG === "en" ? "en-GB" : "fi-FI");
-  window.dec = s => (window.LANG === "fi" ? String(s).replace(".", ",") : String(s));
+  const LOCALES = {fi: "fi-FI", en: "en-GB", de: "de-DE"};
+  window.LOC = () => LOCALES[window.LANG] || "en-GB";
+  window.dec = s => (window.LANG === "en" ? String(s) : String(s).replace(".", ","));   // desimaalipilkku muilla kuin englannilla
 
   function skipped(el) { return el && el.closest && el.closest(SKIP); }
 
@@ -770,7 +790,7 @@
     if (skipped(n.parentElement)) return;
     let o = orig.get(n);
     if (!o || (n.nodeValue !== o.fi && n.nodeValue !== o.out)) { o = {fi: n.nodeValue}; orig.set(n, o); }
-    o.out = window.LANG === "en" ? lookup(o.fi) : o.fi;
+    o.out = window.LANG !== "fi" ? lookup(o.fi) : o.fi;
     if (n.nodeValue !== o.out) n.nodeValue = o.out;
   }
 
@@ -783,7 +803,7 @@
       rec = rec || {};
       let o = rec[a];
       if (!o || (v !== o.fi && v !== o.out)) { o = rec[a] = {fi: v}; }
-      o.out = window.LANG === "en" ? lookup(o.fi) : o.fi;
+      o.out = window.LANG !== "fi" ? lookup(o.fi) : o.fi;
       if (v !== o.out) el.setAttribute(a, o.out);
     }
     if (rec) origAttr.set(el, rec);
@@ -800,7 +820,7 @@
   }
 
   window.setLang = function (l) {
-    window.LANG = l === "en" ? "en" : "fi";
+    window.LANG = LANGS.includes(l) ? l : "fi";
     try { localStorage.setItem("bmm-lang", window.LANG); } catch (e) { /* ei tallennusta */ }
     document.documentElement.lang = window.LANG;
     walk(document.body);

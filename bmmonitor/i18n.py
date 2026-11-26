@@ -1,6 +1,8 @@
-"""Ohjelman omien tekstien kieli (suomi/englanti).
+"""Ohjelman omien tekstien kieli (suomi/englanti/saksa).
 
-Avaimina ovat suomenkieliset tekstit, joten suomi toimii ilman sanakirjaa.
+Avaimina ovat suomenkieliset tekstit, joten suomi toimii ilman sanakirjaa. Englanti on tämän
+tiedoston EN-sanakirjassa; muut kielet omissa tiedostoissaan (i18n_de.py), avaimena
+englanninkielinen teksti. Puuttuva käännös → englanti.
 Käyttö:  tr("Virheellinen kutsu: {x}", x=call)
 
 Käyttöliittymän (selaimen) käännökset ovat tiedostossa static/i18n.js.
@@ -9,7 +11,9 @@ tiedotteet) ovat lähteen kielellä.
 """
 from __future__ import annotations
 
-LANGS = ("fi", "en")
+from .i18n_de import DE
+
+LANGS = ("fi", "en", "de")
 _lang = "fi"
 
 
@@ -23,7 +27,11 @@ def get_lang() -> str:
 
 
 def tr(text: str, **kw) -> str:
-    out = EN.get(text, text) if _lang == "en" else text
+    out = text
+    if _lang != "fi":
+        out = EN.get(text, text)
+        if _lang == "de":
+            out = DE.get(out, out)
     return out.format(**kw) if kw else out
 
 
@@ -53,13 +61,14 @@ def dist(km: float | None, digits: int = 0) -> str:
 def num(x: float, digits: int = 1) -> str:
     """Desimaaliluku kielen mukaisella erottimella."""
     s = f"{x:.{digits}f}"
-    return s.replace(".", ",") if _lang == "fi" else s
+    return s if _lang == "en" else s.replace(".", ",")
 
 
 # Ilmansuunnat (salamahälytys: "12 km koillisessa")
 BEARINGS = {
     "fi": ["pohjoisessa", "koillisessa", "idässä", "kaakossa", "etelässä", "lounaassa", "lännessä", "luoteessa"],
     "en": ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
+    "de": ["N", "NO", "O", "SO", "S", "SW", "W", "NW"],
 }
 
 

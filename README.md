@@ -15,7 +15,7 @@ DMR radio via APRS.
 > **Stable release 0.15.0.** New features arrive first in test versions (beta), which you can enable in
 > *App → Version and updates*. Bug reports and feedback are very welcome in
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
-> The user interface is available in **Finnish** and **English** (App → Language and units). Feature settings are in the *Settings* section at the bottom of each tab.
+> The user interface is available in **English**, **Finnish** and **German** (App → Language and units). Feature settings are in the *Settings* section at the bottom of each tab.
 
 ![Monitor view](docs/screenshot-monitor.png)
 
@@ -88,9 +88,11 @@ DMR radio via APRS.
   `Tie 101 Espoo, Kalevalantie: Liikennevalot, epäkunnossa` or
   `Keltainen liikennesää: lumi/räntä, to 14–pe 12 (30 %)`.
 
-- **English and Finnish** – choose the language on the App tab. It covers the user interface, the program's own
-  alerts and the replies sent to your radio (radio commands work in both languages: `CMD`/`OHJE`, `WHO`/`KUKA`,
-  `NOW`/`NYT`). FMI warnings and Digitraffic bulletins stay in Finnish, their source language.
+- **English, Finnish and German (Deutsch)** – choose the language on the App tab; on first start it follows the
+  operating system language (English otherwise). It covers the user interface, the program's own alerts and the
+  replies sent to your radio (radio commands: `CMD`, `WHO`, `NOW`, in Finnish also `OHJE`, `KUKA`, `NYT`). The German
+  translation is machine-made – corrections are welcome through the feedback function. FMI warnings and Digitraffic
+  bulletins stay in Finnish, their source language.
 - **Automatic updates** – the app checks GitHub for a new version once a day (can be turned off). On Windows
   (installer), macOS and Linux, **Update now** downloads the new version, verifies it against the release's
   `SHA256SUMS.txt`, installs it and restarts the app; the window or browser tab comes back by itself. Test versions (beta) are

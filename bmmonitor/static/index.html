@@ -437,7 +437,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="inner">
     <div class="row">
       <div><label for="langSel">Käyttöliittymän kieli</label>
-        <select id="langSel" data-noi18n><option value="fi">Suomi</option><option value="en">English</option></select></div>
+        <select id="langSel" data-noi18n><option value="fi">Suomi</option><option value="en">English</option><option value="de">Deutsch</option></select></div>
       <div><label for="unitSel">Mittayksiköt</label>
         <select id="unitSel"><option value="metric">Metrijärjestelmä (km)</option><option value="imperial">Yhdysvaltalainen (mailit)</option></select></div>
       <div class="hint" style="max-width:560px">Kieli koskee myös ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
@@ -1503,6 +1503,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   <a id="pExt" href="#" target="_blank" rel="noopener">Hoseline ↗</a>
   <button id="dockClose">Lopeta</button>
 </div>
+<script src="/static/i18n.de.js"></script>
 <script src="/static/i18n.js"></script>
 <script src="/static/player.js"></script>
 
@@ -2247,9 +2248,12 @@ $("ciCopyNew").onclick = () => ciCopy(true);
 $("ciCopyAll").onclick = () => ciCopy(false);
 
 // ---------------- kieli ja päivitykset ----------------
+const DIRS = {fi: ["P", "KO", "I", "KA", "E", "LO", "L", "LU"], en: ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
+              de: ["N", "NO", "O", "SO", "S", "SW", "W", "NW"]};
+function DIRS8() { return DIRS[LANG] || DIRS.en; }   // ilmansuunnat pohjoisesta myötäpäivään
 function initLang() {
   let l = S.config.language;
-  if (!l) { l = (navigator.language || "").toLowerCase().startsWith("fi") ? "fi" : "en"; saveCfg({language: l}); }
+  if (!l) { l = sysLang(); saveCfg({language: l}); }
   setLang(l);
 }
 const UPD_KIND = {"windows-setup": "Windows (asennettu)", "windows-portable": "Windows (ilman asennusta)", macos: "macOS", linux: "Linux", pip: "Python (pip)"};
@@ -2488,7 +2492,7 @@ $("toAprs").onclick = e => { e.preventDefault(); showTab("aprs"); unfold("aprs-c
 $("toLogCfg").onclick = e => { e.preventDefault(); showTab("lokit"); unfold("log-cfg"); };
 function openSheetHelp(e) {
   if (e) e.preventDefault();
-  const g = document.querySelector("#shBg .guide"); g.classList.toggle("fi", LANG !== "en"); g.classList.toggle("en", LANG === "en");
+  const g = document.querySelector("#shBg .guide"); g.classList.toggle("fi", LANG === "fi"); g.classList.toggle("en", LANG !== "fi");   // muilla kielillä englanninkielinen ohje
   $("shCopied").textContent = ""; $("shBg").classList.add("open"); $("shBg").scrollTop = 0;
 }
 $("ciSheetHelp").onclick = openSheetHelp; $("ciSheetHelp2").onclick = openSheetHelp;
@@ -3156,7 +3160,7 @@ function renderServices() {
     }
     if (n === "satellites" && on && s.passes) {
       const al = new Set(c.satellites.alert_sats || []), ps = s.passes;
-      const DIR = LANG === "fi" ? ["P", "KO", "I", "KA", "E", "LO", "L", "LU"] : ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+      const DIR = DIRS8();
       const dir = az => DIR[Math.floor(((az + 22.5) % 360) / 45)];
       const mins = p => Math.max(1, Math.round((p.los - p.aos) / 60)), tNow = Date.now() / 1000;
       const hm = ts => new Date(ts * 1000).toLocaleTimeString(LOC(), {hour: "2-digit", minute: "2-digit"});
@@ -3371,7 +3375,7 @@ function drawSky() {
   if (!x) { x = [...SD.sats].sort((a, b) => ((a.pass || {}).aos || 9e12) - ((b.pass || {}).aos || 9e12))[0]; satSel = x.norad; }
   const i = SD.sats.indexOf(x), c = satColor(i), p = x.pass;
   const R = el => (90 - el) / 90 * 100, P = (az, el) => [R(el) * Math.sin(az * Math.PI / 180), -R(el) * Math.cos(az * Math.PI / 180)];
-  const DIR = LANG === "fi" ? ["P", "I", "E", "L"] : ["N", "E", "S", "W"];
+  const DIR = DIRS8().filter((d, i) => i % 2 === 0);
   let h = `<circle r="100" fill="${col("--map")}" stroke="${col("--landline")}"/><circle r="66.7" fill="none" stroke="${col("--line")}"/><circle r="33.3" fill="none" stroke="${col("--line")}"/>
     <line x1="-100" y1="0" x2="100" y2="0" stroke="${col("--line")}"/><line x1="0" y1="-100" x2="0" y2="100" stroke="${col("--line")}"/>
     <text x="0" y="-105" class="skyl">${DIR[0]}</text><text x="109" y="4" class="skyl">${DIR[1]}</text><text x="0" y="114" class="skyl">${DIR[2]}</text><text x="-109" y="4" class="skyl">${DIR[3]}</text>
@@ -3385,7 +3389,7 @@ function drawSky() {
   }
   if (x.el != null && x.el > 0) { const q = P(x.az, x.el); h += `<circle cx="${q[0]}" cy="${q[1]}" r="6" fill="${c}" stroke="#fff" stroke-width="2"/>`; }
   svg.innerHTML = h;
-  const dirN = az => (LANG === "fi" ? ["P", "KO", "I", "KA", "E", "LO", "L", "LU"] : ["N", "NE", "E", "SE", "S", "SW", "W", "NW"])[Math.floor(((az + 22.5) % 360) / 45)];
+  const dirN = az => DIRS8()[Math.floor(((az + 22.5) % 360) / 45)];
   const rows = [[T("Korkeus"), D(x.alt)], [T("Nopeus"), SPD(x.speed)]];
   if (x.range != null) rows.push([T("Etäisyys"), D(x.range)]);
   if (x.el != null) rows.push([T("Sinusta"), x.el > 0 ? `${x.az}° ${dirN(x.az)}, ${T("korkeus")} ${dec(String(x.el))}°` : T("horisontin alapuolella")]);

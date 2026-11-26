@@ -21,7 +21,7 @@ from pathlib import Path
 
 import aiohttp
 
-from .i18n import tr
+from .i18n import get_lang, tr
 
 log = logging.getLogger("bmmonitor.msg")
 
@@ -123,6 +123,9 @@ def clean_text(text: str, ascii_only: bool) -> str:
     text = text.replace("–", "-").replace("—", "-").replace("’", "'") \
         .replace("‘", "'").replace("“", '"').replace("”", '"').replace("…", "...")
     if ascii_only:
+        if get_lang() == "de":     # saksassa ä → ae, ö → oe, ü → ue, ß → ss
+            for x, y in (("ä", "ae"), ("ö", "oe"), ("ü", "ue"), ("Ä", "Ae"), ("Ö", "Oe"), ("Ü", "Ue"), ("ß", "ss")):
+                text = text.replace(x, y)
         text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
     return text
 
