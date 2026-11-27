@@ -92,7 +92,8 @@ The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Chec
 ### Logs
 
 - **Contact log** – contacts (QSOs) are recognised from BrandMeister calls when you and another station take turns
-  on a talkgroup or have a private call; add them to the log with one click. Manual entries for any mode (SSB, CW, FM, FT8, D-STAR, C4FM, …;
+  on a talkgroup or have a private call; add them to the log with one click. Candidates wait (also across restarts)
+  until you add or skip them, for at most 7 days. Manual entries for any mode (SSB, CW, FM, FT8, D-STAR, C4FM, …;
   quick buttons plus all ADIF modes, RST defaults 59/599). Logs tab: search, filter by mode, edit, ADIF/CSV export.
   The log is stored locally; optional upload to **QRZ Logbook** (requires a QRZ subscription, XML level or higher),
   **eQSL** (free account; note that eQSL's interface does not accept passwords longer than 14 characters) and
@@ -138,6 +139,8 @@ The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Chec
 - The program subscribes only to reports about your own callsign and locator square (PSK Reporter MQTT feed by
   M0LTE, data by N1DQ) and logs in to RBN with your callsign; nothing is sent. RBN locations are derived from the
   callsign prefix at country level. For detailed tropo maps the tab links to Hepburn's tropo forecast.
+
+![Propagation](docs/screenshot-propagation.png)
 
 ### App
 

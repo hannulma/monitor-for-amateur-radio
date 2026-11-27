@@ -71,6 +71,7 @@ Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · 
   listan ylimpinä LÄHETYS-merkillä ja kasvavalla kestolla; päättyessään ne siirtyvät tavallisiksi riveiksi.
 - **Kirjaa yhteys (QSO) lokiin:** kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai
   pidätte yksityispuhelun, yhteys näkyy ehdokkaana. *Lisää lokiin* avaa valmiiksi täytetyn lomakkeen (tila DMR); *Ohita* poistaa ehdokkaan.
+  Ehdokkaat odottavat (myös ohjelman uudelleenkäynnistyksen yli), kunnes lisäät tai ohitat ne, kuitenkin enintään 7 päivää.
   Loki tallentuu oletuksena paikallisesti; lähetys QRZ.comiin, eQSL:ään ja HamQTH:hon on valinnainen.
 - **Netit tänään ja huomenna:** FinDMR-kierros ([6kw.fi](https://6kw.fi/findmr/)), W0WC:n BrandMeister-nettikalenteri
   ja omat ICS-kalenterit sekä oma lista. Ajat omassa ajassa, "käynnissä – liikennettä" kun netin puheryhmässä
@@ -212,6 +213,8 @@ Koko teksti aukeaa ohjelmassa otsikkoa klikkaamalla.
 - Ohjelma tilaa vain omaan kutsuusi ja lokaattoriruutuusi liittyvät raportit (PSK Reporterin MQTT-jakelu, M0LTE;
   data N1DQ) ja kirjautuu RBN:ään omalla kutsullasi; mitään ei lähetetä. RBN-asemien sijainti päätellään kutsun
   etuliitteestä maan tarkkuudella. Tarkempiin tropokarttoihin välilehdeltä on linkki Hepburnin tropoennusteeseen.
+
+![Radiosää](docs/screenshot-propagation-fi.png)
 
 ### Syötteet
 RSS-, Atom- ja JSON Feed -syötteet (esim. BrandMeisterin uutiset, SRAL): uuden uutisen otsikko lähetetään

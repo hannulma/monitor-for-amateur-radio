@@ -1508,3 +1508,35 @@ def test_tropo_estimate():
     f._last_open_check = 0
     f.check_open()                                    # 3 h:n sisällä ei uudestaan
     assert [a["title"] for a in mon.watcher.alerts][0] == "2m auki" and len(mon.watcher.alerts) == 2
+
+
+def test_qso_candidates_persist(tmp_path):
+    """Yhteysehdokkaat säilyvät uudelleenkäynnistyksen yli, käsiteltyä ei luoda uudelleen, yli 7 vrk vanhat poistuvat."""
+    import sqlite3
+    import time as _t
+    from bmmonitor import qso as Q
+    db = sqlite3.connect(str(tmp_path / "q.sqlite"))
+    d = Q.QsoDetector(lambda c: c == "OH2BEA")
+    d.attach(db)
+    now = _t.time() - 600
+    for i, (call, own) in enumerate([("OH2BEA", True), ("OH3XYZ", False), ("OH2BEA", True)]):
+        d.on_event({"Start": now + i * 20, "Stop": now + i * 20 + 10, "SourceCall": call, "SourceID": 1 + i % 2,
+                    "DestinationID": 244, "SourceName": "Pekka" if not own else "", "CallTypes": ["group"]})
+    assert [c["call"] for c in d.snapshot()] == ["OH3XYZ"]
+    d2 = Q.QsoDetector(lambda c: c == "OH2BEA")
+    d2.attach(db)                                     # "uudelleenkäynnistys"
+    assert [(c["call"], c["name"], c["turns"]) for c in d2.snapshot()] == [("OH3XYZ", "Pekka", 3)]
+    cid = d2.snapshot()[0]["id"]
+    d2.close(cid)
+    d3 = Q.QsoDetector(lambda c: c == "OH2BEA")
+    d3.attach(db)
+    assert d3.snapshot() == [] and cid in d3.closed
+    d3._upsert(cid, "OH3XYZ", [{"start": now, "stop": now + 5, "own": False, "name": "", "via": "", "ctx": None, "tg": 244}],
+               private=False, other_info={})
+    assert d3.snapshot() == []                        # käsiteltyä ei luoda uudelleen
+    old = {"id": "TG:244:OH9X:1", "call": "OH9X", "end": _t.time() - 8 * 86400, "start": 0}
+    db.execute("INSERT INTO candidates VALUES (?, ?, ?)", (old["id"], old["end"], json.dumps(old)))
+    db.commit()
+    d4 = Q.QsoDetector(lambda c: c == "OH2BEA")
+    d4.attach(db)
+    assert "TG:244:OH9X:1" not in d4.cands and db.execute("SELECT COUNT(*) FROM candidates").fetchone()[0] == 0

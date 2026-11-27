@@ -29,7 +29,7 @@ log = logging.getLogger("bmmonitor.qso")
 QSO_GAP = 180          # s: vuorojen suurin väli
 QSO_QUIET = 600        # s: tämän jälkeen ehdokas on päättynyt
 TURN_KEEP = 1800       # s: puheryhmän vuorot muistissa
-CAND_KEEP = 24 * 3600  # s: päättyneet ehdokkaat näkyvät vuorokauden
+CAND_KEEP = 7 * 86400  # s: käsittelemätön ehdokas säilyy (myös uudelleenkäynnistyksen yli) viikon
 QRZ_URL = "https://logbook.qrz.com/api"
 QRZ_RETRY = 300        # s: verkkovirheen jälkeen uusi yritys
 EQSL_URL = "https://www.eqsl.cc/qslcard/ImportADIF.cfm"
@@ -229,6 +229,44 @@ class QsoDetector:
         self.seen: dict[tuple, float] = {}
         self.private_open: dict[str, tuple] = {}  # asema → (yksityispuhelu-ehdokkaan id, viimeisin vuoro)
         self.rev = 0
+        self.db = None                          # QsoLog asettaa: ehdokkaat säilyvät uudelleenkäynnistyksen yli
+
+    # ---------------- tallennus (qso_log.sqlite)
+    def attach(self, db):
+        self.db = db
+        db.execute("CREATE TABLE IF NOT EXISTS candidates (id TEXT PRIMARY KEY, end REAL, data TEXT)")
+        db.execute("CREATE TABLE IF NOT EXISTS candidates_closed (id TEXT PRIMARY KEY, t REAL)")
+        now = time.time()
+        db.execute("DELETE FROM candidates WHERE end < ?", (now - CAND_KEEP,))
+        db.execute("DELETE FROM candidates_closed WHERE t < ?", (now - CAND_KEEP * 2,))
+        db.commit()
+        for cid, t in db.execute("SELECT id, t FROM candidates_closed"):
+            self.closed[cid] = t
+        for cid, data in db.execute("SELECT id, data FROM candidates"):
+            try:
+                c = json.loads(data)
+            except ValueError:
+                continue
+            if cid not in self.closed:
+                self.cands[cid] = c
+        if self.cands:
+            self.rev += 1
+
+    def _save(self, cid: str):
+        if self.db is None:
+            return
+        c = self.cands.get(cid)
+        try:
+            if c:
+                self.db.execute("INSERT OR REPLACE INTO candidates (id, end, data) VALUES (?, ?, ?)",
+                                (cid, c["end"], json.dumps(c, ensure_ascii=False)))
+            else:
+                self.db.execute("DELETE FROM candidates WHERE id = ?", (cid,))
+            if cid in self.closed:
+                self.db.execute("INSERT OR REPLACE INTO candidates_closed (id, t) VALUES (?, ?)", (cid, self.closed[cid]))
+            self.db.commit()
+        except Exception as e:  # noqa: BLE001
+            log.warning("Ehdokkaan tallennus epäonnistui: %s", e)
 
     def on_event(self, p: dict, info: dict | None = None):
         stop = p.get("Stop") or 0
@@ -305,11 +343,13 @@ class QsoDetector:
             "_turns": turns[-50:],
         }
         self.rev += 1
+        self._save(cid)
 
     def close(self, cid: str):
         self.cands.pop(cid, None)
         self.closed[cid] = time.time()
         self.rev += 1
+        self._save(cid)
 
     def housekeeping(self):
         now = time.time()
@@ -317,10 +357,19 @@ class QsoDetector:
             if now - c["end"] > CAND_KEEP:
                 self.cands.pop(cid, None)
                 self.rev += 1
-        for d in (self.closed, self.seen):
-            for k, t in list(d.items()):
-                if now - t > CAND_KEEP * 2:
-                    d.pop(k, None)
+                self._save(cid)
+        for k, t in list(self.closed.items()):
+            if now - t > CAND_KEEP * 2:
+                self.closed.pop(k, None)
+        for k, t in list(self.seen.items()):
+            if now - t > TURN_KEEP * 2:
+                self.seen.pop(k, None)
+        if self.db is not None:
+            try:
+                self.db.execute("DELETE FROM candidates_closed WHERE t < ?", (now - CAND_KEEP * 2,))
+                self.db.commit()
+            except Exception:  # noqa: BLE001
+                pass
 
     def snapshot(self) -> list[dict]:
         now = time.time()
@@ -361,6 +410,7 @@ class QsoLog:
         self.db.commit()
         self.rev = 0
         self.detector = QsoDetector(self.is_mine)
+        self.detector.attach(self.db)
         self.secrets: dict[str, str] = {}
         moved_any = False
         for svc, (field, name) in SECRETS.items():
