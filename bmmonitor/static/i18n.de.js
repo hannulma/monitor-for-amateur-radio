@@ -6,6 +6,12 @@
  */
 window.I18N_LANGS = window.I18N_LANGS || {};
 window.I18N_LANGS.de = {
+    "CW and RTTY reports from the Reverse Beacon Network": "CW- und RTTY-Berichte vom Reverse Beacon Network",
+    "The Reverse Beacon Network (RBN) shows where your CW or RTTY transmissions have been heard and what the skimmers in your country hear. The program logs in to RBN with your callsign; skimmer locations are derived from the callsign prefix at country level.": "Das Reverse Beacon Network (RBN) zeigt, wo deine CW- oder RTTY-Aussendungen gehört wurden und was die Skimmer in deinem Land hören. Die Anmeldung bei RBN erfolgt mit deinem Rufzeichen; die Standorte der Skimmer werden aus dem Rufzeichenpräfix auf Landesebene abgeleitet.",
+    "Data from PSK Reporter by Philip Gladstone. Live spots from mqtt.pskreporter.info by Tom Fanning M0LTE. CW/RTTY: Reverse Beacon Network (reversebeacon.net).": "Data from PSK Reporter by Philip Gladstone. Live spots from mqtt.pskreporter.info by Tom Fanning M0LTE. CW/RTTY: Reverse Beacon Network (reversebeacon.net).",
+    "location at country level": "Standort auf Landesebene",
+    "RBN: set your callsign (Logs → Settings)": "RBN: lege dein Rufzeichen fest (Logs → Einstellungen)",
+    "Connected to the Reverse Beacon Network": "Mit dem Reverse Beacon Network verbunden",
     "Propagation on": "Funkwetter an",
     "Propagation: where you were heard and which bands are open": "Funkwetter: wo du gehört wurdest und welche Bänder offen sind",
     "Time window": "Zeitfenster",

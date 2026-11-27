@@ -483,7 +483,8 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <div class="covleg" id="propLegend"></div>
         <div class="hint">Tasot valitaan kartan oikeasta yläkulmasta. Viiva kulkee lähettäjältä kuulijalle. Klikkaa pistettä nähdäksesi
           raportin tiedot. Raportit kerätään vain, kun Radiosää on päällä; tiedot säilyvät 6 tuntia.</div>
-        <div class="hint">Data from PSK Reporter by Philip Gladstone. Live spots from mqtt.pskreporter.info by Tom Fanning M0LTE.</div>
+        <div class="hint">Data from PSK Reporter by Philip Gladstone. Live spots from mqtt.pskreporter.info by Tom Fanning M0LTE.
+          CW/RTTY: Reverse Beacon Network (reversebeacon.net).</div>
       </div>
     </div>
   </section>
@@ -492,11 +493,14 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="inner form msgform">
       <div class="note">Radiosää näyttää PSK Reporterin vastaanottoraportit: missä sinun FT8-, FT4-, JS8- tai muut digilähetyksesi on kuultu,
         ja mitä omassa lokaattoriruudussasi kuullaan ja mistä sieltä lähetetyt kuullaan. Ohjelma tilaa vain omaan kutsuusi ja omaan
-        4-merkkiseen lokaattoriruutuusi liittyvät raportit eikä lähetä mitään.</div>
+        4-merkkiseen lokaattoriruutuusi liittyvät raportit eikä lähetä mitään.
+        <br>Reverse Beacon Network (RBN) kertoo, missä CW- tai RTTY-lähetyksesi on kuultu ja mitä oman maasi skimmerit kuulevat.
+        RBN:ään kirjaudutaan omalla kutsullasi; skimmerien sijainti päätellään kutsun etuliitteestä maan tarkkuudella.</div>
       <div class="frow" style="margin-top:10px">
         <div class="fld checks">
           <label><input type="checkbox" id="propMine"> Missä minut kuultiin (oma kutsu lähettäjänä)</label>
-          <label><input type="checkbox" id="propArea"> Oma lokaattoriruutu: siellä kuullut ja sieltä kuullut</label></div>
+          <label><input type="checkbox" id="propArea"> Oma lokaattoriruutu: siellä kuullut ja sieltä kuullut</label>
+          <label><input type="checkbox" id="propRbn"> CW- ja RTTY-raportit Reverse Beacon Networkista</label></div>
       </div>
       <div class="hint" id="propWho"></div>
       <div class="frow svcsave"><button class="primary" id="btnPropSave">Tallenna</button><span class="err" id="propErr"></span></div>
@@ -4126,7 +4130,7 @@ async function propInit() {
   const remember = () => { const o = {}; Object.entries(layers).forEach(([k, l]) => { o[k] = propMap.hasLayer(l); });
     try { localStorage.setItem(PROP_LAYERS_KEY, JSON.stringify(o)); } catch (e) { /* ei tallennusta */ } };
   propMap.on("overlayadd overlayremove", remember);
-  propMap.attributionControl.addAttribution('<a href="https://pskreporter.info/" target="_blank" rel="noopener">PSK Reporter</a> (N1DQ), mqtt.pskreporter.info (M0LTE)');
+  propMap.attributionControl.addAttribution('<a href="https://pskreporter.info/" target="_blank" rel="noopener">PSK Reporter</a> (N1DQ), mqtt.pskreporter.info (M0LTE), <a href="https://www.reversebeacon.net/" target="_blank" rel="noopener">RBN</a>');
   propDrawGrey();
 }
 function propShow() {
@@ -4146,8 +4150,10 @@ function propPopup(p) {
   const who = p.kind === "mine" ? T("{c} kuuli sinut", {c: p.call}) : p.kind === "heard" ? T("{n} kuuli asemaa {c}", {n: p.near, c: p.call})
     : T("{c} kuuli asemaa {n}", {c: p.call, n: p.near});
   const f = p.f ? ` · ${dec((p.f / 1e6).toFixed(4))} MHz` : "";
-  return `<b>${esc(who)}</b><br>${esc(p.b)} · ${esc(p.md || "?")}${f}${p.rp != null ? ` · ${p.rp > 0 ? "+" : ""}${p.rp} dB` : ""}<br>`
-    + `${esc(D(p.km))} · ${p.az}° ${esc(DIRS8()[Math.round(p.az / 45) % 8])}<br><span class="muted">${esc(ago(p.t))}</span>`;
+  const src = p.src === "rbn" ? "Reverse Beacon Network · " + T("sijainti maan tarkkuudella") : "PSK Reporter";
+  return `<b>${esc(who)}</b><br>${esc(p.b)} · ${esc(p.md || "?")}${f}${p.rp != null ? ` · ${p.rp > 0 ? "+" : ""}${p.rp} dB` : ""}`
+    + `${p.wpm ? ` · ${p.wpm} ${p.md === "RTTY" ? "Bd" : "WPM"}` : ""}<br>`
+    + `${esc(D(p.km))} · ${p.az}° ${esc(DIRS8()[Math.round(p.az / 45) % 8])}<br><span class="muted">${esc(ago(p.t))} · ${esc(src)}</span>`;
 }
 function renderProp() {
   if (!propMap || !propData) return;
@@ -4186,12 +4192,18 @@ function renderPropState() {
   else if (a.ok === false) h = `<span class="bad">${esc(T("Virhe: {e}", {e: a.error || "?"}))}</span>`;
   else if (a.connected) h = `<span class="ok">● ${esc(T("Yhdistetty PSK Reporteriin"))}</span>` + (a.updated ? " · " + esc(T("viimeisin raportti {a}", {a: ago(a.updated)})) : "");
   else h = esc(T("Yhdistetään…"));
+  const rb = a.rbn || {};
+  if (a.enabled && propCfg().rbn !== false) {
+    if (!a.call) h += `<br><span class="muted">${esc(T("RBN: aseta oma kutsu (Lokit → Asetukset)"))}</span>`;
+    else if (rb.ok === false) h += `<br><span class="bad">RBN: ${esc(rb.error || "?")}</span>`;
+    else if (rb.connected) h += `<br><span class="ok">● ${esc(T("Yhdistetty Reverse Beacon Networkiin"))}</span>`;
+  }
   if ($("propStatus").dataset.h !== h) { $("propStatus").innerHTML = h; $("propStatus").dataset.h = h; }
 }
 function fillProp() {
   const c = propCfg(), a = (S && S.prop) || {};
   $("propEnabled").checked = !!c.enabled; $("propEnabledTxt").textContent = T(c.enabled ? "Päällä" : "Pois");
-  $("propMine").checked = c.mine !== false; $("propArea").checked = c.area !== false;
+  $("propMine").checked = c.mine !== false; $("propArea").checked = c.area !== false; $("propRbn").checked = c.rbn !== false;
   $("propWho").textContent = [a.call ? T("Oma kutsu: {c} (Lokit → Asetukset)", {c: a.call}) : T("Omaa kutsua ei ole asetettu (Lokit → Asetukset)."),
     a.grid ? T("Oma ruutu: {g} (Palvelut → Oma sijainti)", {g: a.grid}) : T("Sijaintia ei ole asetettu (Palvelut → Oma sijainti).")].join(" · ");
   renderPropState();
@@ -4205,7 +4217,7 @@ $("propEnabled").onchange = async () => {
 };
 $("btnPropSave").onclick = async () => {
   $("propErr").textContent = "";
-  const j = await saveCfg({propagation: {mine: $("propMine").checked, area: $("propArea").checked}});
+  const j = await saveCfg({propagation: {mine: $("propMine").checked, area: $("propArea").checked, rbn: $("propRbn").checked}});
   if (!j.ok) { $("propErr").textContent = j.error; return; }
   S.config = j.config; fillProp(); $("propErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
 };

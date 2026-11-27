@@ -1,4 +1,4 @@
-"""Radiosää: PSKReporterin vastaanottoraportit (myöhemmin myös RBN ja tropoarvio).
+"""Radiosää: PSKReporterin ja Reverse Beacon Networkin vastaanottoraportit (myöhemmin myös tropoarvio).
 
 Lähde: mqtt.pskreporter.info (Tom Fanning M0LTE), reaaliaikainen MQTT-jakelu PSK Reporterin
 (Philip Gladstone N1DQ) raporteista. Ohjeiden mukaisesti:
@@ -8,12 +8,17 @@ Lähde: mqtt.pskreporter.info (Tom Fanning M0LTE), reaaliaikainen MQTT-jakelu PS
 - lähdemerkintä käyttöliittymässä
 Raportteja vain näytetään; mitään ei lähetetä eteenpäin. Yhteys vain, kun Radiosää on päällä.
 
+Reverse Beacon Network (telnet.reversebeacon.net:7000, CW ja RTTY): kirjautuminen omalla kutsulla, koko syöte
+luetaan ja ohjelma poimii siitä oman kutsun raportit sekä oman maan skimmerien kuulemat asemat. Skimmerien ja
+kuultujen asemien sijainti päätellään kutsun etuliitteestä (prefixes.py, maan tai kutsualueen tarkkuus).
+
 Aiheen rakenne: pskr/filter/v2/{band}/{mode}/{tx_call}/{rx_call}/{tx_grid}/{rx_grid}/{tx_dxcc}/{rx_dxcc}
 Raportin kentät: sq, f (Hz), b, md, rp (dB), t, t_tx, sc, sl, sa, rc, rl, ra.
 """
 from __future__ import annotations
 
 import asyncio
+import calendar
 import json
 import logging
 import math
@@ -29,6 +34,8 @@ log = logging.getLogger("bmmonitor.propagation")
 
 MQTT_HOST = "mqtt.pskreporter.info"
 MQTT_PORT = 1884            # MQTT TLS:n yli
+RBN_HOST = "telnet.reversebeacon.net"
+RBN_PORT = 7000             # CW ja RTTY (7001 = FT8, saadaan jo PSK Reporterista)
 KEEPALIVE = 60
 KEEP_S = 6 * 3600           # raporttien säilytys muistissa
 MAX_SPOTS = 30000
@@ -39,12 +46,13 @@ DEFAULT_PROP = {
     "enabled": False,       # Radiosää päällä (yhteys PSKReporteriin)
     "mine": True,           # missä minut kuultiin (oma kutsu lähettäjänä)
     "area": True,           # oma lokaattoriruutu: täällä kuullut ja täältä kuullut
+    "rbn": True,            # CW/RTTY Reverse Beacon Networkista (vaatii oman kutsun)
 }
 
 
 def normalize_prop(new: dict, old: dict) -> dict:
     out = {**DEFAULT_PROP, **(old or {})}
-    for k in ("enabled", "mine", "area"):
+    for k in ("enabled", "mine", "area", "rbn"):
         if k in new:
             out[k] = bool(new[k])
     return out
@@ -176,6 +184,26 @@ def topics_for(call: str, grid: str, mine: bool, area: bool) -> list[str]:
     return t
 
 
+# ---------------------------------------------------------------- RBN
+_RBN_RE = re.compile(r"^DX de ([A-Z0-9/]+)(?:-[#\d]+)?:\s+(\d+(?:\.\d+)?)\s+([A-Z0-9/]+)\s+([A-Z0-9]+)\s+(-?\d+)\s*dB"
+                     r"(?:\s+(\d+)\s*(?:WPM|BPS))?.*?\s(\d{4})Z", re.I)
+
+
+def parse_rbn(line: str, now: float | None = None):
+    """RBN-telnetrivi → dict (skimmer, dx, kHz, mode, snr, wpm, t) tai None."""
+    m = _RBN_RE.match((line or "").strip())
+    if not m:
+        return None
+    now = now or time.time()
+    hh, mm = int(m.group(7)[:2]), int(m.group(7)[2:])
+    t0 = time.gmtime(now)
+    t = calendar.timegm((t0.tm_year, t0.tm_mon, t0.tm_mday, hh, mm, 0, 0, 0, 0))
+    if t > now + 120:                       # puolenyön yli: eilinen
+        t -= 86400
+    return {"skimmer": m.group(1).upper(), "khz": float(m.group(2)), "dx": m.group(3).upper(), "md": m.group(4).upper(),
+            "rp": int(m.group(5)), "wpm": int(m.group(6)) if m.group(6) else None, "t": min(t, now)}
+
+
 # ---------------------------------------------------------------- syöte
 class PropFeed:
     def __init__(self, mon, demo: bool = False):
@@ -186,6 +214,9 @@ class PropFeed:
         self.state = {"ok": None, "error": None, "connected": False, "updated": None, "since": None}
         self._wake = asyncio.Event()
         self.host, self.port, self.tls = MQTT_HOST, MQTT_PORT, True     # testeissä paikallinen palvelin
+        self.rbn_host, self.rbn_port = RBN_HOST, RBN_PORT
+        self.rbn_state = {"ok": None, "error": None, "connected": False, "updated": None}
+        self._rbn_wake = asyncio.Event()
 
     @property
     def cfg(self) -> dict:
@@ -207,6 +238,7 @@ class PropFeed:
 
     def reconfigure(self):
         self._wake.set()
+        self._rbn_wake.set()
 
     # ---------------- raporttien käsittely
     def add_spot(self, d: dict, src: str = "pskr") -> bool:
@@ -221,7 +253,7 @@ class PropFeed:
         key = (src, d.get("sq")) if d.get("sq") is not None else (src, sc, rc, d.get("b"), int(t))
         if key in self._seen:
             return False
-        sp, rp = loc_latlon(d.get("sl")), loc_latlon(d.get("rl"))
+        sp, rp = d.get("_sp") or loc_latlon(d.get("sl")), d.get("_rp") or loc_latlon(d.get("rl"))
         if not sp or not rp:
             return False
         try:
@@ -236,8 +268,29 @@ class PropFeed:
         self._seen[key] = t
         self.spots.append({"t": t, "src": src, "b": band_of(d.get("b"), f), "md": str(d.get("md") or "").upper()[:10],
                            "f": f, "rp": snr, "sc": sc, "sl": str(d.get("sl") or "")[:10], "rc": rc,
-                           "rl": str(d.get("rl") or "")[:10], "s": sp, "r": rp, "km": round(km)})
+                           "rl": str(d.get("rl") or "")[:10], "s": sp, "r": rp, "km": round(km),
+                           "kind": d.get("_kind"), "wpm": d.get("wpm")})
         return True
+
+    def add_rbn(self, sp: dict) -> bool:
+        """RBN-raportti: oma kutsu kuultu (mine) tai oman maan skimmeri kuuli (heard)."""
+        from .prefixes import call_latlon
+        call = self.my_call()
+        if not call:
+            return False
+        dx, sk = sp["dx"], sp["skimmer"]
+        mine = base_call(dx) == call
+        home_cc = call_latlon(call)
+        if not mine and not (self.cfg.get("area", True) and home_cc and call_latlon(sk) == home_cc):
+            return False
+        if mine and not self.cfg.get("mine", True):
+            return False
+        rpos, spos = call_latlon(sk), (self.home() if mine and self.home() else call_latlon(dx))
+        if not rpos or not spos:
+            return False
+        return self.add_spot({"sq": f"rbn-{sk}-{dx}-{int(sp['khz'])}-{int(sp['t'] // 60)}", "f": sp["khz"] * 1000,
+                              "md": sp["md"], "rp": sp["rp"], "t": sp["t"], "sc": dx, "rc": sk, "sl": "", "rl": "",
+                              "_sp": spos, "_rp": rpos, "_kind": None if mine else "heard", "wpm": sp.get("wpm")}, "rbn")
 
     def prune(self):
         cut = time.time() - KEEP_S
@@ -250,6 +303,8 @@ class PropFeed:
         """mine = oma kutsu lähettäjänä; heard = oma ruutu kuuli; sent = omasta ruudusta kuultiin."""
         if call and base_call(s["sc"]) == call:
             return "mine"
+        if s.get("kind"):
+            return s["kind"]
         if grid and s["rl"][:4].upper() == grid:
             return "heard"
         if grid and s["sl"][:4].upper() == grid:
@@ -282,7 +337,7 @@ class PropFeed:
             if not cur or s["t"] > cur["t"]:
                 best[k] = {"kind": kind, "b": s["b"], "md": s["md"], "call": fcall, "near": s["sc"] if kind != "heard" else s["rc"],
                            "lat": far[0], "lon": far[1], "olat": origin[0], "olon": origin[1], "km": round(km),
-                           "az": round(az), "rp": s["rp"], "t": s["t"], "f": s["f"], "src": s["src"]}
+                           "az": round(az), "rp": s["rp"], "t": s["t"], "f": s["f"], "src": s["src"], "wpm": s.get("wpm")}
             b = summ.setdefault(s["b"], {"b": s["b"], "n": 0, "mine": 0, "far": 0, "farcall": "", "sect": [0] * 8,
                                           "last": 0, "modes": {}})
             b["n"] += 1
@@ -363,6 +418,67 @@ class PropFeed:
             self.state["connected"] = False
             writer.close()
 
+    async def _rbn_once(self, call: str):
+        reader, writer = await asyncio.wait_for(asyncio.open_connection(self.rbn_host, self.rbn_port), 20)
+        try:
+            buf = b""
+            while b"call" not in buf.lower():
+                chunk = await asyncio.wait_for(reader.read(512), 30)
+                if not chunk:
+                    raise ConnectionError(tr("Yhteys suljettu"))
+                buf += chunk
+            writer.write(call.encode() + b"\r\n")
+            await writer.drain()
+            self.rbn_state.update(ok=True, error=None, connected=True)
+            self.mon.dirty = True
+            last_push = 0.0
+            while not self._rbn_wake.is_set():
+                try:
+                    line = await asyncio.wait_for(reader.readline(), 300)
+                except asyncio.TimeoutError:
+                    raise ConnectionError(tr("Yhteys suljettu")) from None
+                if not line:
+                    raise ConnectionError(tr("Yhteys suljettu"))
+                sp = parse_rbn(line.decode("latin-1", "replace"))
+                if sp and self.add_rbn(sp) and time.time() - last_push > 5:
+                    last_push = time.time()
+                    self.rbn_state["updated"] = last_push
+                    self.prune()
+                    self.mon.dirty = True
+        finally:
+            self.rbn_state["connected"] = False
+            writer.close()
+
+    async def run_rbn(self):
+        delay = 10
+        while True:
+            self._rbn_wake.clear()
+            wait = 60
+            call = self.my_call()
+            want = self.cfg.get("enabled") and self.cfg.get("rbn", True) and call and \
+                (self.cfg.get("mine", True) or self.cfg.get("area", True))
+            if want and not self.demo:
+                try:
+                    await self._rbn_once(call)
+                    delay, wait = 10, 0.5
+                except asyncio.CancelledError:
+                    raise
+                except Exception as e:  # noqa: BLE001
+                    from .messaging import friendly_error
+                    self.rbn_state.update(ok=False, error=friendly_error(e), connected=False)
+                    self.mon.dirty = True
+                    log.info("RBN: %s", e)
+                    wait, delay = delay, min(300, delay * 2)
+            elif want:
+                self.rbn_state.update(ok=True, error=None, connected=True, updated=time.time())
+            elif self.rbn_state.get("connected") or self.rbn_state.get("ok") is not None:
+                self.rbn_state = {"ok": None, "error": None, "connected": False, "updated": None}
+                self.mon.dirty = True
+            try:
+                await asyncio.wait_for(self._rbn_wake.wait(), wait)
+            except asyncio.TimeoutError:
+                pass
+
     # ---------------- demo
     def _demo_tick(self):
         h = self.home() or (60.17, 24.94)
@@ -388,6 +504,14 @@ class PropFeed:
                 d = {"sc": "OH2" + rnd.choice(["XD", "XE"]), "sl": g + "kf", "rc": rc, "rl": rl}
             d.update(b=b, md=md, rp=rnd.randint(-22, 12), t=now - rnd.uniform(0, 3500 if first else 50), f=None, sq=rnd.getrandbits(40))
             self.add_spot(d, "pskr")
+        sks = ["DL8LAS", "K3LR", "JA1YCQ", "OH6BG", "SM6FMB", "VE2WU", "W3LPL", "ZS6YI", "VK6ANC", "EA5WU", "OH2BBT"]
+        for _ in range(rnd.randint(25, 40) if first else rnd.randint(1, 3)):
+            sk = rnd.choice(sks)
+            # suomalaiset skimmerit kuulevat myös muita (oma alue), muut vain omaa kutsua
+            dx = rnd.choice(["DL1VWX", "K1ABC", "JA1XYZ", "G4STU"]) if sk.startswith("OH") and rnd.random() < 0.6 else call
+            khz = rnd.choice([3525.0, 7012.5, 10112.0, 14025.0, 18080.0, 21030.0, 28025.0])
+            self.add_rbn({"skimmer": sk, "dx": dx, "khz": khz, "md": "CW", "rp": rnd.randint(3, 30), "wpm": rnd.choice([18, 22, 25, 28]),
+                          "t": now - rnd.uniform(0, 3500 if first else 50)})
         self.state.update(ok=True, error=None, connected=True, updated=now, since=self.state.get("since") or now)
         self.prune()
         self.mon.dirty = True
@@ -430,7 +554,7 @@ class PropFeed:
 
     def snapshot(self) -> dict:
         return {**self.state, "enabled": bool(self.cfg.get("enabled")), "count": len(self.spots),
-                "call": self.my_call(), "grid": self.grid()}
+                "call": self.my_call(), "grid": self.grid(), "rbn": dict(self.rbn_state)}
 
 
 def latlon_loc6(lat: float, lon: float) -> str:

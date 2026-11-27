@@ -822,6 +822,12 @@
     "Oma ruutu: {g} (Palvelut → Oma sijainti)": "Own square: {g} (Services → Your location)",
     "Sijaintia ei ole asetettu (Palvelut → Oma sijainti).": "Location is not set (Services → Your location).",
     "Aseta oma kutsu (Lokit) tai sijainti (Palvelut)": "Set your callsign (Logs) or location (Services)",
+    "CW- ja RTTY-raportit Reverse Beacon Networkista": "CW and RTTY reports from the Reverse Beacon Network",
+    "Reverse Beacon Network (RBN) kertoo, missä CW- tai RTTY-lähetyksesi on kuultu ja mitä oman maasi skimmerit kuulevat. RBN:ään kirjaudutaan omalla kutsullasi; skimmerien sijainti päätellään kutsun etuliitteestä maan tarkkuudella.": "The Reverse Beacon Network (RBN) shows where your CW or RTTY transmissions have been heard and what the skimmers in your country hear. The program logs in to RBN with your callsign; skimmer locations are derived from the callsign prefix at country level.",
+    "Data from PSK Reporter by Philip Gladstone. Live spots from mqtt.pskreporter.info by Tom Fanning M0LTE. CW/RTTY: Reverse Beacon Network (reversebeacon.net).": "Data from PSK Reporter by Philip Gladstone. Live spots from mqtt.pskreporter.info by Tom Fanning M0LTE. CW/RTTY: Reverse Beacon Network (reversebeacon.net).",
+    "sijainti maan tarkkuudella": "location at country level",
+    "RBN: aseta oma kutsu (Lokit → Asetukset)": "RBN: set your callsign (Logs → Settings)",
+    "Yhdistetty Reverse Beacon Networkiin": "Connected to the Reverse Beacon Network",
   };
 
   const ATTRS = ["placeholder", "title", "aria-label"];

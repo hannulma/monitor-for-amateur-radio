@@ -1409,3 +1409,53 @@ def test_propagation_pskreporter():
     assert got["connect"][0] == 1 and b"MonitorForAmateurRadio-" in got["connect"][1]
     assert b"pskr/filter/v2/+/+/OH2BEA/#" in got["sub"]
     assert [(p["call"], p["kind"]) for p in g.query(60)["points"]] == [("ZS6JKL", "mine")]
+
+
+def test_propagation_rbn():
+    """RBN: rivien jäsennys, etuliitteet → sijainti, oma kutsu / oman maan skimmerit, telnet-asiakas paikallista palvelinta vasten."""
+    import calendar
+    import time as _t
+    from types import SimpleNamespace
+    from bmmonitor import propagation as P
+    from bmmonitor.prefixes import call_latlon
+    assert call_latlon("OH2BEA") == call_latlon("OH6BG-#") and call_latlon("W1AW/7") == call_latlon("K7ABC")
+    assert call_latlon("OH/DL1ABC") == call_latlon("OH1A") and call_latlon("KH6ABC") != call_latlon("K6ABC")
+    assert call_latlon("UA9XX") != call_latlon("UA3XX") and call_latlon("QQ1A") is None
+    now = calendar.timegm((2026, 11, 27, 20, 25, 0, 0, 0, 0))
+    sp = P.parse_rbn("DX de OH6BG-#:    14025.1  OH2BEA         CW    18 dB  22 WPM  CQ      2024Z", now)
+    assert sp == {"skimmer": "OH6BG", "khz": 14025.1, "dx": "OH2BEA", "md": "CW", "rp": 18, "wpm": 22, "t": now - 60}
+    assert P.parse_rbn("DX de DL8LAS-#: 7012.5 K1ABC RTTY 12 dB 45 BPS CQ 2359Z", now)["t"] == now - 86400 + (23 * 60 + 59 - 20 * 60 - 25) * 60
+    assert P.parse_rbn("garbage") is None
+    cfg = {"propagation": {**P.DEFAULT_PROP, "enabled": True}, "services": {"location": {"lat": 60.17, "lon": 24.94}}}
+    mon = SimpleNamespace(cfg=cfg, dirty=False, qso=SimpleNamespace(my_call=lambda: "OH2BEA"))
+    f = P.PropFeed(mon)
+    t = _t.time()
+    assert f.add_rbn({"skimmer": "K3LR", "dx": "OH2BEA", "khz": 14025.0, "md": "CW", "rp": 12, "wpm": 25, "t": t})
+    assert f.add_rbn({"skimmer": "OH6BG", "dx": "JA1XYZ", "khz": 7012.0, "md": "CW", "rp": 8, "wpm": 20, "t": t})
+    assert not f.add_rbn({"skimmer": "DL8LAS", "dx": "JA1XYZ", "khz": 7012.0, "md": "CW", "rp": 8, "t": t})     # muu maa
+    pts = {(p["kind"], p["call"], p["src"]) for p in f.query(60)["points"]}
+    assert pts == {("mine", "K3LR", "rbn"), ("heard", "JA1XYZ", "rbn")}
+
+    async def server_test():
+        got = {}
+
+        async def handle(reader, writer):
+            writer.write(b"Welcome to RBN\r\nPlease enter your call: ")
+            await writer.drain()
+            got["login"] = await reader.readline()
+            writer.write(f"DX de W3LPL-#:  21030.0  OH2BEA  CW  20 dB  24 WPM  CQ  {_t.strftime('%H%M', _t.gmtime())}Z\r\n".encode())
+            await writer.drain()
+            await asyncio.sleep(0.2)
+            writer.close()
+
+        srv = await asyncio.start_server(handle, "127.0.0.1", 0)
+        g = P.PropFeed(mon)
+        g.rbn_host, g.rbn_port = "127.0.0.1", srv.sockets[0].getsockname()[1]
+        with pytest.raises(ConnectionError):
+            await asyncio.wait_for(g._rbn_once("OH2BEA"), 5)
+        srv.close()
+        return got, g
+
+    got, g = asyncio.run(server_test())
+    assert got["login"] == b"OH2BEA\r\n"
+    assert [(p["call"], p["b"], p["wpm"]) for p in g.query(60)["points"]] == [("W3LPL", "15m", 24)]

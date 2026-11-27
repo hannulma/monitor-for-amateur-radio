@@ -1648,6 +1648,7 @@ async def _run(args, mon, cfg_path, ui):
     tasks.append(asyncio.create_task(mon.qso.run()))
     tasks.append(asyncio.create_task(mon.ais.run()))
     tasks.append(asyncio.create_task(mon.prop.run()))
+    tasks.append(asyncio.create_task(mon.prop.run_rbn()))
     start_loop_watchdog(asyncio.get_running_loop())
     if not args.demo:
         tasks.append(asyncio.create_task(mon.updater.run()))
