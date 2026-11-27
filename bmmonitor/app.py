@@ -36,6 +36,7 @@ from .nets import DEFAULT_NETS, NetCalendar, normalize_nets
 from .qso import DEFAULT_LOG, SECRETS as QSO_SECRETS, QsoLog, adif_file, csv_file, normalize_log
 from .ais import DEFAULT_AIS, AisFeed, normalize_ais
 from .propagation import DEFAULT_PROP, WINDOWS as PROP_WINDOWS, PropFeed, normalize_prop
+from .tropo import TropoFeed
 from .aprsrx import DEFAULT_APRSRX, DEFAULT_TILES, DEFAULT_TILES_ATTR, AprsRx, normalize_aprsrx
 from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
                         validate_passcode, ws_options)
@@ -262,6 +263,7 @@ class Monitor:
         self.qso = QsoLog(self, cfg_path.parent / "qso_log.sqlite")
         self.ais = AisFeed(self, demo=demo)
         self.prop = PropFeed(self, demo=demo)
+        self.tropo = TropoFeed(self, demo=demo)
         self.tile_sem = asyncio.Semaphore(4)
         self.tile_fail, self.tile_down_until = 0, 0.0
 
@@ -392,9 +394,11 @@ class Monitor:
         if "propagation" in new:
             self.cfg["propagation"] = normalize_prop(new["propagation"] or {}, self.cfg["propagation"])
             self.prop.reconfigure()
+            self.tropo.reconfigure()
             self.dirty = True
         elif any(k in new for k in ("services", "log", "devices", "messaging")) and self.cfg["propagation"].get("enabled"):
             self.prop.reconfigure()        # oma kutsu tai sijainti voi vaihtua → uudet tilaukset
+            self.tropo.reconfigure()
         if "aprsrx" in new:
             old_km = self.cfg["aprsrx"].get("is_km")
             self.cfg["aprsrx"] = normalize_aprsrx(new["aprsrx"] or {}, self.cfg["aprsrx"])
@@ -1277,6 +1281,15 @@ def make_app(mon: Monitor) -> web.Application:
         return web.json_response({"ok": True, **(await in_thread(mon.prop.query, mins, bands, modes)),
                                   "state": mon.prop.snapshot()})
 
+    async def tropo_data(request):
+        try:
+            h = max(0, min(71, int(request.query.get("h", 0))))
+        except ValueError:
+            h = 0
+        out = mon.tropo.query(h)
+        out["aprs"] = await in_thread(mon.aprsrx.tropo_meter, home())
+        return web.json_response({"ok": True, **out})
+
     async def aprsrx_serialports(_):
         from .radios import serial_ports
         return web.json_response({"ports": await in_thread(serial_ports)})
@@ -1456,6 +1469,7 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_get("/api/aprsrx/extra", aprsrx_extra)
     app.router.add_get("/api/ais", ais_ships)
     app.router.add_get("/api/prop", prop_data)
+    app.router.add_get("/api/tropo", tropo_data)
     app.router.add_get("/api/log", log_list)
     app.router.add_post("/api/log", log_save)
     app.router.add_delete("/api/log/{id:\\d+}", log_delete)
@@ -1649,6 +1663,7 @@ async def _run(args, mon, cfg_path, ui):
     tasks.append(asyncio.create_task(mon.ais.run()))
     tasks.append(asyncio.create_task(mon.prop.run()))
     tasks.append(asyncio.create_task(mon.prop.run_rbn()))
+    tasks.append(asyncio.create_task(mon.tropo.run()))
     start_loop_watchdog(asyncio.get_running_loop())
     if not args.demo:
         tasks.append(asyncio.create_task(mon.updater.run()))

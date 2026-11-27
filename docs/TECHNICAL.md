@@ -69,6 +69,25 @@ Talkgroups 1–90 are not supported by Hoseline.
   passenger 60–69 and 40–49, fishing 30, pleasure 36–37, special 31–35 and 50–59, other the rest;
   *hide moored/anchored* hides navigational status 1 and 5. The browser polls `GET /api/ais` every 30 s.
 
+### Propagation (Radiosää)
+
+`bmmonitor/propagation.py` and `bmmonitor/tropo.py` run only while the tab's switch is on.
+
+- **PSK Reporter**: MQTT 3.1.1 over TLS to `mqtt.pskreporter.info:1884` (own minimal client, QoS 0, keepalive 60 s,
+  reconnect 5 s → 2 min). Topics `pskr/filter/v2/+/+/{CALL}/#` (own callsign as sender), `…/+/+/+/+/{GRID}/#` and
+  `…/+/+/+/+/+/{GRID}/#` (own 4-character square as sender / receiver). Client ID `MonitorForAmateurRadio-<version>-<call>-<n>`.
+  Spots kept in memory for 6 h; `/api/prop?mins=&bands=&modes=` returns the latest point per (kind, band, far station)
+  and a per-band summary (count, farthest, 8 direction sectors).
+- **RBN**: `telnet.reversebeacon.net:7000` (CW/RTTY), login with the own callsign, lines `DX de SKIMMER-#: kHz DX MODE
+  dB WPM … HHMMZ`. Own callsign spots and spots by skimmers in the own country are kept; positions from the callsign
+  prefix (`bmmonitor/prefixes.py`, call areas for W/VE/JA/UA/VK).
+- **Tropo estimate**: Open-Meteo, 7 × 7 grid (1.5° × 3°) around home, hourly 2 m values, surface pressure and
+  1000/925/850 hPa temperature, humidity and geopotential height, 3 days, every 3 h. N = 77.6 P/T + 3.73·10⁵ e/T²;
+  the steepest dN/dh between the surface and pressure levels above ground gives 0 normal (> −60 N/km), 1 enhanced,
+  2 strong (< −90), 3 ducting likely (< −157). Coarse levels smooth out thin inversions – an approximate indicator only.
+- **Aurora oval**: NOAA SWPC `ovation_aurora_latest.json` every 10 min, max per 2° cell (≥ 3 %).
+- **APRS tropo meter**: farthest directly heard position in the last hour vs. the median of daily maxima over 14 days.
+
 ## Open data services
 
 | Service | Endpoint | Notes |

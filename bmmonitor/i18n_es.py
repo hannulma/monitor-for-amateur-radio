@@ -5,6 +5,14 @@ Si falta una entrada, se usa el inglés.
 """
 
 ES: dict[str, str] = {
+    "Propagation": "Propagación",
+    "ducting likely": "conducto probable",
+    "Tropo estimate: {w}": "Estimación tropo: {w}",
+    "VHF/UHF tropo conditions may improve from about {t} (own estimate from the Open-Meteo forecast).": "Las condiciones tropo VHF/UHF pueden mejorar a partir de las {t} aprox. (estimación propia del pronóstico de Open-Meteo).",
+    "Tropo {w} at {t}": "Tropo {w} a las {t}",
+    "{b} open": "{b} abierta",
+    "Long path from my area: {c} {km} km (in the last 30 min).": "Enlace largo desde mi zona: {c} {km} km (en los últimos 30 min).",
+    "{b} open: {c} {km} km": "{b} abierta: {c} {km} km",
     "Set your callsign (Logs) or location (Services)": "Define tu indicativo (Registros) o tu ubicación (Servicios)",
     "The server refused the connection": "El servidor rechazó la conexión",
     "The server refused the subscription": "El servidor rechazó la suscripción",

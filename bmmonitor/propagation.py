@@ -47,12 +47,16 @@ DEFAULT_PROP = {
     "mine": True,           # missä minut kuultiin (oma kutsu lähettäjänä)
     "area": True,           # oma lokaattoriruutu: täällä kuullut ja täältä kuullut
     "rbn": True,            # CW/RTTY Reverse Beacon Networkista (vaatii oman kutsun)
+    "alert_open": False,    # hälytys: 6 m / 2 m aukeaa omalta alueelta (pitkät yhteydet)
+    "alert_tropo": False,   # hälytys: oma tropoarvio voimakas tai kanavointi seuraavan 12 h aikana
+    "sms": False,           # hälytykset myös radioon
 }
+OPEN_KM = {"6m": 800, "4m": 600, "2m": 500, "70cm": 400}    # tätä pidempi omalta alueelta = keli auki
 
 
 def normalize_prop(new: dict, old: dict) -> dict:
     out = {**DEFAULT_PROP, **(old or {})}
-    for k in ("enabled", "mine", "area", "rbn"):
+    for k in ("enabled", "mine", "area", "rbn", "alert_open", "alert_tropo", "sms"):
         if k in new:
             out[k] = bool(new[k])
     return out
@@ -215,6 +219,8 @@ class PropFeed:
         self._wake = asyncio.Event()
         self.host, self.port, self.tls = MQTT_HOST, MQTT_PORT, True     # testeissä paikallinen palvelin
         self.rbn_host, self.rbn_port = RBN_HOST, RBN_PORT
+        self._last_open_check = 0.0
+        self._open_alerted: dict = {}
         self.rbn_state = {"ok": None, "error": None, "connected": False, "updated": None}
         self._rbn_wake = asyncio.Event()
 
@@ -291,6 +297,31 @@ class PropFeed:
         return self.add_spot({"sq": f"rbn-{sk}-{dx}-{int(sp['khz'])}-{int(sp['t'] // 60)}", "f": sp["khz"] * 1000,
                               "md": sp["md"], "rp": sp["rp"], "t": sp["t"], "sc": dx, "rc": sk, "sl": "", "rl": "",
                               "_sp": spos, "_rp": rpos, "_kind": None if mine else "heard", "wpm": sp.get("wpm")}, "rbn")
+
+    def check_open(self):
+        """Hälytys, kun VHF-bandilla on viimeisen 30 min aikana pitkä raportti omalta alueelta (kerran 3 h / bandi)."""
+        now = time.time()
+        if not self.cfg.get("alert_open") or now - self._last_open_check < 60:
+            return
+        self._last_open_check = now
+        call, grid = self.my_call(), self.grid()
+        best: dict = {}
+        for s in reversed(self.spots):
+            if s["t"] < now - 1800:
+                break
+            lim = OPEN_KM.get(s["b"])
+            if not lim or s["km"] < lim or not self.classify(s, call, grid):
+                continue
+            if s["km"] > best.get(s["b"], (0, ""))[0]:
+                best[s["b"]] = (s["km"], s["rc"] if base_call(s["sc"]) == call or s["sl"][:4].upper() == grid else s["sc"])
+        from .tropo import push_alert
+        for b, (km, far) in best.items():
+            if now - self._open_alerted.get(b, 0) < 3 * 3600:
+                continue
+            self._open_alerted[b] = now
+            push_alert(self.mon, tr("{b} auki", b=b),
+                       tr("Pitkä yhteys omalta alueelta: {c} {km} km (viimeisen 30 min aikana).", c=far, km=km),
+                       tr("{b} auki: {c} {km} km", b=b, c=far, km=km) if self.cfg.get("sms") else None)
 
     def prune(self):
         cut = time.time() - KEEP_S
@@ -387,6 +418,7 @@ class PropFeed:
                             last["push"] = time.time()
                             self.state["updated"] = last["push"]
                             self.prune()
+                            self.check_open()
                             self.mon.dirty = True
                     elif typ == 9 and b"\x80" in body[2:]:
                         raise ConnectionError(tr("Palvelin hylkäsi tilauksen"))
@@ -444,6 +476,7 @@ class PropFeed:
                     last_push = time.time()
                     self.rbn_state["updated"] = last_push
                     self.prune()
+                    self.check_open()
                     self.mon.dirty = True
         finally:
             self.rbn_state["connected"] = False
@@ -514,6 +547,7 @@ class PropFeed:
                           "t": now - rnd.uniform(0, 3500 if first else 50)})
         self.state.update(ok=True, error=None, connected=True, updated=now, since=self.state.get("since") or now)
         self.prune()
+        self.check_open()
         self.mon.dirty = True
 
     async def run(self):

@@ -25,7 +25,7 @@ internal names still use that name so that updates and saved settings keep worki
 
 ## Features
 
-The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Check-in │ APRS · Feeds │ Logs │ Services · Satellites │ App**. Tabs you don't use can be hidden (*App → Appearance*); their functions keep running in the background.
+The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Check-in │ APRS · Feeds │ Logs │ Services · Satellites · Propagation │ App**. Tabs you don't use can be hidden (*App → Appearance*); their functions keep running in the background.
 
 ### BrandMeister DMR
 
@@ -122,6 +122,22 @@ The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Chec
 - **Satellite passes** – upcoming passes of the ISS and active amateur radio satellites (CelesTrak orbits, SatNOGS DB
   frequencies, SGP4) with visible ISS passes and alerts before rise. The *Satellites* tab shows them on a world map
   (position, ground track, coverage circle, day/night) with a sky plot of the next pass.
+
+### Propagation
+
+- **Where you were heard** – live PSK Reporter reports of your FT8, FT4, JS8 and other digital transmissions and Reverse
+  Beacon Network (RBN) spots of your CW/RTTY signal, drawn on a world map as great-circle lines coloured by band.
+- **Which bands are open** – what is heard in your own 4-character locator square and where stations from there are heard
+  (PSK Reporter), plus what the skimmers in your country hear (RBN); a *Bands now* table with reports, the farthest
+  station and the main directions per band. Filters for time window, bands and mode.
+- **VHF/UHF conditions** – the program's own approximate tropo estimate around your home, calculated from the Open-Meteo
+  weather model (refractivity gradient in the lowest pressure levels, 72-hour outlook), the NOAA OVATION aurora oval,
+  your own APRS station as a tropo meter (farthest station heard directly vs. usual) and the Kp index / aurora level.
+- Layers like on the APRS map (heard me, HF and VHF/UHF reports, tropo estimate, aurora oval, day/night line) and
+  optional alerts when 6 m, 4 m, 2 m or 70 cm opens from your area or the tropo estimate turns strong.
+- The program subscribes only to reports about your own callsign and locator square (PSK Reporter MQTT feed by
+  M0LTE, data by N1DQ) and logs in to RBN with your callsign; nothing is sent. RBN locations are derived from the
+  callsign prefix at country level. For detailed tropo maps the tab links to Hepburn's tropo forecast.
 
 ### App
 

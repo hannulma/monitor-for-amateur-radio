@@ -1459,3 +1459,52 @@ def test_propagation_rbn():
     got, g = asyncio.run(server_test())
     assert got["login"] == b"OH2BEA\r\n"
     assert [(p["call"], p["b"], p["wpm"]) for p in g.query(60)["points"]] == [("W3LPL", "15m", 24)]
+
+
+def test_tropo_estimate():
+    """Tropoarvio: refraktiivisuus, gradientti ja luokat, Open-Meteon vastauksen jäsennys, OVATION-ruudukko, hälytykset."""
+    import time as _t
+    from collections import deque
+    from types import SimpleNamespace
+    from bmmonitor import tropo as T
+    from bmmonitor import propagation as P
+    assert 300 < T.refractivity(15, 60, 1013.25) < 340
+    assert T.index_of(-40) == 0 and T.index_of(-70) == 1 and T.index_of(-120) == 2 and T.index_of(-200) == 3 and T.index_of(None) == 0
+    assert T.min_gradient([(2, 320), (300, 310), (1000, 250)]) == pytest.approx((250 - 310) / 0.7, rel=1e-3)
+    pts = T.grid_points(60.2, 24.9)
+    assert len(pts) == 49 and (60.2, 24.9) in pts and min(p[0] for p in pts) == pytest.approx(55.7)
+
+    def hourly(t2, rh2, ps, lv):
+        h = {"time": [1000, 4600], "temperature_2m": [t2, t2], "relative_humidity_2m": [rh2, rh2], "surface_pressure": [ps, ps]}
+        for p, (t, rh, z) in lv.items():
+            h[f"temperature_{p}hPa"], h[f"relative_humidity_{p}hPa"], h[f"geopotential_height_{p}hPa"] = [t, t], [rh, rh], [z, z]
+        return {"elevation": 10, "hourly": h}
+    normal = hourly(10, 70, 1010, {1000: (9.5, 70, 90), 925: (5, 65, 760), 850: (0, 60, 1450)})
+    duct = hourly(2, 95, 1015, {1000: (12, 20, 130), 925: (11, 20, 800), 850: (6, 30, 1500)})   # kostea kylmä pinta, kuiva lämmin yllä
+    high = hourly(10, 70, 960, {1000: (12, 20, -300), 925: (5, 65, 720), 850: (0, 60, 1400)})   # 1000 hPa maan alla
+    fc = T.parse_forecast([normal, duct, high], [(60, 25), (61, 25), (62, 25)])
+    assert fc["times"] == [1000, 4600] and fc["cells"][0]["idx"][0] == 0 and fc["cells"][1]["idx"][0] == 3
+    assert fc["cells"][2]["idx"][0] == 0
+    assert T.ovation_cells({"coordinates": [[25, 66, 30], [24, 66, 50], [200, -70, 9], [10, 10, 1]]}) == [[-70, -160, 9], [66, 24, 50]]
+    alerts = []
+    mon = SimpleNamespace(cfg={"propagation": {**P.DEFAULT_PROP, "enabled": True, "alert_tropo": True, "alert_open": True},
+                               "services": {"location": {"lat": 60.17, "lon": 24.94}}},
+                          dirty=False, qso=SimpleNamespace(my_call=lambda: "OH2BEA"), touch=lambda: None,
+                          hub=SimpleNamespace(announce=lambda *a, **k: None),
+                          watcher=SimpleNamespace(seq=0, alerts=deque()))
+    tf = T.TropoFeed(mon)
+    now = int(_t.time())
+    tf.fc = {"times": [now + 3600 * i for i in range(24)],
+             "cells": [{"lat": 60.2, "lon": 24.9, "idx": [0, 0, 2, 3] + [0] * 20, "grad": [None] * 24}]}
+    tf.check_alert()
+    tf.check_alert()                                  # sama päivä ja taso: ei uudestaan
+    assert [a["title"] for a in mon.watcher.alerts] == ["Tropoarvio: kanavointi todennäköinen"]
+    q = tf.query(0)
+    assert q["home_now"] == 0 and q["outlook"][0]["idx"] == 3 and len(q["cells"]) == 1
+    f = P.PropFeed(mon)
+    f.add_spot({"sq": 1, "b": "2m", "md": "FT8", "t": _t.time() - 60, "sc": "SP2QRS", "sl": "JO94", "rc": "OH2XA", "rl": "KP20kf"})
+    f.add_spot({"sq": 2, "b": "2m", "md": "FT8", "t": _t.time() - 60, "sc": "ES2HIJ", "sl": "KO29", "rc": "OH2XA", "rl": "KP20kf"})
+    f.check_open()
+    f._last_open_check = 0
+    f.check_open()                                    # 3 h:n sisällä ei uudestaan
+    assert [a["title"] for a in mon.watcher.alerts][0] == "2m auki" and len(mon.watcher.alerts) == 2

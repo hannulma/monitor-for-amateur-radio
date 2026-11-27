@@ -775,6 +775,34 @@ class AprsRx:
             "SELECT src, lat, lon, MAX(ts) FROM packets WHERE lat IS NOT NULL AND ts > ? GROUP BY src",
             (time.time() - KEEP_DAYS * 86400,))}
 
+    def tropo_meter(self, home) -> dict:
+        """Kauimmainen suoraan kuultu asema viimeisen tunnin aikana verrattuna edellisten 14 vrk:n päivittäisten
+        maksimien mediaaniin (VHF-tropokelin mittari)."""
+        if not home:
+            return {}
+        db = self._reader()
+        try:
+            now = time.time()
+            rows = db.execute("SELECT ts, src, lat, lon FROM packets WHERE direct = 1 AND lat IS NOT NULL AND ts > ?",
+                              (now - 15 * 86400,)).fetchall()
+        finally:
+            db.close()
+        cur, cur_call, days = 0.0, "", {}
+        today = time.strftime("%Y%m%d", time.localtime(now))
+        for ts, src, lat, lon in rows:
+            d = km(home[0], home[1], lat, lon)
+            if d > 1000:                  # virheellinen sijainti
+                continue
+            if ts > now - 3600 and d > cur:
+                cur, cur_call = d, src
+            day = time.strftime("%Y%m%d", time.localtime(ts))
+            if day != today:
+                days[day] = max(days.get(day, 0.0), d)
+        vals = sorted(days.values())
+        typical = vals[len(vals) // 2] if len(vals) >= 3 else None
+        return {"now_km": round(cur) if cur else None, "now_call": cur_call, "typical_km": round(typical) if typical else None,
+                "days": len(vals)}
+
     def summary(self, period: str, home: tuple[float, float] | None) -> dict:
         db = self._reader()
         try:

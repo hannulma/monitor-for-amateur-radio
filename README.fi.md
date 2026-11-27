@@ -60,7 +60,7 @@ BrandMeister lähettää), `-v` (enemmän lokia).
 
 ## Välilehdet
 
-Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · Kaverit · Laitteet · Check-in │ APRS · Syötteet │ Lokit │ Palvelut · Satelliitit │ Ohjelma**.
+Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · Kaverit · Laitteet · Check-in │ APRS · Syötteet │ Lokit │ Palvelut · Satelliitit · Radiosää │ Ohjelma**.
 
 ### BrandMeister
 - **Puheryhmät:** lähetys juuri nyt (vihreä LÄHETYS), viimeisin yhteys, puhuja, kesto, toistin/hotspot,
@@ -197,6 +197,21 @@ Viestit lyhennetään mahtumaan yhteen 67 merkin radioviestiin, esim.
 Koko teksti aukeaa ohjelmassa otsikkoa klikkaamalla.
 
 ![Palvelut](docs/screenshot-services-fi.png)
+
+### Radiosää
+- **Missä minut kuultiin** – PSK Reporterin reaaliaikaiset raportit FT8-, FT4-, JS8- ja muista digilähetyksistäsi sekä
+  Reverse Beacon Networkin (RBN) CW- ja RTTY-havainnot maailmankartalla isoympyräviivoina bandin väreillä.
+- **Mille bandeille keli on auki** – mitä omassa 4-merkkisessä lokaattoriruudussasi kuullaan ja mistä sieltä lähetetyt
+  kuullaan (PSK Reporter) sekä mitä oman maasi skimmerit kuulevat (RBN). *Bandit nyt* -taulukossa raportit, kauimmainen
+  asema ja pääsuunnat bandeittain. Suodattimet: aikaikkuna, bandit ja lähetysmuoto.
+- **VHF/UHF-keli** – ohjelman oma, suuntaa antava tropoarvio kotisi ympäriltä Open-Meteon säämallista (refraktiivisuuden
+  pystygradientti alimmilla painepinnoilla, ennuste 72 tuntia), NOAA:n OVATION-revontuliovaali, oma APRS-asemasi
+  tropomittarina (kauimmainen suoraan kuultu verrattuna tavalliseen) sekä Kp ja revontulitaso.
+- Tasot kuten APRS-kartassa (minut kuultiin, HF- ja VHF/UHF-raportit, tropoarvio, revontuliovaali, yö/päiväraja) ja
+  valinnaiset hälytykset, kun 6 m, 4 m, 2 m tai 70 cm aukeaa omalta alueelta tai tropoarvio muuttuu voimakkaaksi.
+- Ohjelma tilaa vain omaan kutsuusi ja lokaattoriruutuusi liittyvät raportit (PSK Reporterin MQTT-jakelu, M0LTE;
+  data N1DQ) ja kirjautuu RBN:ään omalla kutsullasi; mitään ei lähetetä. RBN-asemien sijainti päätellään kutsun
+  etuliitteestä maan tarkkuudella. Tarkempiin tropokarttoihin välilehdeltä on linkki Hepburnin tropoennusteeseen.
 
 ### Syötteet
 RSS-, Atom- ja JSON Feed -syötteet (esim. BrandMeisterin uutiset, SRAL): uuden uutisen otsikko lähetetään

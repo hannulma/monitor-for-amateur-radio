@@ -265,6 +265,14 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   #propMap .leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
   .propwrap { grid-template-columns: minmax(0, 1fr) 400px; }
   @media (max-width: 980px) { .propwrap { grid-template-columns: 1fr; } }
+  .tropostrip { display: flex; gap: 2px; margin: 6px 0; }
+  .tropostrip span { flex: 1; height: 22px; border-radius: 3px; background: var(--line); font-size: 10px; color: var(--muted);
+    display: flex; align-items: flex-end; justify-content: center; }
+  .tropostrip span.l1 { background: rgba(245,159,0,.30); } .tropostrip span.l2 { background: rgba(245,159,0,.60); color: var(--text); }
+  .tropostrip span.l3 { background: rgba(224,49,49,.75); color: #fff; }
+  .tlev { display: inline-block; padding: 1px 8px; border-radius: 10px; font-weight: 600; }
+  .tlev.l0 { background: var(--line); } .tlev.l1 { background: rgba(245,159,0,.30); } .tlev.l2 { background: rgba(245,159,0,.60); }
+  .tlev.l3 { background: rgba(224,49,49,.75); color: #fff; }
   .propbands { columns: 2; min-width: 200px; }
   .propbands .pbq { column-span: all; margin-bottom: 6px; font-size: 12px; }
   .propsum td, .propsum th { padding: 3px 6px; }
@@ -481,6 +489,21 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
           <tbody id="propSum"></tbody></table>
         <div class="empty" id="propSumEmpty">Ei raportteja valitulla aikavälillä.</div>
         <div class="covleg" id="propLegend"></div>
+        <h3>VHF/UHF-keli</h3>
+        <div class="tropobox">
+          <div class="frow" style="align-items:center;gap:8px;margin:0 0 6px"><span class="muted">Tropoarvio kartalla</span>
+            <select class="filter" id="tropoH" title="Ennusteen ajankohta"><option value="0">nyt</option><option value="3">+3 h</option>
+              <option value="6">+6 h</option><option value="12">+12 h</option><option value="24">+24 h</option><option value="48">+48 h</option></select></div>
+          <div id="tropoNow"></div>
+          <div class="tropostrip" id="tropoStrip"></div>
+          <div class="covleg" id="tropoLegend"></div>
+          <div id="tropoAprs" class="hint" style="margin:6px 0 0"></div>
+          <div id="tropoSpace" class="hint" style="margin:4px 0 0"></div>
+          <div class="hint" style="margin:6px 0 0">Tropoarvio on ohjelman oma, suuntaa antava laskelma Open-Meteon säämallista
+            (painepinnat 1000–850 hPa, CC BY 4.0). Tarkemmat ennustekartat:
+            <a href="https://www.dxinfocentre.com/tropo_eeu.html" target="_blank" rel="noopener">Hepburnin tropoennuste</a>.
+            Revontuliovaali: NOAA SWPC OVATION.</div>
+        </div>
         <div class="hint">Tasot valitaan kartan oikeasta yläkulmasta. Viiva kulkee lähettäjältä kuulijalle. Klikkaa pistettä nähdäksesi
           raportin tiedot. Raportit kerätään vain, kun Radiosää on päällä; tiedot säilyvät 6 tuntia.</div>
         <div class="hint">Data from PSK Reporter by Philip Gladstone. Live spots from mqtt.pskreporter.info by Tom Fanning M0LTE.
@@ -501,6 +524,10 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
           <label><input type="checkbox" id="propMine"> Missä minut kuultiin (oma kutsu lähettäjänä)</label>
           <label><input type="checkbox" id="propArea"> Oma lokaattoriruutu: siellä kuullut ja sieltä kuullut</label>
           <label><input type="checkbox" id="propRbn"> CW- ja RTTY-raportit Reverse Beacon Networkista</label></div>
+        <div class="fld checks">
+          <label><input type="checkbox" id="propAlertOpen"> Hälytä, kun 6 m, 4 m, 2 m tai 70 cm aukeaa omalta alueelta</label>
+          <label><input type="checkbox" id="propAlertTropo"> Hälytä, kun tropoarvio on voimakas seuraavan 12 h aikana</label>
+          <label><input type="checkbox" id="propSms"> Lähetä hälytys myös radioon</label></div>
       </div>
       <div class="hint" id="propWho"></div>
       <div class="frow svcsave"><button class="primary" id="btnPropSave">Tallenna</button><span class="err" id="propErr"></span></div>
@@ -4050,7 +4077,8 @@ const PROP_COL = {"160m": "#8e44ad", "80m": "#3b5bdb", "60m": "#1098ad", "40m": 
   "70cm": "#fcc419", "23cm": "#adb5bd"};
 const PROP_LAYERS_KEY = "bmm.propLayers", PROP_BANDS_KEY = "bmm.propBands";
 let propMap = null, propTiles = null, propMine = null, propHf = null, propVhf = null, propGrey = null, propHome = null;
-let propData = null, propTimer = null;
+let propData = null, propTimer = null, propTropo = null, propOval = null, tropoData = null;
+const propCanvas = window.L ? L.canvas({padding: 0.3}) : null;
 function propCfg() { return (S.config && S.config.propagation) || {}; }
 function propBandSel() {
   try { const b = JSON.parse(localStorage.getItem(PROP_BANDS_KEY) || "null"); if (Array.isArray(b)) return b; } catch (e) { /* oletus */ }
@@ -4123,10 +4151,11 @@ async function propInit() {
   propTiles = L.tileLayer("/tiles/{z}/{x}/{y}.png?u=" + encodeURIComponent((S.config.map_tiles || "").slice(-24)),
     {maxZoom: 12, minZoom: 1, className: "darktiles", attribution: esc(S.config.map_tiles_attr || "")}).addTo(propMap);
   propMine = L.layerGroup(); propHf = L.layerGroup(); propVhf = L.layerGroup(); propGrey = L.layerGroup();
-  const layers = {mine: propMine, hf: propHf, vhf: propVhf, grey: propGrey};
-  Object.entries(layers).forEach(([k, l]) => { if (propLayerOn(k, true)) l.addTo(propMap); });
+  propTropo = L.layerGroup(); propOval = L.layerGroup();
+  const layers = {mine: propMine, hf: propHf, vhf: propVhf, tropo: propTropo, oval: propOval, grey: propGrey};
+  Object.entries(layers).forEach(([k, l]) => { if (propLayerOn(k, k !== "oval")) l.addTo(propMap); });
   L.control.layers(null, {"Minut kuultiin": propMine, "HF-raportit omalta alueelta": propHf, "VHF/UHF-raportit omalta alueelta": propVhf,
-    "Yö/päiväraja": propGrey}, {collapsed: false, position: "topright"}).addTo(propMap);
+    "Tropoarvio": propTropo, "Revontuliovaali": propOval, "Yö/päiväraja": propGrey}, {collapsed: false, position: "topright"}).addTo(propMap);
   const remember = () => { const o = {}; Object.entries(layers).forEach(([k, l]) => { o[k] = propMap.hasLayer(l); });
     try { localStorage.setItem(PROP_LAYERS_KEY, JSON.stringify(o)); } catch (e) { /* ei tallennusta */ } };
   propMap.on("overlayadd overlayremove", remember);
@@ -4135,8 +4164,8 @@ async function propInit() {
 }
 function propShow() {
   fillProp();
-  propInit().then(() => { setTimeout(() => propMap && propMap.invalidateSize(), 50); propLoad(); });
-  clearInterval(propTimer); propTimer = setInterval(() => { if (TAB === "radiosaa") { propLoad(); propDrawGrey(); } }, 30000);
+  propInit().then(() => { setTimeout(() => propMap && propMap.invalidateSize(), 50); propLoad(); tropoLoad(); });
+  clearInterval(propTimer); propTimer = setInterval(() => { if (TAB === "radiosaa") { propLoad(); propDrawGrey(); tropoLoad(); } }, 30000);
 }
 async function propLoad() {
   if (!propMap) return;
@@ -4184,6 +4213,58 @@ function renderProp() {
   const lh = sum.length ? `<span class="muted">${esc(T("Suluissa: minut kuultiin. Suunnat omalta alueelta."))}</span>` : "";
   if ($("propLegend").dataset.h !== lh) { $("propLegend").innerHTML = lh; $("propLegend").dataset.h = lh; }
 }
+
+// tropoarvio, revontuliovaali, APRS-mittari ja avaruussää
+const TROPO_WORD = ["normaali", "kohonnut", "voimakas", "kanavointi todennäköinen"];
+const AUR_WORD = ["rauhallista", "mahdollisia", "todennäköisiä", "voimakkaita"];
+$("tropoH").onchange = () => tropoLoad();
+async function tropoLoad() {
+  if (!propMap) return;
+  try { tropoData = await (await fetchT("/api/tropo?h=" + $("tropoH").value, 30000)).json(); } catch (e) { return; }
+  renderTropo();
+}
+function renderTropo() {
+  const d = tropoData; if (!d || !propMap) return;
+  propTropo.clearLayers(); propOval.clearLayers();
+  const [sl, so] = d.step || [1.5, 3];
+  for (const c of d.cells || []) {
+    if (!c.idx) continue;
+    const fill = c.idx === 3 ? "#e03131" : "#f59f00", op = [0, 0.18, 0.34, 0.45][c.idx];
+    L.rectangle([[c.lat - sl / 2, c.lon - so / 2], [c.lat + sl / 2, c.lon + so / 2]], {renderer: propCanvas, stroke: false, fillColor: fill, fillOpacity: op})
+      .bindTooltip(esc(T(TROPO_WORD[c.idx])) + (c.grad != null ? ` · ${dec(String(c.grad))} N/km` : "")).addTo(propTropo);
+  }
+  for (const [la, lo, p] of d.oval || []) {
+    L.rectangle([[la, lo], [la + 2, lo + 2]], {renderer: propCanvas, stroke: false, fillColor: "#40c057",
+      fillOpacity: Math.min(0.65, 0.08 + p / 100 * 0.8), interactive: false}).addTo(propOval);
+  }
+  const st = d.state || {};
+  let now = "";
+  if (st.ok === false) now = `<span class="bad">${esc(T("Virhe: {e}", {e: st.error || "?"}))}</span>`;
+  else if (d.home_now != null) now = `${esc(T("Kotona nyt"))}: <span class="tlev l${d.home_now}">${esc(T(TROPO_WORD[d.home_now]))}</span>`
+    + (d.time ? ` <span class="muted">· ${esc(T("kartalla {t}", {t: fmtShort(d.time)}))}</span>` : "");
+  else now = `<span class="muted">${esc(T(S.prop && S.prop.enabled ? "Ennustetta haetaan…" : "Radiosää ei ole päällä – kytke se otsikon kytkimestä."))}</span>`;
+  if ($("tropoNow").dataset.h !== now) { $("tropoNow").innerHTML = now; $("tropoNow").dataset.h = now; }
+  const strip = (d.outlook || []).slice(0, 12).map(o => {
+    const dt = new Date(o.t * 1000), hh = dt.getHours();
+    const lab = hh < 6 ? dt.toLocaleDateString(LOC(), {weekday: "short"}) : String(hh).padStart(2, "0");
+    return `<span class="l${o.idx}" title="${esc(fmtShort(o.t) + " · " + T(TROPO_WORD[o.idx]))}">${esc(lab)}</span>`; }).join("");
+  if ($("tropoStrip").dataset.h !== strip) { $("tropoStrip").innerHTML = strip; $("tropoStrip").dataset.h = strip; }
+  const leg = [1, 2, 3].map(i => `<span><span class="tlev l${i}">&nbsp;</span> ${esc(T(TROPO_WORD[i]))}</span>`).join(" ")
+    + ` <span><span class="tlev" style="background:rgba(64,192,87,.5)">&nbsp;</span> ${esc(T("revontulet"))}</span>`;
+  if ($("tropoLegend").dataset.h !== leg) { $("tropoLegend").innerHTML = leg; $("tropoLegend").dataset.h = leg; }
+  const a = d.aprs || {};
+  let ah = "";
+  if (a.now_km) ah = T("APRS: kauimmainen suoraan kuultu tunnin aikana {c} {d}", {c: a.now_call, d: D(a.now_km)})
+    + (a.typical_km ? " · " + T("tavallisesti {d}", {d: D(a.typical_km)}) + (a.now_km > a.typical_km * 1.5 ? " ↑" : "") : "");
+  else if (S.config.aprsrx && S.config.aprsrx.enabled) ah = T("APRS: ei suoraan kuultuja sijainteja viimeisen tunnin aikana.");
+  if ($("tropoAprs").dataset.h !== ah) { $("tropoAprs").textContent = ah; $("tropoAprs").dataset.h = ah; }
+  const sv = S.services || {}, sp = sv.space || {}, au = sv.aurora || {};
+  const parts = [];
+  if (sp.kp != null && sp.checked) parts.push(T("Kp nyt") + " " + dec(String(sp.kp)));
+  if (au.level != null && au.checked && !au.error) parts.push(T("revontulet") + ": " + T(AUR_WORD[au.level] || ""));
+  const sh = parts.length ? parts.join(" · ") : T("Kp ja revontulet: kytke Avaruussää tai Revontulihälytys päälle Palvelut-välilehdellä.");
+  if ($("tropoSpace").dataset.h !== sh) { $("tropoSpace").textContent = sh; $("tropoSpace").dataset.h = sh; }
+}
 function renderPropState() {
   const a = (S && S.prop) || {};
   let h;
@@ -4204,6 +4285,7 @@ function fillProp() {
   const c = propCfg(), a = (S && S.prop) || {};
   $("propEnabled").checked = !!c.enabled; $("propEnabledTxt").textContent = T(c.enabled ? "Päällä" : "Pois");
   $("propMine").checked = c.mine !== false; $("propArea").checked = c.area !== false; $("propRbn").checked = c.rbn !== false;
+  $("propAlertOpen").checked = !!c.alert_open; $("propAlertTropo").checked = !!c.alert_tropo; $("propSms").checked = !!c.sms;
   $("propWho").textContent = [a.call ? T("Oma kutsu: {c} (Lokit → Asetukset)", {c: a.call}) : T("Omaa kutsua ei ole asetettu (Lokit → Asetukset)."),
     a.grid ? T("Oma ruutu: {g} (Palvelut → Oma sijainti)", {g: a.grid}) : T("Sijaintia ei ole asetettu (Palvelut → Oma sijainti).")].join(" · ");
   renderPropState();
@@ -4217,7 +4299,8 @@ $("propEnabled").onchange = async () => {
 };
 $("btnPropSave").onclick = async () => {
   $("propErr").textContent = "";
-  const j = await saveCfg({propagation: {mine: $("propMine").checked, area: $("propArea").checked, rbn: $("propRbn").checked}});
+  const j = await saveCfg({propagation: {mine: $("propMine").checked, area: $("propArea").checked, rbn: $("propRbn").checked,
+    alert_open: $("propAlertOpen").checked, alert_tropo: $("propAlertTropo").checked, sms: $("propSms").checked}});
   if (!j.ok) { $("propErr").textContent = j.error; return; }
   S.config = j.config; fillProp(); $("propErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
 };

@@ -8,6 +8,7 @@ Ohjelma ottaa yhteyttä ulkoisiin palveluihin vain niiden toimintojen ollessa k�
 - GitHub: päivitystarkistus kerran päivässä (voi kytkeä pois Asetuksista)
 - avoimet datapalvelut (esim. Ilmatieteen laitos, MeteoAlarm, NOAA, Digitraffic, CelesTrak), vain Palvelut-välilehdellä päälle kytketyt
 - OpenStreetMap-karttatiilet APRS-kuuluvuuskarttaa katsottaessa
+- PSK Reporter, Reverse Beacon Network ja Open-Meteo, jos kytket Radiosään päälle
 - Fintraffic Digitraffic tai aisstream.io laivoille, jos kytket Laivat (AIS) -karttatason päälle
 - net-kalenterit (6kw.fi, Google-kalenteri), kun Netit-osio on päällä
 - itse lisäämäsi syötteet ja kalenterit sekä check-in-taulukko, jos yhdistät sen

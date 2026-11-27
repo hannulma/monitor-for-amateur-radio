@@ -5,6 +5,14 @@ Fehlt ein Eintrag, wird Englisch verwendet.
 """
 
 DE: dict[str, str] = {
+    "Propagation": "Funkwetter",
+    "ducting likely": "Ducting wahrscheinlich",
+    "Tropo estimate: {w}": "Tropo-Schätzung: {w}",
+    "VHF/UHF tropo conditions may improve from about {t} (own estimate from the Open-Meteo forecast).": "UKW/UHF-Tropobedingungen können sich ab etwa {t} verbessern (eigene Schätzung aus der Open-Meteo-Vorhersage).",
+    "Tropo {w} at {t}": "Tropo {w} ab {t}",
+    "{b} open": "{b} offen",
+    "Long path from my area: {c} {km} km (in the last 30 min).": "Weite Verbindung aus meiner Gegend: {c} {km} km (in den letzten 30 min).",
+    "{b} open: {c} {km} km": "{b} offen: {c} {km} km",
     "Set your callsign (Logs) or location (Services)": "Lege dein Rufzeichen (Logs) oder deinen Standort (Dienste) fest",
     "The server refused the connection": "Der Server hat die Verbindung abgelehnt",
     "The server refused the subscription": "Der Server hat das Abonnement abgelehnt",

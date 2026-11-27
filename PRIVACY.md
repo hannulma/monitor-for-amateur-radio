@@ -24,6 +24,9 @@ tavallisesti tapaan IP-osoitteesi ja sen, mitä pyydetään; palveluiden omat ti
 | GitHub (api.github.com, github.com) | päivitystarkistus kerran päivässä ja päivitys | versiotarkistus, julkaisun lataus | Asetukset → Versio ja päivitykset → automaattinen tarkistus pois |
 | Ilmatieteen laitos (opendata.fmi.fi, alerts.fmi.fi), MeteoAlarm, NOAA SWPC, STUK (IL:n avoin data), Fintraffic Digitraffic, Open-Meteo, CelesTrak, SatNOGS DB | kun kyseinen palvelu on päällä Palvelut-välilehdellä | haut sijaintisi lähialueelta (koordinaatit tai alue) | Palvelut-välilehden kytkimet |
 | OpenStreetMap-karttatiilet (tile.openstreetmap.org tai itse valittu) | kun katsot APRS-kuuluvuuskarttaa | katsotut karttatiilet; ohjelman nimi ja versio User-Agentissa | älä avaa karttaa; tiilipalvelimen voi vaihtaa |
+| PSK Reporter (mqtt.pskreporter.info) | vain kun Radiosää on päällä | tilaukset omaan kutsuusi ja 4-merkkiseen lokaattoriruutuusi; asiakastunnuksessa ohjelman nimi, versio ja kutsu | Radiosää pois |
+| Reverse Beacon Network (telnet.reversebeacon.net) | vain kun Radiosää ja RBN ovat päällä | kirjautuminen omalla kutsullasi; ohjelma lukee koko CW/RTTY-syötteen ja suodattaa sen itse | Radiosää → Asetukset → RBN pois |
+| Open-Meteo (tropoarvio) ja NOAA SWPC OVATION (revontuliovaali) | vain kun Radiosää on päällä, enintään 3 h / 10 min välein | ruudukko kotisijaintisi ympäriltä (0,1° tarkkuus) | Radiosää pois |
 | Laivat (AIS): Fintraffic Digitraffic (meri.digitraffic.fi) tai aisstream.io | vain kun Laivat (AIS) -taso on päällä APRS-kartalla, noin minuutin välein | kotisijaintisi noin 10 km tarkkuuteen pyöristettynä ja hakusäde; aisstream.io:lle myös oma API-avaimesi | kytke Laivat (AIS) -taso pois |
 | Net-kalenterit: FinDMR-kierros (6kw.fi), W0WC:n BM DMR Nets (Google-kalenteri) ja itse lisäämäsi | kun Netit-osio on päällä (BrandMeister-välilehti), noin 6 tunnin välein | kalenterin haku | Netit-kytkin pois tai poista kalenteri |
 | Uutis- ja kalenterisyötteet, jotka itse lisäät | kun syötteet ovat käytössä | syötteen haku | poista syöte |
@@ -56,6 +59,10 @@ and what is requested, as with any internet connection; their own privacy polici
 - **Open data services** (FMI, MeteoAlarm, NOAA SWPC, STUK via FMI, Fintraffic Digitraffic, Open-Meteo, CelesTrak,
   SatNOGS DB) – only for services you switch on; requests concern your area.
 - **OpenStreetMap tiles** – only when you view the APRS coverage map; the tile server can be changed.
+- **Propagation** – only while the Propagation tab is switched on: PSK Reporter's MQTT feed (subscriptions to your own
+  callsign and 4-character locator square; the client ID contains the program name, version and your callsign), the
+  Reverse Beacon Network (login with your callsign; the program reads the CW/RTTY feed and filters it itself, can be
+  switched off), Open-Meteo (a grid around your home rounded to 0.1°, every 3 h) and NOAA's OVATION aurora oval.
 - **Ships (AIS)** – Fintraffic Digitraffic (meri.digitraffic.fi) or aisstream.io, only while the Ships (AIS) layer is on
   in the APRS map, about once a minute: your home location rounded to about 10 km and the search radius; for
   aisstream.io also your own API key.
