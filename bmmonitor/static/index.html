@@ -211,7 +211,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .guide dl.faq dt { font-weight: 600; margin-top: 8px; }
   .guide dl.faq dd { margin: 2px 0 0 14px; color: var(--muted); }
   .guide [lang] { display: none; }
-  .guide.fi [lang="fi"], .guide.en [lang="en"], .guide.de [lang="de"], .guide.es [lang="es"] { display: block; }
+  .guide.fi [lang="fi"], .guide.en [lang="en"], .guide.de [lang="de"], .guide.es [lang="es"], .guide.fr [lang="fr"] { display: block; }
   .about { font-size: 14px; color: var(--text); margin: 4px 0 6px; }
   .about b { font-weight: 700; }
   .fbform textarea, .fbform input[type=text], .fbform input[type=email] { background: var(--bg); color: var(--text); border: 1px solid var(--line);
@@ -282,6 +282,11 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .covtot { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 13px; }
   .covtot b { text-align: right; }
   .covleg { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin-top: 10px; }
+  .aisfilt { position: relative; display: inline-block; margin-left: 6px; text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .aispanel { position: absolute; right: 0; top: calc(100% + 4px); z-index: 1200; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 12px; box-shadow: 0 6px 20px rgba(0,0,0,.35); min-width: 290px; font-size: 13px; color: var(--text); }
+  .aispanel label { display: flex; align-items: center; gap: 8px; padding: 3px 0; white-space: nowrap; cursor: pointer; }
+  .aispanel hr { border: 0; border-top: 1px solid var(--line); margin: 6px 0; }
   .covleg i { display: inline-block; width: 22px; height: 10px; border-radius: 2px; }
   .covchip { display: inline-flex; gap: 6px; align-items: center; background: var(--bg); border: 1px solid var(--accent); border-radius: 12px; padding: 2px 4px 2px 10px; margin-top: 10px; font-size: 12px; }
   .covchip button { padding: 0 6px; border: 0; background: none; color: var(--muted); }
@@ -437,7 +442,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="inner">
     <div class="row">
       <div><label for="langSel">Käyttöliittymän kieli</label>
-        <select id="langSel" data-noi18n><option value="fi">Suomi</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option></select></div>
+        <select id="langSel" data-noi18n><option value="fi">Suomi</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option></select></div>
       <div><label for="unitSel">Mittayksiköt</label>
         <select id="unitSel"><option value="metric">Metrijärjestelmä (km)</option><option value="imperial">Yhdysvaltalainen (mailit)</option></select></div>
       <div class="hint" style="max-width:560px">Kieli koskee myös ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
@@ -519,6 +524,17 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <select class="filter" id="covPeriod" title="Tarkastelujakso"><option value="24h">24 h</option><option value="7d">7 vrk</option><option value="30d">30 vrk</option></select>
       <select class="filter" id="covMode" style="margin-left:6px" title="Mitkä paketit kartalla">
         <option value="all">Kaikki paketit</option><option value="direct">Suoraan kuullut</option><option value="digi">Digin kautta kuullut</option></select>
+      <span class="aisfilt" id="aisFilt" style="display:none"><button class="filter" id="aisFiltBtn" aria-expanded="false">Laivat ▾</button>
+        <div class="aispanel" id="aisPanel" hidden>
+          <label><input type="checkbox" data-aisg="cargo"> Rahtialukset</label>
+          <label><input type="checkbox" data-aisg="tanker"> Säiliöalukset</label>
+          <label><input type="checkbox" data-aisg="passenger"> Matkustaja-alukset ja lautat</label>
+          <label><input type="checkbox" data-aisg="special"> Hinaajat, luotsit ja erikoisalukset</label>
+          <label><input type="checkbox" data-aisg="fishing"> Kalastusalukset</label>
+          <label><input type="checkbox" data-aisg="pleasure"> Huviveneet ja purjeveneet</label>
+          <label><input type="checkbox" data-aisg="other"> Muut ja tuntemattomat</label>
+          <hr><label><input type="checkbox" id="aisMoored"> Piilota laiturissa ja ankkurissa olevat</label>
+        </div></span>
     </h2>
     <div class="covwrap">
       <div id="covMap" aria-label="APRS-kartta: radiolla kuullut asemat, digipiitterit ja RF-kuuluvuus"></div>
@@ -529,6 +545,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <div class="covtot" id="covTotals"></div>
         <div class="covleg" id="covLegend"></div>
         <div class="covleg" id="covStaLegend"></div>
+        <div class="covleg" id="covAisLegend"></div>
         <div class="hint">Tasot valitaan kartan oikeasta yläkulmasta. RF-kuuluvuuden ruutu = lähettäjän ilmoittama sijainti.
           Klikkaa digiä kartalla tai taulukossa, niin näet sen kautta kuullut alueet ja asemat.</div>
         <h3>Kauimmat suoraan kuullut</h3>
@@ -580,6 +597,12 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
           <div class="fld" style="flex:1;min-width:240px"><label for="rxWatch">Seuraa lisäksi (esim. iGatet)</label><input type="text" id="rxWatch" placeholder="OH2RCH-10 OH2ABC-1" style="width:100%">
             <div class="hint">Hälytys tulee vain, kun oma vastaanotto toimii: muuta liikennettä on kuultu hiljaisuuden aikana.</div></div>
         </div>
+        <div class="frow svcsave"><button class="primary" id="btnRxSave">Tallenna</button><span class="err" id="rxErr"></span></div>
+      </div>
+    </section>
+    <section class="msgp form" data-tab="aprs" data-fold="aprs-map">
+      <h2>Kartta</h2>
+      <div class="inner form msgform">
         <h3>APRS-IS-asemat kartalle</h3>
         <div class="frow">
           <div class="fld"><label for="rxIsKm">Säde kotisijainnista (km)</label><input type="number" id="rxIsKm" min="0" max="500" style="width:110px">
@@ -593,7 +616,27 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
             <div class="hint">Oletus OpenStreetMap. Tiilet haetaan ohjelman kautta ja tallennetaan välimuistiin. Tyhjä = oletus.</div></div>
           <div class="fld" style="flex:1;min-width:200px"><label for="rxTilesAttr">Lähdemerkintä</label><input type="text" id="rxTilesAttr" style="width:100%"></div>
         </div>
-        <div class="frow svcsave"><button class="primary" id="btnRxSave">Tallenna</button><span class="err" id="rxErr"></span></div>
+        <div class="frow svcsave"><button class="primary" id="btnMapSave">Tallenna</button><span class="err" id="mapErr"></span></div>
+      </div>
+    </section>
+    <section class="msgp form" data-tab="aprs" data-fold="aprs-ais">
+      <h2>Laivat (AIS)</h2>
+      <div class="inner form msgform">
+        <div class="note">Laivat näkyvät APRS-kartalla omalla tasollaan (Laivat (AIS)), jonka saat päälle kartan oikeasta yläkulmasta.
+          Näytettävät alustyypit valitaan kartan yläpuolelta. Laivoja vain näytetään; mitään ei lähetetä eteenpäin.
+          Laivat haetaan kotisijaintisi ympäriltä (Palvelut-välilehti), ja sijainti pyöristetään hauissa noin 10 km tarkkuuteen.</div>
+        <div class="frow" style="margin-top:10px">
+          <div class="fld"><label for="aisSource">Lähde</label><select id="aisSource" style="width:360px;max-width:100%">
+            <option value="digitraffic">Digitraffic (Suomi ja Itämeri, ei avainta)</option>
+            <option value="aisstream">aisstream.io (koko maailma, oma avain)</option></select></div>
+          <div class="fld"><label for="aisKm">Säde kotisijainnista</label><select id="aisKm" style="width:120px">
+            <option value="50">50 km</option><option value="100">100 km</option><option value="200">200 km</option><option value="450">450 km</option></select></div>
+          <div class="fld" id="aisKeyFld"><label for="aisKey">aisstream.io-avain</label><input id="aisKey" type="password" autocomplete="off" style="width:300px">
+            <div class="hint">Ilmainen avain: <a href="https://aisstream.io/" target="_blank" rel="noopener">aisstream.io</a> → API Keys. Avain tallennetaan käyttöjärjestelmän salasanavarastoon.</div></div>
+        </div>
+        <div class="hint" id="aisSrcHint"></div>
+        <div class="frow svcsave"><button class="primary" id="btnAisSave">Tallenna</button><span class="err" id="aisErr"></span></div>
+        <div class="hint" id="aisState"></div>
       </div>
     </section>
     <section class="cfg form" data-tab="aprs" data-fold="cfg-rftx">
@@ -755,7 +798,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <select class="filter" id="callFilter"><option value="">Kaikki seuratut</option></select>
       <select class="filter" id="callLimit" style="margin-left:6px" title="Näytettävien puheluiden määrä">
         <option value="10">10 viimeisintä</option><option value="25">25 viimeisintä</option>
-        <option value="50">50 viimeisintä</option><option value="100">100 viimeisintä</option><option value="150">150 viimeisintä</option>
+        <option value="50">50 viimeisintä</option><option value="100">100 viimeisintä</option>
       </select>
     </h2>
     <div class="scroll" id="callScroll" style="max-height:none">
@@ -778,8 +821,8 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     </div>
     <div class="hint" style="margin:6px 10px 10px">Lokiin lisätyt yhteydet näet Lokit-välilehdellä. <span id="qsoLogInfo"></span>
       Oma kutsu ja tunnistus: <a href="#" id="toLogCfg">Lokit → Asetukset</a>.<br>
-      Lokitiedot tallentuvat oletuksena paikallisesti tälle tietokoneelle. Halutessasi voit synkronoida ne QRZ.comin lokikirjaan, mikä vaatii maksullisen QRZ.com-tilauksen:
-      <a href="#" id="toQrzCfg">Lokit → Asetukset → QRZ Logbook</a>.</div>
+      Lokitiedot tallentuvat oletuksena paikallisesti tälle tietokoneelle. Halutessasi voit lähettää ne QRZ.comiin (maksullinen tilaus), eQSL:ään tai HamQTH:hon (ilmaisia):
+      <a href="#" id="toQrzCfg">Lokit → Asetukset</a>.</div>
   </section>
   <section class="wide" data-tab="seuranta" data-fold="bm-nets">
     <h2>Netit tänään ja huomenna <span class="count" id="netCount"></span>
@@ -912,7 +955,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <section class="cfg form" data-tab="lokit" data-fold="log-qrz">
       <h2>QRZ Logbook <span class="count" id="qrzHead"></span></h2>
       <div class="inner">
-      <div class="note">Lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan. API-avaimen käyttö vaatii maksullisen QRZ.com-tilauksen (XML-taso tai ylempi).
+      <div class="note">Lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan (<a href="https://www.qrz.com/" target="_blank" rel="noopener">www.qrz.com</a>). API-avaimen käyttö vaatii maksullisen QRZ.com-tilauksen (XML-taso tai ylempi).
         API-avaimen löydät QRZ.comista: Logbook → Settings → API Key. Avain tallennetaan käyttöjärjestelmän salasanavarastoon.</div>
       <div class="frow" style="margin-top:10px">
         <div class="fld checks"><label><input type="checkbox" id="qrzOn"> Lähetä lokiin lisätyt yhteydet QRZ Logbookiin</label>
@@ -931,7 +974,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <section class="cfg form" data-tab="lokit" data-fold="log-eqsl">
       <h2>eQSL <span class="count" id="eqslHead"></span></h2>
       <div class="inner">
-      <div class="note">Lokiin lisätyt yhteydet lähetetään eQSL.cc:hen, joka lähettää niistä sähköiset QSL-kortit. Tarvitset eQSL.cc-tilin (ilmainen).
+      <div class="note">Lokiin lisätyt yhteydet lähetetään eQSL.cc:hen (<a href="https://www.eqsl.cc/" target="_blank" rel="noopener">www.eqsl.cc</a>), joka lähettää niistä sähköiset QSL-kortit. Tarvitset eQSL.cc-tilin (ilmainen).
         Salasana tallennetaan käyttöjärjestelmän salasanavarastoon.
         <b>Huom:</b> eQSL:n rajapinta ei hyväksy yli 14 merkin salasanaa. Jos salasanasi on pidempi, vaihda eQSL.cc:ssä enintään 14 merkin salasana.
         Muokkaukset eivät päivity eQSL:ään jälkikäteen.</div>
@@ -1718,6 +1761,95 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       </dl>
       <p class="muted">Los mensajes del script aparecen en finés, porque la plantilla (FinDMR) es finlandesa. Código fuente del script y descripción de seguridad más detallada: <a href="https://github.com/hannulma/monitor-for-amateur-radio/tree/main/sheets" target="_blank" rel="noopener">GitHub → sheets</a>.</p>
     </div>
+    <div lang="fr" data-noi18n>
+      <p>Avec une feuille connectée, les entrées de check-in vont directement dans Google Sheets. La feuille attribue le numéro d'enregistrement,
+        si bien que plusieurs animateurs de net peuvent enregistrer en même temps sans numéros en double.</p>
+      <p class="who"><b>Qui fait quoi ?</b> Le <b>propriétaire</b> de la feuille effectue une seule fois les étapes 1 à 9. Les autres <b>animateurs de net</b> ne font que l'étape 10 :
+        ils n'ont besoin ni d'un compte Google ni d'un droit de modification sur la feuille.</p>
+
+      <h3>A. Installer le script (propriétaire)</h3>
+      <ol class="steps">
+        <li><b>Ouvrez la feuille.</b> Connectez-vous dans le navigateur avec le compte Google propriétaire de la feuille et ouvrez-la.
+          <div class="tip">Conseil : essayez d'abord sur une copie (<b>Fichier → Créer une copie</b>). Quand tout fonctionne, refaites les étapes sur la vraie feuille.
+          La feuille doit avoir un onglet modèle dont le nom commence par <code>LOGIPOHJA</code> (feuille FinDMR v0.68).</div></li>
+        <li><b>Ouvrez l'éditeur de scripts.</b> Dans le menu de la feuille, choisissez <b>Extensions → Apps Script</b>. L'éditeur s'ouvre dans un nouvel onglet du navigateur.
+          En haut à gauche, vous pouvez nommer le projet, p. ex. <i>Check-in</i>.</li>
+        <li><b>Collez Code.gs.</b> Cliquez sur <b>Copier Code.gs</b> en haut de cette fenêtre. Dans le panneau gauche de l'éditeur, choisissez <b>Fichiers → Code.gs</b>,
+          sélectionnez tout son contenu (<kbd>Ctrl</kbd>+<kbd>A</kbd>, sur Mac <kbd>Cmd</kbd>+<kbd>A</kbd>) et remplacez-le par le texte copié
+          (<kbd>Ctrl</kbd>+<kbd>V</kbd> / <kbd>Cmd</kbd>+<kbd>V</kbd>).</li>
+        <li><b>Affichez appsscript.json.</b> Dans le panneau gauche, choisissez <b>Paramètres du projet</b> (icône d'engrenage) et cochez
+          <b>Afficher le fichier manifeste « appsscript.json » dans l'éditeur</b>. Revenez à l'éditeur (icône <b>&lt;&gt;</b>).</li>
+        <li><b>Collez appsscript.json.</b> Cliquez sur <b>Copier appsscript.json</b>, ouvrez le fichier <b>appsscript.json</b> dans l'éditeur et remplacez
+          tout son contenu comme à l'étape 3. Enregistrez (<kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Cmd</kbd>+<kbd>S</kbd> ou l'icône de disquette).
+          <div class="tip">Ce fichier limite l'accès du script à <b>cette seule feuille</b>. Il ne peut pas accéder aux autres fichiers du propriétaire.</div></li>
+        <li><b>Vérifiez les réglages.</b> Au début de <code>Code.gs</code> se trouve un bloc <code>CONFIG</code>. Les valeurs par défaut conviennent à la feuille FinDMR :
+          onglet modèle <code>LOGIPOHJA</code>, onglets de tour <code>Kierros &lt;numéro&gt; &lt;jjmmaa&gt;</code>, données à partir de la ligne 3 dans les colonnes A–F
+          (NRO, indicatif, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper), date en D1, numéro de tour en F1 et opérateur en G2.
+          Si votre feuille est différente, modifiez les valeurs et enregistrez. Sinon, laissez-les telles quelles.</li>
+        <li><b>Déployez-le comme application Web.</b> En haut à droite, choisissez <b>Déployer → Nouveau déploiement</b>. Cliquez sur l'engrenage à côté de
+          <b>Sélectionner le type</b> et choisissez <b>Application Web</b>. Réglez :
+          <ul><li><b>Exécuter en tant que :</b> Moi (votre adresse)</li>
+              <li><b>Qui a accès :</b> Tout le monde</li></ul>
+          puis cliquez sur <b>Déployer</b>.
+          <div class="tip">« Tout le monde » signifie seulement que des requêtes peuvent être envoyées à l'adresse sans connexion. Le script n'accepte pourtant que
+          les requêtes signées avec la clé personnelle d'un animateur ajouté. Sans ce réglage, le programme ne peut pas se connecter.</div></li>
+        <li><b>Autorisez.</b> Google demande une autorisation : cliquez sur <b>Autoriser l'accès</b> et choisissez votre compte.
+          Comme le script est le vôtre et que Google ne l'a pas examiné, l'avertissement <i>« Google n'a pas validé cette application »</i> apparaît.
+          Choisissez <b>Paramètres avancés → Accéder à … (non sécurisé)</b>, puis <b>Autoriser</b>.</li>
+        <li><b>Copiez l'adresse.</b> Copiez l'<b>URL de l'application Web</b> affichée. Elle ressemble à ceci :
+          <code>https://script.google.com/macros/s/…/exec</code>. Utilisez l'adresse qui se termine par <code>/exec</code>, pas <code>/dev</code>.
+          Rechargez ensuite la feuille dans le navigateur : le menu <b>Check-in</b> apparaît (après quelques secondes) dans la barre des menus.</li>
+      </ol>
+
+      <h3>B. Ajouter et connecter des animateurs de net</h3>
+      <ol class="steps" start="10">
+        <li><b>Créez un code d'appairage et connectez-vous.</b> Le propriétaire choisit dans la feuille <b>Check-in → Lisää ylläpitäjä / uusi parituskoodi</b> (ajouter un animateur)
+          et saisit l'indicatif de l'animateur (aussi le sien s'il enregistre lui-même). La première fois, Google peut redemander
+          une autorisation comme à l'étape 8. La feuille affiche un code, p. ex. <code>K7M-42Q</code>. Le code est valable 15 minutes et ne fonctionne qu'une fois.
+          <ul><li>Donnez le code et l'adresse de l'application Web à l'animateur.</li>
+              <li>L'animateur les saisit dans cet onglet, dans la section <b>Feuille Google</b>, dans les champs <b>Adresse du script</b> et <b>Code d'appairage</b>, puis clique sur <b>Connecter</b>.</li>
+              <li>Le programme échange le code contre une clé personnelle enregistrée dans le trousseau de mots de passe du système d'exploitation. La clé n'est jamais
+                envoyée sur le réseau ; chaque requête est signée avec elle.</li></ul></li>
+      </ol>
+
+      <h3>Gérer les animateurs de net</h3>
+      <ul>
+        <li><b>Check-in → Poista ylläpitäjä</b> (retirer) : le programme de l'animateur ne peut plus écrire dans la feuille.</li>
+        <li><b>Check-in → Näytä ylläpitäjät</b> (afficher) : animateurs ajoutés et date de leur dernière utilisation de la feuille.</li>
+        <li>Si un animateur change d'ordinateur, créez-lui un nouveau code d'appairage. L'ancienne clé cesse de fonctionner.</li>
+        <li>Tous les événements (appairages, entrées, modifications) sont consignés dans l'onglet masqué <i>Check-in-tapahtumat</i>.</li>
+      </ul>
+
+      <h3>Pendant le net</h3>
+      <p>Lancez le tour dans le programme comme d'habitude. Si l'onglet du tour n'existe pas encore, le script le crée à partir du modèle, le place en premier et
+        remplit la date, le numéro de tour et l'opérateur. Si un autre animateur a déjà lancé le même tour, tout le monde enregistre dans le même onglet.
+        Le programme lit la feuille toutes les 5 secondes, vous voyez donc aussi les entrées des autres.</p>
+
+      <h3>Mettre à jour le script</h3>
+      <p>Quand le programme apporte une nouvelle version du script : copiez de nouveau Code.gs, collez-le et enregistrez. Choisissez ensuite <b>Déployer → Gérer les déploiements</b>,
+        cliquez sur l'icône du crayon, choisissez <b>Version : Nouvelle version</b> puis <b>Déployer</b>. L'adresse ne change pas et les animateurs n'ont rien à faire.
+        <span class="warnline">N'utilisez pas « Nouveau déploiement » pour mettre à jour : cela crée une nouvelle adresse et tout le monde devrait se reconnecter.</span></p>
+
+      <h3>Problèmes fréquents</h3>
+      <dl class="faq">
+        <dt>« La feuille a répondu de façon inattendue (HTTP …) »</dt>
+        <dd>L'adresse est incorrecte ou l'accès n'est pas réglé sur « Tout le monde ». Vérifiez que l'adresse se termine par <code>/exec</code> et corrigez le réglage dans
+          Déployer → Gérer les déploiements → crayon.</dd>
+        <dt>« Parituskoodi ei kelpaa tai se on jo käytetty » / « Parituskoodi on vanhentunut » (code invalide, déjà utilisé ou expiré)</dt>
+        <dd>Un code ne fonctionne qu'une fois et pendant 15 minutes. Créez-en un nouveau depuis le menu Check-in de la feuille.</dd>
+        <dt>« Échec de l'authentification »</dt>
+        <dd>L'accès a été retiré ou un nouveau code a été créé pour vous sur un autre ordinateur. Demandez un nouveau code d'appairage au propriétaire et reconnectez-vous.</dd>
+        <dt>« L'horloge de l'ordinateur est fausse »</dt>
+        <dd>Les requêtes sont refusées si l'horloge diffère de plus de 5 minutes. Activez l'heure automatique dans le système d'exploitation.</dd>
+        <dt>« Pohjavälilehteä "LOGIPOHJA…" ei löytynyt » (onglet modèle introuvable)</dt>
+        <dd>La feuille n'a pas d'onglet modèle ou il porte un autre nom. Ajoutez l'onglet ou modifiez <code>TEMPLATE_PREFIX</code> dans CONFIG.</dd>
+        <dt>Le menu Check-in n'apparaît pas dans la feuille</dt>
+        <dd>Rechargez la feuille et patientez un instant. Vérifiez que Code.gs est enregistré.</dd>
+        <dt>Une modification du script n'a pas d'effet</dt>
+        <dd>Une modification enregistrée ne prend effet que lorsque vous déployez une nouvelle version (voir Mettre à jour le script).</dd>
+      </dl>
+      <p class="muted">Les messages du script s'affichent en finnois, car le modèle (FinDMR) est finlandais. Code source du script et description de sécurité plus détaillée : <a href="https://github.com/hannulma/monitor-for-amateur-radio/tree/main/sheets" target="_blank" rel="noopener">GitHub → sheets</a>.</p>
+    </div>
   </div>
 </div></div>
 
@@ -1737,6 +1869,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
 </div>
 <script src="/static/i18n.de.js"></script>
 <script src="/static/i18n.es.js"></script>
+<script src="/static/i18n.fr.js"></script>
 <script src="/static/i18n.js"></script>
 <script src="/static/player.js"></script>
 
@@ -1930,12 +2063,21 @@ function render() {
   $("callScroll").style.maxHeight = limit >= 50 ? "60vh" : "none";   // pitkä lista vierii omassa ikkunassaan
   if (document.activeElement !== $("callLimit")) $("callLimit").value = String(limit);
   const calls = S.calls.filter(c => !sel.value || String(c.tg) === sel.value).slice(0, limit);
+  // käynnissä olevat lähetykset ylimmiksi riveiksi (päättyessään ne siirtyvät tavallisiksi puheluriveiksi)
+  const nowS = Date.now() / 1000 + offset;
+  const live = S.talkgroups.filter(r => r.active && (!sel.value || String(r.tg) === sel.value)).map(r => ({...r.active, tg: r.tg}))
+    .sort((a, b) => b.start - a.start);
   $("callCount").textContent = calls.length ? `(${calls.length}${sel.value ? " · TG " + sel.value : ""})` : "";
-  $("callEmpty").style.display = calls.length ? "none" : "";
-  $("callBody").innerHTML = calls.map(c => `<tr>
+  $("callEmpty").style.display = calls.length || live.length ? "none" : "";
+  const callHtml = live.map(c => `<tr class="live">
+      <td>${fmtTime(c.start)}</td><td class="tg">${esc(c.tg)}</td>
+      <td class="call clk"${q(c.call, c.id)}>${esc(c.call || c.id)}</td><td>${esc(c.name)}</td>
+      <td class="num" style="white-space:nowrap"><span class="livebadge">LÄHETYS</span> ${dur(Math.max(0, nowS - c.start))}…</td>
+      <td class="muted">${esc(c.via)}</td></tr>`).join("") + calls.map(c => `<tr>
       <td>${fmtTime(c.start)}</td><td class="tg">${esc(c.tg)}</td>
       <td class="call clk"${q(c.call, c.id)}>${esc(c.call || c.id)}</td><td>${esc(c.name)}</td>
       <td class="num">${dur(c.duration)}</td><td class="muted">${esc(c.via)}</td></tr>`).join("");
+  if ($("callBody").dataset.html !== callHtml) { $("callBody").innerHTML = callHtml; $("callBody").dataset.html = callHtml; }   // piirretään vain muuttuessa
 
   renderAprs();
 }
@@ -2540,7 +2682,8 @@ $("ciCopyAll").onclick = () => ciCopy(false);
 
 // ---------------- kieli ja päivitykset ----------------
 const DIRS = {fi: ["P", "KO", "I", "KA", "E", "LO", "L", "LU"], en: ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
-              de: ["N", "NO", "O", "SO", "S", "SW", "W", "NW"], es: ["N", "NE", "E", "SE", "S", "SO", "O", "NO"]};
+              de: ["N", "NO", "O", "SO", "S", "SW", "W", "NW"], es: ["N", "NE", "E", "SE", "S", "SO", "O", "NO"],
+              fr: ["N", "NE", "E", "SE", "S", "SO", "O", "NO"]};
 function DIRS8() { return DIRS[LANG] || DIRS.en; }   // ilmansuunnat pohjoisesta myötäpäivään
 function initLang() {
   let l = S.config.language;
@@ -2664,7 +2807,7 @@ function showTab(tab) {
   if (!S) return;
   if (tab === "asetukset") { fillSettings(); fillTabPick(); }
   if (tab === "viestit" || tab === "aprs") fillMsg();
-  if (tab === "aprs") { fillRx(); fillRf(); covShow(); }
+  if (tab === "aprs") { fillRx(); fillRf(); fillAis(); covShow(); }
   if (tab === "seuranta") { netsShow(); fillBmCfg(); }
   if (tab === "lokit") { fillLogCfg(); loadLog(); }
   if (tab === "kaverit") { fillWatch(); seenAlerts = maxAlertSeq(); updateAlertBadge(); }
@@ -2784,7 +2927,7 @@ $("toLogCfg").onclick = e => { e.preventDefault(); showTab("lokit"); unfold("log
 function openSheetHelp(e) {
   if (e) e.preventDefault();
   const g = document.querySelector("#shBg .guide"); const gl = g.querySelector(`[lang="${LANG}"]`) ? LANG : "en";   // ohje kielellä, jos sellainen on, muuten englanniksi
-  for (const l of ["fi", "en", "de", "es"]) g.classList.toggle(l, l === gl);
+  for (const l of ["fi", "en", "de", "es", "fr"]) g.classList.toggle(l, l === gl);
   $("shCopied").textContent = ""; $("shBg").classList.add("open"); $("shBg").scrollTop = 0;
 }
 $("ciSheetHelp").onclick = openSheetHelp; $("ciSheetHelp2").onclick = openSheetHelp;
@@ -2801,7 +2944,7 @@ document.querySelectorAll("#shBg [data-copy]").forEach(b => b.onclick = async ()
     $("shCopied").textContent = T(ok ? "{f} kopioitu leikepöydälle – liitä se Apps Script -editoriin." : "Kopiointi ei onnistunut.", {f: name});
   } catch (err) { $("shCopied").className = "err"; $("shCopied").textContent = T("Kopiointi ei onnistunut."); }
 });
-$("toQrzCfg").onclick = e => { e.preventDefault(); showTab("lokit"); unfold("log-qrz"); };
+$("toQrzCfg").onclick = e => { e.preventDefault(); showTab("lokit"); unfold("log-cfg"); };
 $("toCmdCfg").onclick = e => { e.preventDefault(); showTab("aprs"); unfold("msg-cmd"); };
 $("btnFeedCheck").onclick = () => fetch("/api/feeds/check", {method: "POST"});
 $("btnTest").onclick = async () => {
@@ -3195,6 +3338,7 @@ $("btnBm").onclick = async () => {
 let aprsSel = null;
 const APRS_ST = {"virhe: ei radioyhteyttä": "bad", "kuitattu": "ok", "vastaanotettu": "warn", "lähetetty": "warn", "jonossa": "warn", "uudelleen": "warn", "lähetetty (ei kuittausta)": "ok", "ei kuittauspyyntöä": "muted"};
 function renderAprs() {
+  if (TAB === "aprs") renderAisState();
   const M = S.messaging, a = M.aprs, bases = M.watch_bases || [];
   $("aprsWho").textContent = bases.length ? bases.map(b => b + "*").join(", ") : "";
   const msgs = M.aprs_msgs || [];
@@ -3851,20 +3995,23 @@ async function covInit() {
   } catch (e) { /* ei pohjakarttaa */ }
   covSetTiles();
   covCells = L.layerGroup(); covStations = L.layerGroup(); covDigis = L.layerGroup(); covMarks = L.layerGroup().addTo(covMap);
-  covWx = L.layerGroup(); covObj = L.layerGroup(); covIs = L.layerGroup();
+  covWx = L.layerGroup(); covObj = L.layerGroup(); covIs = L.layerGroup(); covAis = L.layerGroup();
   const layers = {cells: covCells, stations: covStations, digis: covDigis, wx: covWx, obj: covObj, is: covIs};
   Object.entries(layers).forEach(([k, l]) => { if (covLayerOn(k)) l.addTo(covMap); });
+  if (aisCfg().enabled) covAis.addTo(covMap);         // laivataso: tila asetuksissa (haku vain kun päällä)
   L.control.layers(null, {"RF-kuuluvuus": covCells, "APRS-asemat": covStations, "Digipiitterit": covDigis,
-    "Sääasemat": covWx, "Objektit": covObj, "APRS-IS-asemat": covIs},
+    "Sääasemat": covWx, "Objektit": covObj, "APRS-IS-asemat": covIs, "Laivat (AIS)": covAis},
     {collapsed: false, position: "topright"}).addTo(covMap);
+  aisLayerChanged();
   const remember = () => { const o = {}; Object.entries(layers).forEach(([k, l]) => { o[k] = covMap.hasLayer(l); });
     try { localStorage.setItem(COV_LAYERS_KEY, JSON.stringify(o)); } catch (e) { /* ei tallennusta */ } };
   covMap.on("overlayadd", e => { remember(); if (e.layer === covStations || e.layer === covWx) covLoadStations();
     if (e.layer === covCells) covLoadCells(); if ([covWx, covObj, covIs].includes(e.layer)) covLoadExtra(); });
-  covMap.on("overlayremove", remember);
+  covMap.on("overlayremove", e => { remember(); if (e.layer === covAis) aisLayerChanged(); });
+  covMap.on("overlayadd", e => { if (e.layer === covAis) aisLayerChanged(); });
   covMap.on("zoomend", () => {
     if (covResFor(covMap.getZoom()) !== covRes) covLoadCells();
-    if ((covMap.getZoom() >= 10) !== covLabels) { renderStations(); renderExtra(); }
+    if ((covMap.getZoom() >= 10) !== covLabels) { renderStations(); renderExtra(); renderAis(); }
   });
 }
 function covSetTiles() {
@@ -4159,6 +4306,121 @@ async function saveRx() {
   return true;
 }
 $("btnRxSave").onclick = saveRx;
+$("btnMapSave").onclick = async () => { $("mapErr").textContent = ""; const ok = await saveRx();
+  $("mapErr").innerHTML = ok ? `<span class="ok">${esc(T("Tallennettu"))}</span>` : esc($("rxErr").textContent); $("rxErr").textContent = ""; };
+
+// ---------------- laivat (AIS) ----------------
+const AIS_GROUPS = {cargo: ["Rahtialukset", "#43a047"], tanker: ["Säiliöalukset", "#e53935"], passenger: ["Matkustaja-alukset ja lautat", "#1e88e5"],
+  special: ["Hinaajat, luotsit ja erikoisalukset", "#fb8c00"], fishing: ["Kalastusalukset", "#a1887f"],
+  pleasure: ["Huviveneet ja purjeveneet", "#ab47bc"], other: ["Muut ja tuntemattomat", "#9e9e9e"]};
+const AIS_NAV = {0: "kulussa konevoimalla", 1: "ankkurissa", 2: "ei ohjailtavissa", 3: "rajoitettu ohjailukyky", 4: "syväyksen rajoittama",
+  5: "laiturissa", 6: "karilla", 7: "kalastamassa", 8: "kulussa purjein"};
+let covAis = null, aisData = [], aisTimer = null, aisAttr = "";
+function aisCfg() { return (S.config && S.config.ais) || {}; }
+function aisIcon(s) {
+  const c = (AIS_GROUPS[s.group] || AIS_GROUPS.other)[1];
+  const dir = s.heading != null ? s.heading : s.cog;
+  const moving = (s.sog || 0) >= 0.5 && dir != null;
+  const svg = moving
+    ? `<svg width="18" height="18" viewBox="0 0 18 18" style="transform:rotate(${Math.round(dir)}deg)"><path d="M9 1 L15 16 L9 12.5 L3 16 Z" fill="${c}" stroke="${col("--bg")}" stroke-width="1.2"/></svg>`
+    : `<svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="2" transform="rotate(45 6 6)" fill="${c}" stroke="${col("--bg")}" stroke-width="1.2"/></svg>`;
+  return L.divIcon({className: "stamark", iconSize: moving ? [18, 18] : [12, 12], iconAnchor: moving ? [9, 9] : [6, 6], html: svg});
+}
+function aisPopup(s) {
+  const r = [];
+  const g = AIS_GROUPS[s.group] || AIS_GROUPS.other;
+  r.push(`<b>${esc(s.name || "MMSI " + s.mmsi)}</b> <span class="muted">${esc(T(g[0]))}${s.type ? " (" + esc(s.type) + ")" : ""}</span>`);
+  r.push(`MMSI ${esc(s.mmsi)}${s.call ? " · " + esc(T("Kutsu")) + " " + esc(s.call) : ""}${s.imo ? " · IMO " + esc(s.imo) : ""}`);
+  if (s.sog != null) r.push(`${esc(T("Nopeus"))}: ${esc(dec(s.sog.toFixed(1)))} kn${s.cog != null ? " · " + esc(T("Suunta")) + " " + Math.round(s.cog) + "°" : ""}`);
+  if (s.nav != null && AIS_NAV[s.nav]) r.push(esc(T(AIS_NAV[s.nav])));
+  const dims = [s.length ? `${esc(T("Pituus"))} ${esc(s.length)} m` : "", s.draught ? `${esc(T("Syväys"))} ${esc(dec(String(s.draught)))} m` : ""].filter(Boolean);
+  if (dims.length) r.push(dims.join(" · "));
+  if (s.dest) r.push(`${esc(T("Määränpää"))}: ${esc(s.dest)}`);
+  r.push(`<span class="muted">${esc(T("Sijainti {a}", {a: ago(s.ts)}))}</span>`);
+  return r.join("<br>");
+}
+function renderAis() {
+  if (!covAis) return;
+  covAis.clearLayers();
+  const c = aisCfg(), types = new Set(c.types || []);
+  aisData.filter(s => types.has(s.group) && !(c.hide_moored && (s.nav === 1 || s.nav === 5))).forEach(s => {
+    L.marker([s.lat, s.lon], {icon: aisIcon(s), keyboard: false})
+      .bindTooltip(s.name || String(s.mmsi), {permanent: covLabels, direction: "right", offset: [8, 0], className: "covlbl"})
+      .bindPopup(aisPopup(s)).addTo(covAis);
+  });
+  const on = covMap && covMap.hasLayer(covAis);
+  $("covAisLegend").innerHTML = on ? `<span class="stalegend">` + Object.entries(AIS_GROUPS).filter(([k]) => types.has(k)).map(([k, v]) =>
+    `<span><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="2" transform="rotate(45 6 6)" fill="${v[1]}"/></svg> ${esc(T(v[0]))}</span>`).join("") + `</span>` : "";
+}
+async function aisLoad() {
+  if (!covMap || !covMap.hasLayer(covAis)) return;
+  let j; try { j = await (await fetchT("/api/ais", 20000)).json(); } catch (e) { return; }
+  aisData = j.ships || [];
+  renderAis();
+}
+function aisSetAttr() {
+  if (!covMap) return;
+  if (aisAttr) covMap.attributionControl.removeAttribution(aisAttr);
+  aisAttr = "";
+  if (covMap.hasLayer(covAis)) {
+    aisAttr = aisCfg().source === "aisstream" ? 'AIS: <a href="https://aisstream.io/" target="_blank" rel="noopener">aisstream.io</a>'
+      : T("AIS: Fintraffic / digitraffic.fi, lisenssi") + ' <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC 4.0 BY</a>';
+    covMap.attributionControl.addAttribution(aisAttr);
+  }
+}
+function aisLayerChanged() {
+  const on = covMap.hasLayer(covAis);
+  $("aisFilt").style.display = on ? "" : "none";
+  if (!on) $("aisPanel").hidden = true;
+  aisSetAttr();
+  clearInterval(aisTimer);
+  if (on) { aisLoad(); aisTimer = setInterval(() => { if (TAB === "aprs") aisLoad(); }, 30000); }
+  else renderAis();
+  if (!!aisCfg().enabled !== on) saveCfg({ais: {enabled: on}}).then(j => { if (j.ok) S.config = j.config; });
+}
+function fillAisFilter() {
+  const c = aisCfg(), t = new Set(c.types || []);
+  document.querySelectorAll("[data-aisg]").forEach(cb => { cb.checked = t.has(cb.dataset.aisg); });
+  $("aisMoored").checked = !!c.hide_moored;
+}
+async function saveAisFilter() {
+  const types = [...document.querySelectorAll("[data-aisg]")].filter(cb => cb.checked).map(cb => cb.dataset.aisg);
+  const j = await saveCfg({ais: {types, hide_moored: $("aisMoored").checked}});
+  if (j.ok) { S.config = j.config; renderAis(); }
+}
+document.querySelectorAll("[data-aisg]").forEach(cb => { cb.onchange = saveAisFilter; });
+$("aisMoored").onchange = saveAisFilter;
+$("aisFiltBtn").onclick = e => { e.stopPropagation(); fillAisFilter(); $("aisPanel").hidden = !$("aisPanel").hidden;
+  $("aisFiltBtn").setAttribute("aria-expanded", String(!$("aisPanel").hidden)); };
+document.addEventListener("click", e => { if (!$("aisPanel").hidden && !e.target.closest("#aisFilt")) { $("aisPanel").hidden = true; $("aisFiltBtn").setAttribute("aria-expanded", "false"); } });
+function fillAis() {
+  const c = aisCfg();
+  $("aisSource").value = c.source || "digitraffic"; $("aisKm").value = String(c.km || 100); $("aisKey").value = c.key || "";
+  aisSrcUi(); renderAisState();
+}
+function aisSrcUi() {
+  const st = $("aisSource").value === "aisstream";
+  $("aisKeyFld").style.display = st ? "" : "none";
+  $("aisSrcHint").textContent = T(st ? "aisstream.io on ilmainen beta-palvelu ilman käytettävyystakuuta. Avain pysyy ohjelman taustaosassa."
+    : "Lähde: Fintraffic / digitraffic.fi, lisenssi CC 4.0 BY. Kattaa Suomen ja Itämeren.");
+}
+$("aisSource").onchange = aisSrcUi;
+function renderAisState() {
+  const a = (S && S.ais) || {};
+  let h = "";
+  if (!a.home) h = `<span class="warn">${esc(T("Aseta kotisijainti Palvelut-välilehdellä."))}</span>`;
+  else if (!a.enabled) h = esc(T("Laivataso ei ole päällä – kytke se kartan oikeasta yläkulmasta."));
+  else if (a.ok === false) h = `<span class="bad">${esc(T("Virhe: {e}", {e: a.error || "?"}))}</span>`;
+  else if (a.ok) h = `<span class="ok">${esc(T("{n} laivaa", {n: a.count}))}</span>` + (a.updated ? " · " + esc(T("päivitetty {ago}", {ago: ago(a.updated)})) : "");
+  if ($("aisState").dataset.html !== h) { $("aisState").innerHTML = h; $("aisState").dataset.html = h; }
+}
+$("btnAisSave").onclick = async () => {
+  $("aisErr").textContent = "";
+  const j = await saveCfg({ais: {source: $("aisSource").value, km: +$("aisKm").value, key: $("aisKey").value}});
+  if (!j.ok) { $("aisErr").textContent = j.error; return; }
+  S.config = j.config; fillAis(); aisSetAttr(); $("aisErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+  setTimeout(aisLoad, 3000);
+};
 $("rxEnabled").onchange = async () => { $("rxEnabledTxt").textContent = T($("rxEnabled").checked ? "Päällä" : "Pois"); if (!await saveRx()) { $("rxEnabled").checked = !$("rxEnabled").checked; } };
 
 // ---------------- oma ikkuna (pywebview) ----------------

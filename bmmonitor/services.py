@@ -1377,7 +1377,7 @@ def normalize_services(new: dict, old: dict) -> tuple[dict, set[str]]:
                 out["location"] = {"lat": None, "lon": None, "label": ""}
         elif loc.get("lat") is not None:
             lat, lon = float(loc["lat"]), float(loc["lon"])
-            out["location"] = {"lat": round(lat, 5), "lon": round(lon, 5), "label": loc.get("label") or "selaimen sijainti"}
+            out["location"] = {"lat": round(lat, 5), "lon": round(lon, 5), "label": loc.get("label") or f"{lat:.5f}, {lon:.5f}"}
     for sec in ("lightning", "warnings", "space", "traffic", "aurora", "radiation", "satellites"):
         if sec in new:
             setb(sec, "enabled")

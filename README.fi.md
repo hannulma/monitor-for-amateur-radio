@@ -16,7 +16,7 @@ sisäiset nimet käyttävät edelleen sitä, jotta päivitykset ja tallennetut a
 > kohdasta *Ohjelma → Versio ja päivitykset*. Virheilmoitukset ja palaute:
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
 
-![Seuranta](docs/screenshot-monitor.png)
+![Seuranta](docs/screenshot-monitor-fi.png)
 
 ## Lataus ja asennus
 
@@ -67,7 +67,8 @@ Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · 
   avausten määrä ja yhteenlaskettu puheaika. Välilehden nimen perässä näkyy antennikuvake, kun jossakin seuratussa
   ryhmässä on lähetys käynnissä. Kaiutinpainike aloittaa ryhmän **kuuntelun** (useita ryhmiä
   voi kuunnella yhtä aikaa; ryhmiä 1–90 ei voi kuunnella).
-- **Viimeisimmät puhelut:** 10, 25, 50, 100 tai 150 viimeisintä, suodatettavissa puheryhmän mukaan.
+- **Viimeisimmät puhelut:** 10, 25, 50 tai 100 viimeisintä, suodatettavissa puheryhmän mukaan. Käynnissä olevat lähetykset näkyvät
+  listan ylimpinä LÄHETYS-merkillä ja kasvavalla kestolla; päättyessään ne siirtyvät tavallisiksi riveiksi.
 - **Kirjaa yhteys (QSO) lokiin:** kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai
   pidätte yksityispuhelun, yhteys näkyy ehdokkaana. *Lisää lokiin* avaa valmiiksi täytetyn lomakkeen (tila DMR); *Ohita* poistaa ehdokkaan.
   Loki tallentuu oletuksena paikallisesti; lähetys QRZ.comiin, eQSL:ään ja HamQTH:hon on valinnainen.
@@ -95,6 +96,8 @@ Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · 
   oman API-avaimen (HamQTH → Settings → Apps and API keys, alkaa `hqk_`); salasanaa ei tarvita. *Lokin lähetys: [HamQTH.com](https://www.hamqth.com/)*
   – HamQTH toivoo, että rekisteröidyt ja pidät profiilisi ajan tasalla.
 
+![Loki](docs/screenshot-logs-fi.png)
+
 ### APRS
 - **APRS-viestit:** kutsusi kaikkien SSID:iden saapuvat ja lähtevät APRS-viestit, myös BrandMeisterin kautta
   DMR-radiosta lähtevät. Viestiä klikkaamalla voit vastata suoraan (valittavissa millä SSID:llä). Uusien viestien
@@ -111,13 +114,17 @@ Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · 
   suoraan ja mistä digipiitterien kautta; **APRS-asemat** – radiolla kuultujen asemien viimeisin sijainti (iGaten radioon välittämät asemat näkyvät onttoina
   eivätkä ole mukana RF-kuuluvuudessa); **Digipiitterit** – digiä klikkaamalla näkyy sen kautta kuultu alue;
   **Sääasemat** – lämpötila, tuuli, kosteus, ilmanpaine ja sade; **Objektit** – objektit ja itemit (esim. toistimet);
-  **APRS-IS-asemat** – valinnainen, APRS-IS:n asemat kotisijaintisi ympäriltä (säde asetuksissa). Taulukoissa digien osuudet ja yleisimmät polut. Hälytys, kun tuttu digi tai valitsemasi asema
+  **APRS-IS-asemat** – valinnainen, APRS-IS:n asemat kotisijaintisi ympäriltä (säde asetuksissa). **Laivat (AIS)** – valinnainen,
+  laivat kotisijaintisi ympäriltä Fintrafficin Digitrafficista (Suomi ja Itämeri, ei avainta) tai aisstream.io:sta (koko maailma, ilmainen avain);
+  näytettävät alustyypit valitaan kartan yläpuolelta *Laivat*-valikosta, ja laiturissa tai ankkurissa olevat voi piilottaa. Taulukoissa digien osuudet ja yleisimmät polut. Hälytys, kun tuttu digi tai valitsemasi asema
   (esim. iGate) hiljenee – vain silloin, kun oma vastaanotto toimii. Paketit säilytetään koneella 30 vrk.
   Karttapohja: OpenStreetMap (© OpenStreetMap contributors), tiilet haetaan ohjelman kautta omalla
   tunnisteella ja välimuistitetaan; osoitteen voi vaihtaa.
 - **APRS-IS-yhteys ja vastaanottajat:** oma APRS-IS-tunnus, passcode, palvelin, radioiden kutsut,
   viestiasetukset ja testiviesti.
 - **Komennot radiosta:** ks. alempana.
+
+![APRS-kartta ja laivat](docs/screenshot-aprs-fi.png)
 
 ### Kaverit
 Kaverilistan kutsut tai DMR-ID:t. Hälytys (työpöytäilmoitus, äänimerkki, halutessa tekstiviesti radioon),
@@ -133,6 +140,8 @@ katkaisu ja yhteyden nollaus. Avain luodaan BrandMeister SelfCaressa.
 ### Tilastot
 Puhelut tunneittain/päivittäin (14 päivän historia), eniten puhuneet, vilkkaimmat ryhmät sekä BrandMeisterin
 oma historiakysely: ryhmässä kuullut asemat puhekertoineen.
+
+![Tilastot](docs/screenshot-stats-fi.png)
 
 ### Check-in
 Viikoittaisten check-in-nettien (esim. FinDMR TG 244, Viro TG 248, Worldwide TG 91) kirjaamiseen.
@@ -187,6 +196,8 @@ Viestit lyhennetään mahtumaan yhteen 67 merkin radioviestiin, esim.
 `Keltainen liikennesää: lumi/räntä, to 14–pe 12 (30 %)` ("nyt" = jo voimassa, "24" = keskiyöhön asti).
 Koko teksti aukeaa ohjelmassa otsikkoa klikkaamalla.
 
+![Palvelut](docs/screenshot-services-fi.png)
+
 ### Syötteet
 RSS-, Atom- ja JSON Feed -syötteet (esim. BrandMeisterin uutiset, SRAL): uuden uutisen otsikko lähetetään
 radioon APRS-välilehdellä asetetuille vastaanottajille. Syötteiden tila ja viestiloki; syötteet ja viestiasetukset ovat välilehden alimpana Asetukset-osiossa.
@@ -205,9 +216,9 @@ Toimintojen asetukset ovat kunkin välilehden alimmassa, pienennettävässä **A
 käyttöliittymä omassa ikkunassa tai selaimessa; **näytettävät välilehdet**), **päivitykset** sekä palaute, vikailmoitukset ja
 **Sulje ohjelma**. Käyttämättömät välilehdet voi piilottaa; niiden toiminnot jatkavat taustalla, ja Ohjelma-välilehti on aina näkyvissä.
 
-- **Kieli (suomi / English / Deutsch / Español)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
+- **Kieli (suomi / English / Deutsch / Español / Français)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
   Ensimmäisellä käynnistyksellä kieli valitaan käyttöjärjestelmän kielen mukaan (muuten englanti). Radiokomennot toimivat
-  suomeksi ja englanniksi (`OHJE`/`CMD`, `KUKA`/`WHO`, `NYT`/`NOW`; saksaksi ja espanjaksi käytetään englanninkielisiä). Saksan- ja espanjankielinen
+  suomeksi ja englanniksi (`OHJE`/`CMD`, `KUKA`/`WHO`, `NYT`/`NOW`; saksaksi, espanjaksi ja ranskaksi käytetään englanninkielisiä). Saksan-, espanjan- ja ranskankielinen
   käännös on konekäännös – korjausehdotukset ovat tervetulleita palautetoiminnolla. Ilmatieteen laitoksen varoitukset ja
   Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).
 - **Palaute / lokit** (Ohjelma-välilehti) lähettää viestin ja zip-paketin ylläpidolle. Salaisuudet (API-avain, passcode,

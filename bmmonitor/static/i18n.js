@@ -245,7 +245,7 @@
     "Ei liikennettä vielä seuratuissa puheryhmissä.": "No traffic in the monitored talkgroups yet.",
     "Viimeisimmät puhelut": "Latest calls", "Kaikki seuratut": "All monitored",
     "Näytettävien puheluiden määrä": "Number of calls to show",
-    "10 viimeisintä": "Last 10", "25 viimeisintä": "Last 25", "50 viimeisintä": "Last 50", "100 viimeisintä": "Last 100", "150 viimeisintä": "Last 150",
+    "10 viimeisintä": "Last 10", "25 viimeisintä": "Last 25", "50 viimeisintä": "Last 50", "100 viimeisintä": "Last 100",
     "Kutsu": "Callsign", "Ei puheluita.": "No calls.",
     "ei liikennettä": "no traffic",
     "Lopeta kuuntelu": "Stop listening", "Kuuntele TG {tg}": "Listen to TG {tg}", "Lopeta TG {tg}": "Stop TG {tg}",
@@ -434,8 +434,6 @@
     "Ohje: taulukon luominen ja yhdistäminen": "Help: creating and connecting the sheet", "Vaiheittainen ohje": "Step-by-step guide",
     "{f} kopioitu leikepöydälle – liitä se Apps Script -editoriin.": "{f} copied to the clipboard – paste it into the Apps Script editor.",
     "Kopiointi ei onnistunut.": "Copying failed.", "Oma kutsu ja tunnistus:": "Own callsign and detection:",
-    "Lokitiedot tallentuvat oletuksena paikallisesti tälle tietokoneelle. Halutessasi voit synkronoida ne QRZ.comin lokikirjaan, mikä vaatii maksullisen QRZ.com-tilauksen:":
-      "By default the log is stored locally on this computer. If you like, you can sync it to your QRZ.com logbook, which requires a paid QRZ.com subscription:",
     "Lokit → Asetukset → QRZ Logbook": "Logs → Settings → QRZ Logbook",
     "– kun rasti on pois, syötettä ei seurata eikä siitä lähetetä viestejä.": "– when unticked, the feed is not followed and no messages are sent from it.",
     "– lyhyt tunniste, joka näkyy viestin alussa, esim.": "– a short tag shown at the start of the message, e.g.",
@@ -484,7 +482,6 @@
     "jos taajuus ei ole tiedossa": "when the frequency is not known",
     "Tunnista yhteydet BrandMeisterin puheluista": "Detect contacts from BrandMeister calls",
     "Yhteysehdokas syntyy, kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai pidätte yksityispuhelun. Ehdokas päättyy 10 minuutin hiljaisuuden jälkeen. Ehdokkaat näkyvät BrandMeister-välilehdellä.": "A contact candidate appears when you and another station take turns on the same talkgroup (at most 3 min between overs) or have a private call. It ends after 10 minutes of silence. Candidates are shown on the BrandMeister tab.",
-    "Lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan. API-avaimen käyttö vaatii maksullisen QRZ.com-tilauksen (XML-taso tai ylempi). API-avaimen löydät QRZ.comista: Logbook → Settings → API Key. Avain tallennetaan käyttöjärjestelmän salasanavarastoon.": "Logged contacts are sent to your QRZ.com logbook. Using the API key requires a paid QRZ.com subscription (XML level or higher). You find the API key on QRZ.com: Logbook → Settings → API Key. The key is stored in the operating system's password store.",
     "Lähetä lokiin lisätyt yhteydet QRZ Logbookiin": "Send logged contacts to QRZ Logbook",
     "API-avain": "API key",
     "Testaa yhteys": "Test connection",
@@ -729,7 +726,6 @@
     "Internetin kautta (PROP_MODE {p})": "Via internet (PROP_MODE {p})",
     "Kaikki etenemistavat": "All propagation modes",
     "Lokiin lisätyt yhteydet lähetetään": "Logged contacts are sent to your",
-    "Lokiin lisätyt yhteydet lähetetään eQSL.cc:hen, joka lähettää niistä sähköiset QSL-kortit. Tarvitset eQSL.cc-tilin (ilmainen). Salasana tallennetaan käyttöjärjestelmän salasanavarastoon.": "Logged contacts are sent to eQSL.cc, which sends electronic QSL cards for them. You need an eQSL.cc account (free). The password is stored in the operating system's password store.",
     "Lähetä lokiin lisätyt yhteydet HamQTH:hon": "Send logged contacts to HamQTH",
     "Lähetä lokiin lisätyt yhteydet eQSL:ään": "Send logged contacts to eQSL",
     "QTH-lempinimi (valinnainen)": "QTH nickname (optional)",
@@ -750,6 +746,48 @@
     "Salasana tallennettu.": "Password saved.",
     "Ei salasanaa.": "No password.",
     "liian pitkä: eQSL hyväksyy enintään 14 merkkiä": "too long: eQSL accepts at most 14 characters",
+    "Lokitiedot tallentuvat oletuksena paikallisesti tälle tietokoneelle. Halutessasi voit lähettää ne QRZ.comiin (maksullinen tilaus), eQSL:ään tai HamQTH:hon (ilmaisia):": "By default the log is stored locally on this computer. If you like, you can send it to QRZ.com (paid subscription), eQSL or HamQTH (free):",
+    "Lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan (": "Logged contacts are sent to your QRZ.com logbook (",
+    "). API-avaimen käyttö vaatii maksullisen QRZ.com-tilauksen (XML-taso tai ylempi). API-avaimen löydät QRZ.comista: Logbook → Settings → API Key. Avain tallennetaan käyttöjärjestelmän salasanavarastoon.": "). Using the API key requires a paid QRZ.com subscription (XML level or higher). You find the API key on QRZ.com: Logbook → Settings → API Key. The key is stored in the operating system's password store.",
+    "Lokiin lisätyt yhteydet lähetetään eQSL.cc:hen (": "Logged contacts are sent to eQSL.cc (",
+    "), joka lähettää niistä sähköiset QSL-kortit. Tarvitset eQSL.cc-tilin (ilmainen). Salasana tallennetaan käyttöjärjestelmän salasanavarastoon.": "), which sends electronic QSL cards for them. You need an eQSL.cc account (free). The password is stored in the operating system's password store.",
+    "Kartta": "Map",
+    "Laivat (AIS)": "Ships (AIS)",
+    "Laivat ▾": "Ships ▾",
+    "Rahtialukset": "Cargo ships",
+    "Säiliöalukset": "Tankers",
+    "Matkustaja-alukset ja lautat": "Passenger ships and ferries",
+    "Kalastusalukset": "Fishing vessels",
+    "Huviveneet ja purjeveneet": "Pleasure craft and sailing boats",
+    "Hinaajat, luotsit ja erikoisalukset": "Tugs, pilots and special craft",
+    "Muut ja tuntemattomat": "Other and unknown",
+    "Piilota laiturissa ja ankkurissa olevat": "Hide moored and anchored",
+    "kulussa konevoimalla": "under way using engine",
+    "ankkurissa": "at anchor",
+    "ei ohjailtavissa": "not under command",
+    "rajoitettu ohjailukyky": "restricted manoeuvrability",
+    "syväyksen rajoittama": "constrained by draught",
+    "laiturissa": "moored",
+    "karilla": "aground",
+    "kalastamassa": "engaged in fishing",
+    "kulussa purjein": "under way sailing",
+    "Pituus": "Length",
+    "Syväys": "Draught",
+    "Määränpää": "Destination",
+    "Sijainti {a}": "Position {a}",
+    "{n} laivaa": "{n} ships",
+    "Aseta kotisijainti Palvelut-välilehdellä.": "Set your home location on the Services tab.",
+    "Laivataso ei ole päällä – kytke se kartan oikeasta yläkulmasta.": "The ships layer is off – turn it on from the top right corner of the map.",
+    "Laivat näkyvät APRS-kartalla omalla tasollaan (Laivat (AIS)), jonka saat päälle kartan oikeasta yläkulmasta. Näytettävät alustyypit valitaan kartan yläpuolelta. Laivoja vain näytetään; mitään ei lähetetä eteenpäin. Laivat haetaan kotisijaintisi ympäriltä (Palvelut-välilehti), ja sijainti pyöristetään hauissa noin 10 km tarkkuuteen.": "Ships are shown on the APRS map on their own layer (Ships (AIS)), which you can turn on from the top right corner of the map. The vessel types to show are chosen above the map. Ships are only displayed; nothing is forwarded. Ships are fetched around your home location (Services tab), and the location is rounded to about 10 km in the queries.",
+    "Digitraffic (Suomi ja Itämeri, ei avainta)": "Digitraffic (Finland and the Baltic Sea, no key)",
+    "aisstream.io (koko maailma, oma avain)": "aisstream.io (worldwide, own key)",
+    "Säde kotisijainnista": "Radius from home location",
+    "aisstream.io-avain": "aisstream.io key",
+    "Ilmainen avain:": "Free key:",
+    "→ API Keys. Avain tallennetaan käyttöjärjestelmän salasanavarastoon.": "→ API Keys. The key is stored in the operating system's password store.",
+    "aisstream.io on ilmainen beta-palvelu ilman käytettävyystakuuta. Avain pysyy ohjelman taustaosassa.": "aisstream.io is a free beta service with no availability guarantee. The key stays in the program's backend.",
+    "Lähde: Fintraffic / digitraffic.fi, lisenssi CC 4.0 BY. Kattaa Suomen ja Itämeren.": "Source: Fintraffic / digitraffic.fi, licence CC 4.0 BY. Covers Finland and the Baltic Sea.",
+    "AIS: Fintraffic / digitraffic.fi, lisenssi": "AIS: Fintraffic / digitraffic.fi, licence",
   };
 
   const ATTRS = ["placeholder", "title", "aria-label"];
@@ -792,7 +830,7 @@
     if (vars) out = out.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
     return out;
   };
-  const LOCALES = {fi: "fi-FI", en: "en-GB", de: "de-DE", es: "es-ES"};
+  const LOCALES = {fi: "fi-FI", en: "en-GB", de: "de-DE", es: "es-ES", fr: "fr-FR"};
   window.LOC = () => LOCALES[window.LANG] || "en-GB";
   window.dec = s => (window.LANG === "en" ? String(s) : String(s).replace(".", ","));   // desimaalipilkku muilla kuin englannilla
 

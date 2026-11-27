@@ -126,6 +126,9 @@ def clean_text(text: str, ascii_only: bool) -> str:
         if get_lang() == "de":     # saksassa ä → ae, ö → oe, ü → ue, ß → ss
             for x, y in (("ä", "ae"), ("ö", "oe"), ("ü", "ue"), ("Ä", "Ae"), ("Ö", "Oe"), ("Ü", "Ue"), ("ß", "ss")):
                 text = text.replace(x, y)
+        # ranskan ligatuurit ja kulmalainausmerkit eivät hajoa NFKD:ssä (sitova välilyönti on jo muutettu tavalliseksi)
+        for x, y in (("œ", "oe"), ("Œ", "OE"), ("æ", "ae"), ("Æ", "AE"), ("« ", '"'), (" »", '"'), ("«", '"'), ("»", '"')):
+            text = text.replace(x, y)
         text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
     return text
 

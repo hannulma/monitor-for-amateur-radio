@@ -5,6 +5,8 @@ Fehlt ein Eintrag, wird Englisch verwendet.
 """
 
 DE: dict[str, str] = {
+    "Set the aisstream.io key": "Lege den aisstream.io-Schlüssel fest",
+    "Connection closed": "Verbindung geschlossen",
     "Set the HamQTH API key": "Lege den HamQTH-API-Schlüssel fest",
     "was already in HamQTH": "war bereits in HamQTH",
     "was already in eQSL": "war bereits in eQSL",

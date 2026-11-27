@@ -333,8 +333,8 @@ def test_checkin_link_kinds(tmp_path):
 
 def test_calls_limit_migration():
     from bmmonitor.app import CALLS_LIMITS, nearest_calls_limit
-    assert CALLS_LIMITS == (10, 25, 50, 100, 150)
-    assert [nearest_calls_limit(x) for x in (15, 20, 25, None, 999)] == [10, 25, 25, 10, 150]
+    assert CALLS_LIMITS == (10, 25, 50, 100)
+    assert [nearest_calls_limit(x) for x in (15, 20, 25, None, 999, 150)] == [10, 25, 25, 10, 100, 100]
 
 
 MA_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1091,7 +1091,7 @@ def test_sheet_guide_languages():
     """Check-in-taulukon ohjeikkunassa on oma lohko jokaiselle kielelle (fi, en, de)."""
     html = (Path(__file__).resolve().parent.parent / "bmmonitor" / "static" / "index.html").read_text(encoding="utf-8")
     guide = html[html.index('id="shBg"'):html.index('id="modalBg"')]
-    for lang in ("fi", "en", "de", "es"):
+    for lang in ("fi", "en", "de", "es", "fr"):
         assert guide.count(f'<div lang="{lang}" data-noi18n>') == 1, lang
         assert f'.guide.{lang} [lang="{lang}"]' in html
 
@@ -1243,5 +1243,101 @@ def test_spanish_translation_complete():
         assert i18n.tr("Tuntematon komento. Laheta OHJE") == "Comando desconocido. Envía CMD"
         assert i18n.num(1.25, 2) == "1,25" and i18n.bearing(270) == "O"
         assert clean_text("¿Qué tal, España?", True) == "Que tal, Espana?"
+    finally:
+        i18n.set_lang("fi")
+
+
+def test_ais_ships(tmp_path):
+    """Laivat (AIS): tyyppiryhmät, asetukset, Digitrafficin ja aisstream.io:n viestien jäsennys, demo."""
+    from types import SimpleNamespace
+    from bmmonitor.ais import DEFAULT_AIS, AisFeed, normalize_ais, ship_group
+    assert [ship_group(t) for t in (70, 84, 60, 41, 52, 31, 30, 37, 0, None, 99)] == \
+        ["cargo", "tanker", "passenger", "passenger", "special", "special", "fishing", "pleasure", "other", "other", "other"]
+    c = normalize_ais({"km": 200, "types": ["tanker", "cargo"], "source": "aisstream", "enabled": 1}, DEFAULT_AIS)
+    assert c["km"] == 200 and c["types"] == ["cargo", "tanker"] and c["enabled"] is True
+    for bad in ({"km": 300}, {"types": ["ufo"]}, {"source": "x"}):
+        with pytest.raises(ValueError):
+            normalize_ais(bad, DEFAULT_AIS)
+    mon = SimpleNamespace(cfg={"ais": {**DEFAULT_AIS, "enabled": True, "km": 100},
+                               "services": {"location": {"lat": 60.17, "lon": 24.94}}},
+                          dirty=False, save_config=lambda: None)
+    feed = AisFeed(mon)
+    locs = feed.parse_locations({"type": "FeatureCollection", "features": [
+        {"mmsi": 230145000, "type": "Feature", "geometry": {"type": "Point", "coordinates": [24.95, 60.15]},
+         "properties": {"mmsi": 230145000, "sog": 12.3, "cog": 181.5, "navStat": 0, "rot": 0, "posAcc": True, "raim": False,
+                        "heading": 511, "timestamp": 30, "timestampExternal": 1764250000000}},
+        {"mmsi": 1, "geometry": {"coordinates": []}, "properties": {}}]})
+    assert locs == [{"mmsi": 230145000, "lat": 60.15, "lon": 24.95, "sog": 12.3, "cog": 181.5, "heading": None, "nav": 0,
+                     "ts": 1764250000.0}]
+    v = feed.parse_vessel({"mmsi": 219598000, "name": "NORD SUPERIOR ", "callSign": "OWPA2", "shipType": 80, "draught": 118,
+                           "destination": "NL AMS", "referencePointA": 148, "referencePointB": 35, "referencePointC": 23,
+                           "referencePointD": 9, "imo": 9692129, "eta": 416128, "posType": 1, "timestamp": 1591521868371})
+    assert v == {"name": "NORD SUPERIOR", "call": "OWPA2", "type": 80, "dest": "NL AMS", "draught": 11.8, "length": 183,
+                 "width": 32, "imo": 9692129}
+    calls = []
+
+    async def fake_get(sess, path, params=None):
+        calls.append((path, params))
+        if path == "/vessels":
+            return [{"mmsi": 230145000, "name": "FINNLADY", "shipType": 70, "draught": 65}]
+        import time as _t
+        return {"features": [{"geometry": {"coordinates": [24.95, 60.15]},
+                              "properties": {"mmsi": 230145000, "sog": 10, "cog": 90, "navStat": 0, "heading": 88,
+                                             "timestampExternal": _t.time() * 1000}},
+                             {"geometry": {"coordinates": [25.0, 60.1]},
+                              "properties": {"mmsi": 230000001, "sog": 0, "navStat": 5, "timestampExternal": 1000}}]}
+    feed._get = fake_get
+    asyncio.run(feed._digitraffic_once((60.17, 24.94)))
+    assert calls[0][0] == "/vessels" and calls[1] == ("/locations", {"latitude": 60.2, "longitude": 24.9, "radius": 100})
+    ships = feed.ship_list()
+    assert len(ships) == 1 and ships[0]["name"] == "FINNLADY" and ships[0]["group"] == "cargo" and ships[0]["draught"] == 6.5
+    assert feed.snapshot()["ok"] is True and feed.snapshot()["count"] == 1
+    # aisstream.io
+    feed.ships.clear()
+    home = (60.17, 24.94)
+    assert feed.handle_stream({"MessageType": "PositionReport", "MetaData": {"MMSI": 266000000, "ShipName": "SVEA  "},
+                               "Message": {"PositionReport": {"Latitude": 60.0, "Longitude": 24.9, "Sog": 15.2, "Cog": 270,
+                                                              "TrueHeading": 268, "NavigationalStatus": 0}}}, home)
+    assert not feed.handle_stream({"MessageType": "PositionReport", "MetaData": {"MMSI": 1},
+                                   "Message": {"PositionReport": {"Latitude": 10.0, "Longitude": 10.0}}}, home)   # säteen ulkopuolella
+    assert feed.handle_stream({"MessageType": "ShipStaticData", "MetaData": {"MMSI": 266000000},
+                               "Message": {"ShipStaticData": {"Name": "SVEA", "CallSign": "SFHQ", "Type": 60, "Destination": "STOCKHOLM",
+                                                              "MaximumStaticDraught": 6.2, "Dimension": {"A": 150, "B": 30}}}}, home)
+    s = feed.ships[266000000]
+    assert (s["name"], s["call"], s["type"], s["length"], s["heading"], s["sog"]) == ("SVEA", "SFHQ", 60, 180, 268, 15.2)
+    bb = feed.bbox(home)[0]
+    assert bb[0][0] < 60.2 < bb[1][0] and bb[0][1] < 24.9 < bb[1][1]
+    # demo
+    feed.ships.clear()
+    feed._demo_once(home)
+    assert len(feed.ship_list()) == 10 and {x["group"] for x in feed.ship_list()} >= {"cargo", "tanker", "passenger", "special"}
+
+
+def test_french_translation_complete():
+    """Ranska: jokaisella englanninkielisellä tekstillä on käännös samoilla paikkamerkeillä; tr/num/ilmansuunnat/ASCII."""
+    from bmmonitor import i18n
+    from bmmonitor.i18n_fr import FR
+    from bmmonitor.messaging import clean_text
+    root = Path(__file__).resolve().parent.parent / "bmmonitor" / "static"
+    ph = re.compile(r"\{(\w*)\}")
+    pairs = re.findall(r'"((?:[^"\\]|\\.)*)":\s*\n?\s*"((?:[^"\\]|\\.)*)"', (root / "i18n.js").read_text("utf-8"))
+    en_ui = {json.loads('"' + en + '"') for en in dict(pairs).values()}
+    fr_pairs = re.findall(r'"((?:[^"\\]|\\.)*)":\s*"((?:[^"\\]|\\.)*)"', (root / "i18n.fr.js").read_text("utf-8"))
+    fr_ui = {json.loads('"' + k + '"'): json.loads('"' + v + '"') for k, v in fr_pairs}
+    missing = sorted(en_ui - set(fr_ui))
+    assert not missing, missing[:10]
+    for en, fr in fr_ui.items():
+        assert sorted(ph.findall(en)) == sorted(ph.findall(fr)), en
+    missing = sorted(set(i18n.EN.values()) - set(FR))
+    assert not missing, missing[:10]
+    for en, fr in FR.items():
+        assert sorted(ph.findall(en)) == sorted(ph.findall(fr)), en
+    html = (root / "index.html").read_text("utf-8")
+    assert '<script src="/static/i18n.fr.js"></script>' in html and '<option value="fr">Français</option>' in html
+    try:
+        i18n.set_lang("fr")
+        assert i18n.tr("Tuntematon komento. Laheta OHJE") == "Commande inconnue. Envoyez CMD"
+        assert i18n.num(1.25, 2) == "1,25" and i18n.bearing(270) == "O"
+        assert clean_text("Œuvre « Noël » à Tôkyô", True) == 'OEuvre "Noel" a Tokyo'
     finally:
         i18n.set_lang("fi")

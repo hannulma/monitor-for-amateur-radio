@@ -5,6 +5,8 @@ Si falta una entrada, se usa el inglés.
 """
 
 ES: dict[str, str] = {
+    "Set the aisstream.io key": "Define la clave de aisstream.io",
+    "Connection closed": "Conexión cerrada",
     " (+{n} stations)": " (+{n} estaciones)",
     " (valid until {t} UTC)": " (válida hasta las {t} UTC)",
     ", cloud cover {c}/8": ", nubosidad {c}/8",

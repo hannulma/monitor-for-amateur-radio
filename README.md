@@ -19,7 +19,7 @@ internal names still use that name so that updates and saved settings keep worki
 > **Stable release 0.16.0.** New features arrive first in test versions (beta), which you can enable in
 > *App → Version and updates*. Bug reports and feedback are very welcome in
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
-> The user interface is available in **English**, **Finnish**, **German** and **Spanish** (App → Language and units). Feature settings are in the *Settings* section at the bottom of each tab.
+> The user interface is available in **English**, **Finnish**, **German**, **Spanish** and **French** (App → Language and units). Feature settings are in the *Settings* section at the bottom of each tab.
 
 ![Monitor view](docs/screenshot-monitor.png)
 
@@ -32,6 +32,8 @@ The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Chec
 - **Talkgroup monitor** – watch talkgroups by number or wildcard (`244*`, `2441?`): who is talking right now,
   last activity, duration, via which repeater/hotspot, number of calls and total airtime. An antenna icon after the
   BrandMeister tab name shows when a monitored talkgroup is on the air.
+- **Recent calls** – the last 10, 25, 50 or 100 calls, filterable by talkgroup; transmissions in progress are shown at
+  the top with an ON AIR badge and a running duration.
 - **Live audio** – listen to one or several talkgroups directly in the app (Hoseline audio stream), with the
   current talker, talker alias and level meter.
 - **Nets today and tomorrow** – the FinDMR round ([6kw.fi](https://6kw.fi/findmr/)), W0WC's BrandMeister net
@@ -56,6 +58,8 @@ The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Chec
   log at once (personal keys via one-time pairing codes, signed requests); without it, **Copy new rows** puts
   the rows on the clipboard ready to paste. Finished rounds are saved as CSV.
 
+![Statistics](docs/screenshot-stats.png)
+
 ### APRS
 
 - **APRS messaging** – see all APRS messages to and from every SSID of your callsign (including DMR ↔ APRS
@@ -73,13 +77,17 @@ The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Chec
   directly and via digipeaters; **APRS stations** – the latest position of stations heard on the radio (stations an iGate relays to RF are shown
   hollow and not counted in RF coverage); **Digipeaters** – click one to see the area heard through it;
   **Weather stations** – temperature, wind, humidity, pressure and rain; **Objects** – objects and items (e.g. repeaters);
-  **APRS-IS stations** – optional, stations from APRS-IS around your home (radius in the settings). Tables of digipeater shares and the most
+  **APRS-IS stations** – optional, stations from APRS-IS around your home (radius in the settings). **Ships (AIS)** – optional,
+  ships around your home from Fintraffic Digitraffic (Finland and the Baltic Sea, no key) or aisstream.io (worldwide, free key);
+  the ship types are chosen from the *Ships* menu above the map, and moored/anchored ships can be hidden. Tables of digipeater shares and the most
   common paths, and an alert when a known digipeater or a station you choose (e.g. an iGate) goes silent –
   only while your own reception works. Base map © OpenStreetMap contributors (tiles fetched through the app
   with its own User-Agent and cached; the tile URL can be changed).
 - **Radio commands** – send `CMD`, `TG244`, `WHO OH2ABC`, `NOW` or a feed command from your DMR radio and get the
   answer back as a text message (in Finnish also `OHJE`, `KUKA`, `NYT`).
 - **News feeds → DMR SMS** – new RSS/Atom/JSON Feed items sent to your radio as short text messages.
+
+![APRS map with ships](docs/screenshot-aprs.png)
 
 ### Logs
 
@@ -92,6 +100,8 @@ The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Chec
   [HamQTH.com](https://www.hamqth.com/)*). Contacts recognised from BrandMeister are marked as internet-assisted
   (ADIF `PROP_MODE=INTERNET`, also DMR/D-STAR/C4FM/M17 by default); each service can be set to skip them, since they do
   not count for most awards. The log can be filtered by propagation mode.
+
+![Logbook](docs/screenshot-logs.png)
 
 ### Services and satellites
 
@@ -115,10 +125,10 @@ The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Chec
 
 ### App
 
-- **English, Finnish, German (Deutsch) and Spanish (Español)** – choose the language on the App tab; on first start it follows the
+- **English, Finnish, German (Deutsch), Spanish (Español) and French (Français)** – choose the language on the App tab; on first start it follows the
   operating system language (English otherwise). It covers the user interface, the program's own alerts and the
-  replies sent to your radio (radio commands: `CMD`, `WHO`, `NOW`, in Finnish also `OHJE`, `KUKA`, `NYT`). The German
-  and Spanish translations are machine-made – corrections are welcome through the feedback function. FMI warnings and Digitraffic
+  replies sent to your radio (radio commands: `CMD`, `WHO`, `NOW`, in Finnish also `OHJE`, `KUKA`, `NYT`). The German,
+  Spanish and French translations are machine-made – corrections are welcome through the feedback function. FMI warnings and Digitraffic
   bulletins stay in Finnish, their source language.
 - **Light, dark or automatic theme** (follows the operating system).
 - **Automatic updates** – the app checks GitHub for a new version once a day (can be turned off). On Windows
@@ -223,7 +233,7 @@ Team roles, what is signed and how: [CODE_SIGNING.md](CODE_SIGNING.md).
 ## Data sources and APIs
 
 BrandMeister Last Heard (socket.io) and Halligan API v2, BrandMeister Hoseline audio, APRS-IS, FMI open data,
-NOAA SWPC, STUK (via FMI open data), Fintraffic Digitraffic. See [docs/TECHNICAL.md](docs/TECHNICAL.md) for
+NOAA SWPC, STUK (via FMI open data), Fintraffic Digitraffic (roads and marine AIS), aisstream.io. See [docs/TECHNICAL.md](docs/TECHNICAL.md) for
 endpoints, protocols and implementation notes.
 
 Please be considerate with public services: the app uses conservative polling intervals and the same public

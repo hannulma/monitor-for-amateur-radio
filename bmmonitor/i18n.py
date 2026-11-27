@@ -1,7 +1,7 @@
-"""Ohjelman omien tekstien kieli (suomi/englanti/saksa/espanja).
+"""Ohjelman omien tekstien kieli (suomi/englanti/saksa/espanja/ranska).
 
 Avaimina ovat suomenkieliset tekstit, joten suomi toimii ilman sanakirjaa. Englanti on tämän
-tiedoston EN-sanakirjassa; muut kielet omissa tiedostoissaan (i18n_de.py, i18n_es.py), avaimena
+tiedoston EN-sanakirjassa; muut kielet omissa tiedostoissaan (i18n_de.py, i18n_es.py, i18n_fr.py), avaimena
 englanninkielinen teksti. Puuttuva käännös → englanti.
 Käyttö:  tr("Virheellinen kutsu: {x}", x=call)
 
@@ -13,8 +13,9 @@ from __future__ import annotations
 
 from .i18n_de import DE
 from .i18n_es import ES
+from .i18n_fr import FR
 
-LANGS = ("fi", "en", "de", "es")
+LANGS = ("fi", "en", "de", "es", "fr")
 _lang = "fi"
 
 
@@ -35,6 +36,8 @@ def tr(text: str, **kw) -> str:
             out = DE.get(out, out)
         elif _lang == "es":
             out = ES.get(out, out)
+        elif _lang == "fr":
+            out = FR.get(out, out)
     return out.format(**kw) if kw else out
 
 
@@ -73,6 +76,7 @@ BEARINGS = {
     "en": ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
     "de": ["N", "NO", "O", "SO", "S", "SW", "W", "NW"],
     "es": ["N", "NE", "E", "SE", "S", "SO", "O", "NO"],
+    "fr": ["N", "NE", "E", "SE", "S", "SO", "O", "NO"],
 }
 
 
@@ -285,6 +289,8 @@ EN: dict[str, str] = {
     "Virheellinen polku: {x}": "Invalid path: {x}",
     "Virheellinen lokaattori: {x}": "Invalid locator: {x}",
     "Virheellinen aika": "Invalid time",
+    "Aseta aisstream.io-avain": "Set the aisstream.io key",
+    "Yhteys suljettu": "Connection closed",
     "oli jo eQSL:ssä": "was already in eQSL",
     "oli jo HamQTH:ssa": "was already in HamQTH",
     "Aseta HamQTH:n API-avain": "Set the HamQTH API key",

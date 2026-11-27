@@ -34,6 +34,7 @@ from .sheetsync import SheetError
 from . import APP_ID, APP_NAME, __date__, __version__, desktop, feedback, secret_store
 from .nets import DEFAULT_NETS, NetCalendar, normalize_nets
 from .qso import DEFAULT_LOG, SECRETS as QSO_SECRETS, QsoLog, adif_file, csv_file, normalize_log
+from .ais import DEFAULT_AIS, AisFeed, normalize_ais
 from .aprsrx import DEFAULT_APRSRX, DEFAULT_TILES, DEFAULT_TILES_ATTR, AprsRx, normalize_aprsrx
 from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
                         validate_passcode, ws_options)
@@ -76,9 +77,9 @@ DEFAULT_CONFIG = {
     "min_duration": 0,          # sekuntia; lyhyemmät avaukset ohitetaan
     "port": 8765,
     "log_csv": True,
-    "calls_limit": 10,          # Viimeisimmät puhelut -listan pituus (10/25/50/100/150)
+    "calls_limit": 10,          # Viimeisimmät puhelut -listan pituus (10/25/50/100)
     "bm_api_key": "",           # BM SelfCare API-avain (vain laitteen hallintaan)
-    "language": "",             # "fi" / "en" / "de"; tyhjä = valitaan selaimen kielen mukaan
+    "language": "",             # "fi" / "en" / "de" / "es" / "fr"; tyhjä = valitaan selaimen kielen mukaan
     "units": "metric",          # "metric" (km) / "imperial" (mailit); asetukset tallennetaan aina kilometreinä
     "update_check": True,       # tarkista uudet versiot GitHubista kerran päivässä
     # "update_beta": asennetaanko myös testiversiot; puuttuessa päätetään käynnistyksessä (beta-asennus → True)
@@ -88,13 +89,13 @@ DEFAULT_CONFIG = {
     "map_tiles": DEFAULT_TILES,           # karttatiilten osoite (haetaan paikallisen palvelimen kautta)
     "map_tiles_attr": DEFAULT_TILES_ATTR,
 }
-CALLS_LIMITS = (10, 25, 50, 100, 150)
+CALLS_LIMITS = (10, 25, 50, 100)      # 0.17: 150 poistettu (tallennettu 150 → 100)
 # välilehdet, jotka käyttäjä voi piilottaa (Ohjelma = "asetukset" on aina näkyvissä)
 HIDEABLE_TABS = ("seuranta", "tilastot", "kaverit", "laitteet", "checkin", "aprs", "viestit", "lokit", "palvelut", "satelliitit")
 
 
 def nearest_calls_limit(n) -> int:
-    """Vanhat arvot (15, 20) lähimpään sallittuun: 15 -> 10, 20 -> 25."""
+    """Vanhat arvot lähimpään sallittuun: 15 -> 10, 20 -> 25, 150 -> 100."""
     try:
         n = int(n)
     except (TypeError, ValueError):
@@ -206,6 +207,7 @@ class Monitor:
         self.cfg["aprsrx"] = normalize_aprsrx({}, {**DEFAULT_APRSRX, **(self.cfg.get("aprsrx") or {})})   # myös radiolista
         self.cfg["nets"] = {**DEFAULT_NETS, **(self.cfg.get("nets") or {})}
         self.cfg["log"] = {**DEFAULT_LOG, **(self.cfg.get("log") or {})}
+        self.cfg["ais"] = {**DEFAULT_AIS, **(self.cfg.get("ais") or {})}
         if "update_beta" not in self.cfg:
             # beta-asennuksen käyttäjä pysyy testiversioissa myös vakaan version jälkeen; uusi vakaa asennus ei
             from .updater import is_prerelease
@@ -255,6 +257,7 @@ class Monitor:
         self.hub.rf = self.aprsrx              # APRS-viestit myös radiolla (jos sallittu)
         self.nets = NetCalendar(self, cfg_path.parent / "nets_cache")
         self.qso = QsoLog(self, cfg_path.parent / "qso_log.sqlite")
+        self.ais = AisFeed(self, demo=demo)
         self.tile_sem = asyncio.Semaphore(4)
         self.tile_fail, self.tile_down_until = 0, 0.0
 
@@ -267,7 +270,8 @@ class Monitor:
         return {**self.cfg, "bm_api_key": "********" if self.bm_key else "",
                 "messaging": {**self.cfg["messaging"], "passcode": "********" if self.hub.passcode_secret else ""},
                 "log": {**self.cfg["log"], **{f: "********" if self.qso.secrets.get(svc) else ""
-                                               for svc, (f, _) in QSO_SECRETS.items()}}}
+                                               for svc, (f, _) in QSO_SECRETS.items()}},
+                "ais": {**self.cfg["ais"], "key": "********" if self.ais.key else ""}}
 
     def save_config(self):
         self.cfg_path.write_text(json.dumps(self.cfg, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -371,6 +375,16 @@ class Monitor:
         if "nets" in new:
             self.cfg["nets"] = normalize_nets(new["nets"] or {}, self.cfg["nets"])
             self.nets.reconfigure()
+        if "ais" in new:
+            a = dict(new["ais"] or {})
+            key = a.pop("key", None)
+            old = {k: self.cfg["ais"].get(k) for k in ("enabled", "source", "km")}
+            self.cfg["ais"] = normalize_ais(a, self.cfg["ais"])
+            if key is not None and key != "********":
+                self.ais.set_key(str(key))
+            elif old != {k: self.cfg["ais"].get(k) for k in ("enabled", "source", "km")}:
+                self.ais.reconfigure()
+            self.dirty = True
         if "aprsrx" in new:
             old_km = self.cfg["aprsrx"].get("is_km")
             self.cfg["aprsrx"] = normalize_aprsrx(new["aprsrx"] or {}, self.cfg["aprsrx"])
@@ -684,6 +698,7 @@ class Monitor:
             "version": __version__, "date": __date__,
             "ui": {"window": self.ui is not None, "available": desktop.available()},
             "aprsrx": self.aprsrx.snapshot(),
+            "ais": self.ais.snapshot(),
             "log": self.qso.snapshot(),
             "config": self.public_config(),
             "status": self.status,
@@ -1236,6 +1251,9 @@ def make_app(mon: Monitor) -> web.Application:
         mon.aprsrx._commit()
         return web.json_response(await in_thread(mon.aprsrx.extra, q.get("layer", ""), q.get("period", "24h"), home()))
 
+    async def ais_ships(_):
+        return web.json_response({"ok": True, "ships": mon.ais.ship_list(), "state": mon.ais.snapshot()})
+
     async def aprsrx_serialports(_):
         from .radios import serial_ports
         return web.json_response({"ports": await in_thread(serial_ports)})
@@ -1413,6 +1431,7 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_get("/api/aprsrx/stations", aprsrx_stations)
     app.router.add_get("/api/aprsrx/serialports", aprsrx_serialports)
     app.router.add_get("/api/aprsrx/extra", aprsrx_extra)
+    app.router.add_get("/api/ais", ais_ships)
     app.router.add_get("/api/log", log_list)
     app.router.add_post("/api/log", log_save)
     app.router.add_delete("/api/log/{id:\\d+}", log_delete)
@@ -1603,6 +1622,7 @@ async def _run(args, mon, cfg_path, ui):
     tasks.append(asyncio.create_task(mon.aprsrx.run()))
     tasks.append(asyncio.create_task(mon.nets.run()))
     tasks.append(asyncio.create_task(mon.qso.run()))
+    tasks.append(asyncio.create_task(mon.ais.run()))
     start_loop_watchdog(asyncio.get_running_loop())
     if not args.demo:
         tasks.append(asyncio.create_task(mon.updater.run()))

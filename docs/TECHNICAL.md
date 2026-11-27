@@ -54,6 +54,21 @@ Talkgroups 1–90 are not supported by Hoseline.
   delivered as DMR SMS; from the radio, send a private message to the national gateway ID (*country code + 999*,
   e.g. 244999) as `<RECIPIENT> <text>`.
 
+### Ships (AIS)
+
+`bmmonitor/ais.py` runs only while the *Ships (AIS)* map layer is on and a home location is set.
+
+- **Digitraffic** (default): `https://meri.digitraffic.fi/api/ais/v1/locations?latitude&longitude&radius` (GeoJSON,
+  radius in km, centre rounded to 0.1°) once a minute, and `/api/ais/v1/vessels` (names, call signs, types,
+  dimensions, draught in 1/10 m) every 6 hours. Requests carry `Digitraffic-User: MonitorForAmateurRadio/<version>`
+  and `Accept-Encoding: gzip`. Data © Fintraffic, licence CC 4.0 BY – shown in the map attribution.
+- **aisstream.io**: websocket `wss://stream.aisstream.io/v0/stream`, subscription (API key, bounding box of the
+  radius, `PositionReport`/`StandardClassBPositionReport`/`ShipStaticData`) sent within 3 s of connecting. The
+  key stays in the backend (keyring `aisstream-api-key`).
+- Ships older than one hour are dropped. Type groups follow the AIS ship type: cargo 70–79, tanker 80–89,
+  passenger 60–69 and 40–49, fishing 30, pleasure 36–37, special 31–35 and 50–59, other the rest;
+  *hide moored/anchored* hides navigational status 1 and 5. The browser polls `GET /api/ais` every 30 s.
+
 ## Open data services
 
 | Service | Endpoint | Notes |
