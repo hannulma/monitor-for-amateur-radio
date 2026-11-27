@@ -259,6 +259,17 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .netsrc input, .netown input, .netown select { min-width: 0; }
   .covwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; padding: 12px 14px; }
   @media (max-width: 980px) { .covwrap { grid-template-columns: 1fr; } }
+  #propMap { height: 560px; border-radius: 8px; background: var(--covmap); border: 1px solid var(--line); }
+  #propMap .leaflet-control-attribution { background: var(--overlay); color: var(--muted); }
+  #propMap .leaflet-control-attribution a { color: var(--accent); }
+  #propMap .leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
+  .propwrap { grid-template-columns: minmax(0, 1fr) 400px; }
+  @media (max-width: 980px) { .propwrap { grid-template-columns: 1fr; } }
+  .propbands { columns: 2; min-width: 200px; }
+  .propbands .pbq { column-span: all; margin-bottom: 6px; font-size: 12px; }
+  .propsum td, .propsum th { padding: 3px 6px; }
+  .propsum .bdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .propsum small { color: var(--muted); }
   #covMap { height: 540px; border-radius: 8px; background: var(--covmap); border: 1px solid var(--line); }
   #covMap .leaflet-control-attribution { background: var(--overlay); color: var(--muted); }
   #covMap .leaflet-control-attribution a { color: var(--accent); }
@@ -405,6 +416,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   <span class="tabsep" aria-hidden="true"></span>
   <button data-tab="palvelut">Palvelut</button>
   <button data-tab="satelliitit">Satelliitit</button>
+  <button data-tab="radiosaa">Radiosää</button>
   <span class="tabsep" aria-hidden="true"></span>
   <button data-tab="asetukset">Ohjelma</button>
   <a href="#" class="tabhint" id="tabHiddenHint" style="display:none" title="Ohjelma → Ulkoasu">Valitse näkyvät välilehdet</a>
@@ -432,6 +444,63 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="hint" style="margin:0 14px 12px">Kartalla ovat Palvelut-välilehdellä hälytettäviksi valitut satelliitit (🔔). Nimitagissa on seuraava
       aikaväli, jolloin satelliitti on sijaintisi yhteysalueella; ympyrä on satelliitin kuuluvuusalue. Klikkaa satelliittia nähdäksesi
       sen taivaskartan. Zoomaa hiiren rullalla tai nipistämällä ja siirrä karttaa raahaamalla. Karttapohja: Natural Earth.</div>
+  </section>
+  <section class="wide" data-tab="radiosaa" data-fold="prop-map">
+    <h2>Radiosää <span class="count" id="propCount"></span>
+      <select class="filter" id="propWin" title="Aikaikkuna"><option value="15">15 min</option><option value="30">30 min</option>
+        <option value="60" selected>1 h</option><option value="180">3 h</option><option value="360">6 h</option></select>
+      <span class="aisfilt" id="propBandFilt"><button class="filter" id="propBandBtn" aria-expanded="false">Bandit ▾</button>
+        <div class="aispanel propbands" id="propBandPanel" hidden>
+          <div class="pbq"><a href="#" id="propBandAll">Kaikki</a> · <a href="#" id="propBandHf">HF</a> · <a href="#" id="propBandVhf">VHF/UHF</a></div>
+          <label><input type="checkbox" data-pband="160m" checked> 160m</label>
+          <label><input type="checkbox" data-pband="80m" checked> 80m</label>
+          <label><input type="checkbox" data-pband="60m" checked> 60m</label>
+          <label><input type="checkbox" data-pband="40m" checked> 40m</label>
+          <label><input type="checkbox" data-pband="30m" checked> 30m</label>
+          <label><input type="checkbox" data-pband="20m" checked> 20m</label>
+          <label><input type="checkbox" data-pband="17m" checked> 17m</label>
+          <label><input type="checkbox" data-pband="15m" checked> 15m</label>
+          <label><input type="checkbox" data-pband="12m" checked> 12m</label>
+          <label><input type="checkbox" data-pband="10m" checked> 10m</label>
+          <label><input type="checkbox" data-pband="6m" checked> 6m</label>
+          <label><input type="checkbox" data-pband="4m" checked> 4m</label>
+          <label><input type="checkbox" data-pband="2m" checked> 2m</label>
+          <label><input type="checkbox" data-pband="70cm" checked> 70cm</label>
+          <label><input type="checkbox" data-pband="23cm" checked> 23cm</label>
+        </div></span>
+      <select class="filter" id="propMode" style="margin-left:6px" title="Lähetysmuoto"><option value="">Kaikki lähetysmuodot</option>
+        <option value="FT8">FT8</option><option value="FT4">FT4</option><option value="JS8">JS8</option><option value="CW">CW</option>
+        <option value="RTTY">RTTY</option><option value="WSPR">WSPR</option><option value="OTHER">Muut</option></select>
+      <label class="switch" title="Radiosää päällä"><input type="checkbox" id="propEnabled"><span class="sl"></span><span class="swtxt" id="propEnabledTxt">Pois</span></label></h2>
+    <div class="covwrap propwrap">
+      <div id="propMap" aria-label="Radiosää: missä sinut kuultiin ja mille bandeille keli on auki"></div>
+      <div class="covside">
+        <div class="hint" id="propStatus" style="margin:0"></div>
+        <h3>Bandit nyt</h3>
+        <table class="propsum"><thead><tr><th>Bandi</th><th class="num">Raportit</th><th class="num">Kauimmainen</th><th>Suunnat</th></tr></thead>
+          <tbody id="propSum"></tbody></table>
+        <div class="empty" id="propSumEmpty">Ei raportteja valitulla aikavälillä.</div>
+        <div class="covleg" id="propLegend"></div>
+        <div class="hint">Tasot valitaan kartan oikeasta yläkulmasta. Viiva kulkee lähettäjältä kuulijalle. Klikkaa pistettä nähdäksesi
+          raportin tiedot. Raportit kerätään vain, kun Radiosää on päällä; tiedot säilyvät 6 tuntia.</div>
+        <div class="hint">Data from PSK Reporter by Philip Gladstone. Live spots from mqtt.pskreporter.info by Tom Fanning M0LTE.</div>
+      </div>
+    </div>
+  </section>
+  <section class="cfg form" data-tab="radiosaa" data-fold="prop-cfg" data-fold-default="closed">
+    <h2>Asetukset</h2>
+    <div class="inner form msgform">
+      <div class="note">Radiosää näyttää PSK Reporterin vastaanottoraportit: missä sinun FT8-, FT4-, JS8- tai muut digilähetyksesi on kuultu,
+        ja mitä omassa lokaattoriruudussasi kuullaan ja mistä sieltä lähetetyt kuullaan. Ohjelma tilaa vain omaan kutsuusi ja omaan
+        4-merkkiseen lokaattoriruutuusi liittyvät raportit eikä lähetä mitään.</div>
+      <div class="frow" style="margin-top:10px">
+        <div class="fld checks">
+          <label><input type="checkbox" id="propMine"> Missä minut kuultiin (oma kutsu lähettäjänä)</label>
+          <label><input type="checkbox" id="propArea"> Oma lokaattoriruutu: siellä kuullut ja sieltä kuullut</label></div>
+      </div>
+      <div class="hint" id="propWho"></div>
+      <div class="frow svcsave"><button class="primary" id="btnPropSave">Tallenna</button><span class="err" id="propErr"></span></div>
+    </div>
   </section>
   <section class="wide cfg" data-tab="asetukset">
     <div class="note" style="margin:12px">Toimintojen asetukset ovat kunkin välilehden alimmassa Asetukset-osiossa
@@ -2823,6 +2892,7 @@ function showTab(tab) {
   if (tab === "tilastot") loadStats();
   if (tab === "palvelut") fillServices();
   if (tab === "satelliitit") satPoll();
+  if (tab === "radiosaa") propShow();
   if (tab === "checkin") { fillCheckinForm(); renderCheckin(); }
 }
 $("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) showTab(b.dataset.tab); });
@@ -3347,6 +3417,7 @@ let aprsSel = null;
 const APRS_ST = {"virhe: ei radioyhteyttä": "bad", "kuitattu": "ok", "vastaanotettu": "warn", "lähetetty": "warn", "jonossa": "warn", "uudelleen": "warn", "lähetetty (ei kuittausta)": "ok", "ei kuittauspyyntöä": "muted"};
 function renderAprs() {
   if (TAB === "aprs") renderAisState();
+  if (TAB === "radiosaa") renderPropState();
   const M = S.messaging, a = M.aprs, bases = M.watch_bases || [];
   $("aprsWho").textContent = bases.length ? bases.map(b => b + "*").join(", ") : "";
   const msgs = M.aprs_msgs || [];
@@ -3966,6 +4037,178 @@ $("btnNetAddSrc").onclick = () => $("netSrcRows").append(netSrcRow({enabled: tru
 $("btnNetAddOwn").onclick = () => $("netOwnRows").append(netOwnRow({}));
 $("btnNetRefresh").onclick = async () => { $("btnNetRefresh").disabled = true; await netsLoad(true); $("btnNetRefresh").disabled = false; };
 $("netEnabled").onchange = async () => { $("netEnabledTxt").textContent = T($("netEnabled").checked ? "Päällä" : "Pois"); if (!await saveNets()) $("netEnabled").checked = !$("netEnabled").checked; };
+
+// ---------------- Radiosää (PSK Reporter) ----------------
+const PROP_BANDS = ["160m", "80m", "60m", "40m", "30m", "20m", "17m", "15m", "12m", "10m", "6m", "4m", "2m", "70cm", "23cm"];
+const PROP_HF = PROP_BANDS.slice(0, 10);
+const PROP_COL = {"160m": "#8e44ad", "80m": "#3b5bdb", "60m": "#1098ad", "40m": "#2f9e44", "30m": "#74b816", "20m": "#f08c00",
+  "17m": "#e8590c", "15m": "#e03131", "12m": "#d6336c", "10m": "#ae3ec9", "6m": "#22b8cf", "4m": "#20c997", "2m": "#51cf66",
+  "70cm": "#fcc419", "23cm": "#adb5bd"};
+const PROP_LAYERS_KEY = "bmm.propLayers", PROP_BANDS_KEY = "bmm.propBands";
+let propMap = null, propTiles = null, propMine = null, propHf = null, propVhf = null, propGrey = null, propHome = null;
+let propData = null, propTimer = null;
+function propCfg() { return (S.config && S.config.propagation) || {}; }
+function propBandSel() {
+  try { const b = JSON.parse(localStorage.getItem(PROP_BANDS_KEY) || "null"); if (Array.isArray(b)) return b; } catch (e) { /* oletus */ }
+  return [...PROP_BANDS];
+}
+function propFillBands() { const sel = new Set(propBandSel()); document.querySelectorAll("[data-pband]").forEach(cb => { cb.checked = sel.has(cb.dataset.pband); }); }
+function propSaveBands(list) {
+  try { localStorage.setItem(PROP_BANDS_KEY, JSON.stringify(list)); } catch (e) { /* ei tallennusta */ }
+  propFillBands(); propLoad();
+}
+document.querySelectorAll("[data-pband]").forEach(cb => { cb.onchange = () => propSaveBands([...document.querySelectorAll("[data-pband]:checked")].map(x => x.dataset.pband)); });
+$("propBandAll").onclick = e => { e.preventDefault(); propSaveBands([...PROP_BANDS]); };
+$("propBandHf").onclick = e => { e.preventDefault(); propSaveBands([...PROP_HF]); };
+$("propBandVhf").onclick = e => { e.preventDefault(); propSaveBands(PROP_BANDS.slice(10)); };
+$("propBandBtn").onclick = e => { e.stopPropagation(); propFillBands(); $("propBandPanel").hidden = !$("propBandPanel").hidden;
+  $("propBandBtn").setAttribute("aria-expanded", String(!$("propBandPanel").hidden)); };
+document.addEventListener("click", e => { if (!$("propBandPanel").hidden && !e.target.closest("#propBandFilt")) { $("propBandPanel").hidden = true; $("propBandBtn").setAttribute("aria-expanded", "false"); } });
+$("propWin").onchange = () => propLoad();
+$("propMode").onchange = () => propLoad();
+
+function propLayerOn(k, def) {
+  try { const o = JSON.parse(localStorage.getItem(PROP_LAYERS_KEY) || "{}"); return k in o ? !!o[k] : def; } catch (e) { return def; }
+}
+// Isoympyrä: väliasteet pallon pinnalla (suora viiva Mercatorissa näyttäisi väärän reitin)
+function propGc(a, b, n = 24) {
+  const r = Math.PI / 180, [la1, lo1, la2, lo2] = [a[0] * r, a[1] * r, b[0] * r, b[1] * r];
+  const d = 2 * Math.asin(Math.sqrt(Math.sin((la2 - la1) / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin((lo2 - lo1) / 2) ** 2));
+  if (!d) return [a, b];
+  const out = []; let prev = null;
+  for (let i = 0; i <= n; i++) {
+    const f = i / n, A = Math.sin((1 - f) * d) / Math.sin(d), B = Math.sin(f * d) / Math.sin(d);
+    const x = A * Math.cos(la1) * Math.cos(lo1) + B * Math.cos(la2) * Math.cos(lo2), y = A * Math.cos(la1) * Math.sin(lo1) + B * Math.cos(la2) * Math.sin(lo2);
+    const z = A * Math.sin(la1) + B * Math.sin(la2);
+    let lon = Math.atan2(y, x) / r; const lat = Math.atan2(z, Math.sqrt(x * x + y * y)) / r;
+    if (prev != null) { while (lon - prev > 180) lon -= 360; while (lon - prev < -180) lon += 360; }   // ei hyppyä päivämäärärajalla
+    prev = lon; out.push([lat, lon]);
+  }
+  return out;
+}
+// Yö/päiväraja: auringon alapiste likimain (tarkkuus muutama aste riittää kartalle)
+function propNight(now = new Date()) {
+  const r = Math.PI / 180, start = Date.UTC(now.getUTCFullYear(), 0, 0), n = (now - start) / 864e5;
+  const g = 2 * Math.PI / 365 * (n - 1 + (now.getUTCHours() - 12) / 24);
+  const eot = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g);
+  const utcMin = now.getUTCHours() * 60 + now.getUTCMinutes() + now.getUTCSeconds() / 60;
+  const sunLon = -(utcMin + eot - 720) / 4;
+  const pts = [];
+  for (let lon = -180; lon <= 180; lon += 2) {
+    const lat = Math.atan(-Math.cos((lon - sunLon) * r) / Math.tan(dec || 1e-6)) / r;
+    pts.push([lat, lon]);
+  }
+  const pole = dec > 0 ? -90 : 90;
+  return [[pole, -180], ...pts, [pole, 180]];
+}
+function propDrawGrey() {
+  if (!propGrey) return;
+  propGrey.clearLayers();
+  L.polygon(propNight(), {stroke: false, fillColor: "#000", fillOpacity: 0.28, interactive: false}).addTo(propGrey);
+}
+async function propInit() {
+  if (propMap || !window.L) return;
+  propMap = L.map("propMap", {zoomControl: true, worldCopyJump: true}).setView(covHome() || [55, 15], 2);
+  try {
+    const w = await (await fetchT("/static/world.json", 20000)).json();
+    const polys = w.land.map(r => { const ll = []; for (let i = 0; i + 1 < r.length; i += 2) ll.push([r[i + 1], r[i]]); return ll; });
+    propMap.createPane("basePane").style.zIndex = 150;
+    L.polygon(polys, {pane: "basePane", stroke: false, fillColor: col("--covland"), fillOpacity: 1, interactive: false}).addTo(propMap);
+  } catch (e) { /* ei pohjakarttaa */ }
+  propTiles = L.tileLayer("/tiles/{z}/{x}/{y}.png?u=" + encodeURIComponent((S.config.map_tiles || "").slice(-24)),
+    {maxZoom: 12, minZoom: 1, className: "darktiles", attribution: esc(S.config.map_tiles_attr || "")}).addTo(propMap);
+  propMine = L.layerGroup(); propHf = L.layerGroup(); propVhf = L.layerGroup(); propGrey = L.layerGroup();
+  const layers = {mine: propMine, hf: propHf, vhf: propVhf, grey: propGrey};
+  Object.entries(layers).forEach(([k, l]) => { if (propLayerOn(k, true)) l.addTo(propMap); });
+  L.control.layers(null, {"Minut kuultiin": propMine, "HF-raportit omalta alueelta": propHf, "VHF/UHF-raportit omalta alueelta": propVhf,
+    "Yö/päiväraja": propGrey}, {collapsed: false, position: "topright"}).addTo(propMap);
+  const remember = () => { const o = {}; Object.entries(layers).forEach(([k, l]) => { o[k] = propMap.hasLayer(l); });
+    try { localStorage.setItem(PROP_LAYERS_KEY, JSON.stringify(o)); } catch (e) { /* ei tallennusta */ } };
+  propMap.on("overlayadd overlayremove", remember);
+  propMap.attributionControl.addAttribution('<a href="https://pskreporter.info/" target="_blank" rel="noopener">PSK Reporter</a> (N1DQ), mqtt.pskreporter.info (M0LTE)');
+  propDrawGrey();
+}
+function propShow() {
+  fillProp();
+  propInit().then(() => { setTimeout(() => propMap && propMap.invalidateSize(), 50); propLoad(); });
+  clearInterval(propTimer); propTimer = setInterval(() => { if (TAB === "radiosaa") { propLoad(); propDrawGrey(); } }, 30000);
+}
+async function propLoad() {
+  if (!propMap) return;
+  const bands = propBandSel();
+  const q = new URLSearchParams({mins: $("propWin").value, modes: $("propMode").value,
+    bands: bands.length === PROP_BANDS.length ? "" : bands.join(",") || "none"});
+  try { propData = await (await fetchT("/api/prop?" + q, 30000)).json(); } catch (e) { return; }
+  renderProp();
+}
+function propPopup(p) {
+  const who = p.kind === "mine" ? T("{c} kuuli sinut", {c: p.call}) : p.kind === "heard" ? T("{n} kuuli asemaa {c}", {n: p.near, c: p.call})
+    : T("{c} kuuli asemaa {n}", {c: p.call, n: p.near});
+  const f = p.f ? ` · ${dec((p.f / 1e6).toFixed(4))} MHz` : "";
+  return `<b>${esc(who)}</b><br>${esc(p.b)} · ${esc(p.md || "?")}${f}${p.rp != null ? ` · ${p.rp > 0 ? "+" : ""}${p.rp} dB` : ""}<br>`
+    + `${esc(D(p.km))} · ${p.az}° ${esc(DIRS8()[Math.round(p.az / 45) % 8])}<br><span class="muted">${esc(ago(p.t))}</span>`;
+}
+function renderProp() {
+  if (!propMap || !propData) return;
+  [propMine, propHf, propVhf].forEach(l => l.clearLayers());
+  if (propHome) { propMap.removeLayer(propHome); propHome = null; }
+  const pts = propData.points || [];
+  for (const p of pts) {
+    const c = PROP_COL[p.b] || "#999";
+    const layer = p.kind === "mine" ? propMine : (PROP_HF.includes(p.b) ? propHf : propVhf);
+    L.polyline(propGc([p.olat, p.olon], [p.lat, p.lon]), {color: c, weight: 1.2, opacity: p.kind === "mine" ? 0.75 : 0.45, interactive: false}).addTo(layer);
+    L.circleMarker([p.lat, p.lon], {radius: p.kind === "mine" ? 5 : 4, color: col("--panel"), weight: 1, fillColor: c, fillOpacity: 0.95})
+      .bindPopup(propPopup(p)).addTo(layer);
+  }
+  if (propData.home) propHome = L.circleMarker(propData.home, {radius: 7, color: col("--panel"), weight: 2, fillColor: col("--accent"), fillOpacity: 1})
+    .bindTooltip(esc(propData.call || propData.grid || "")).addTo(propMap);
+  $("propCount").textContent = pts.length ? `(${pts.length.toLocaleString(LOC())})` : "";
+  const sum = propData.summary || [];
+  const D8 = DIRS8();
+  const h = sum.map(b => {
+    const tot = b.sect.reduce((x, y) => x + y, 0) || 1;
+    const dirs = b.sect.map((n, i) => [n, i]).filter(x => x[0] / tot >= 0.15).sort((x, y) => y[0] - x[0]).slice(0, 3).map(x => D8[x[1]]).join(" ");
+    return `<tr><td><span class="bdot" style="background:${PROP_COL[b.b] || "#999"}"></span>${esc(b.b)} <small>${esc(b.modes.join(", "))}</small></td>`
+      + `<td class="num">${b.n.toLocaleString(LOC())}${b.mine ? ` <small title="${esc(T("Minut kuultiin"))}">(${b.mine})</small>` : ""}</td>`
+      + `<td class="num" title="${esc(b.farcall)}">${esc(D(b.far))}</td><td>${esc(dirs)}</td></tr>`;
+  }).join("");
+  if ($("propSum").dataset.h !== h) { $("propSum").innerHTML = h; $("propSum").dataset.h = h; }
+  $("propSumEmpty").style.display = sum.length ? "none" : "";
+  const lh = sum.length ? `<span class="muted">${esc(T("Suluissa: minut kuultiin. Suunnat omalta alueelta."))}</span>` : "";
+  if ($("propLegend").dataset.h !== lh) { $("propLegend").innerHTML = lh; $("propLegend").dataset.h = lh; }
+}
+function renderPropState() {
+  const a = (S && S.prop) || {};
+  let h;
+  if (!a.enabled) h = esc(T("Radiosää ei ole päällä – kytke se otsikon kytkimestä."));
+  else if (!a.call && !a.grid) h = `<span class="warn">${esc(T("Aseta oma kutsu (Lokit) tai sijainti (Palvelut)"))}</span>`;
+  else if (a.ok === false) h = `<span class="bad">${esc(T("Virhe: {e}", {e: a.error || "?"}))}</span>`;
+  else if (a.connected) h = `<span class="ok">● ${esc(T("Yhdistetty PSK Reporteriin"))}</span>` + (a.updated ? " · " + esc(T("viimeisin raportti {a}", {a: ago(a.updated)})) : "");
+  else h = esc(T("Yhdistetään…"));
+  if ($("propStatus").dataset.h !== h) { $("propStatus").innerHTML = h; $("propStatus").dataset.h = h; }
+}
+function fillProp() {
+  const c = propCfg(), a = (S && S.prop) || {};
+  $("propEnabled").checked = !!c.enabled; $("propEnabledTxt").textContent = T(c.enabled ? "Päällä" : "Pois");
+  $("propMine").checked = c.mine !== false; $("propArea").checked = c.area !== false;
+  $("propWho").textContent = [a.call ? T("Oma kutsu: {c} (Lokit → Asetukset)", {c: a.call}) : T("Omaa kutsua ei ole asetettu (Lokit → Asetukset)."),
+    a.grid ? T("Oma ruutu: {g} (Palvelut → Oma sijainti)", {g: a.grid}) : T("Sijaintia ei ole asetettu (Palvelut → Oma sijainti).")].join(" · ");
+  renderPropState();
+}
+$("propEnabled").onchange = async () => {
+  const on = $("propEnabled").checked;
+  $("propEnabledTxt").textContent = T(on ? "Päällä" : "Pois");
+  const j = await saveCfg({propagation: {enabled: on}});
+  if (!j.ok) { $("propEnabled").checked = !on; $("propEnabledTxt").textContent = T(!on ? "Päällä" : "Pois"); return; }
+  S.config = j.config; setTimeout(propLoad, 4000);
+};
+$("btnPropSave").onclick = async () => {
+  $("propErr").textContent = "";
+  const j = await saveCfg({propagation: {mine: $("propMine").checked, area: $("propArea").checked}});
+  if (!j.ok) { $("propErr").textContent = j.error; return; }
+  S.config = j.config; fillProp(); $("propErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+};
 
 // ---------------- APRS-kuuluvuus (radiot) ----------------
 let covMap = null, covTiles = null, covCells = null, covMarks = null, covVia = null, covRes = 0, covTimer = null, covSum = null;

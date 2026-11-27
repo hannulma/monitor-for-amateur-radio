@@ -5,6 +5,9 @@ Fehlt ein Eintrag, wird Englisch verwendet.
 """
 
 DE: dict[str, str] = {
+    "Set your callsign (Logs) or location (Services)": "Lege dein Rufzeichen (Logs) oder deinen Standort (Dienste) fest",
+    "The server refused the connection": "Der Server hat die Verbindung abgelehnt",
+    "The server refused the subscription": "Der Server hat das Abonnement abgelehnt",
     "Set the aisstream.io key": "Lege den aisstream.io-Schlüssel fest",
     "Connection closed": "Verbindung geschlossen",
     "Set the HamQTH API key": "Lege den HamQTH-API-Schlüssel fest",

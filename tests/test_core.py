@@ -1341,3 +1341,71 @@ def test_french_translation_complete():
         assert clean_text("Œuvre « Noël » à Tôkyô", True) == 'OEuvre "Noel" a Tokyo'
     finally:
         i18n.set_lang("fi")
+
+
+def test_propagation_pskreporter():
+    """Radiosää: lokaattorit, kaistat, MQTT-paketit, raporttien luokittelu ja yhteenveto, MQTT-asiakas paikallista palvelinta vasten."""
+    import time as _t
+    from types import SimpleNamespace
+    from bmmonitor import propagation as P
+    assert P.loc_latlon("KP20le") == P.loc_latlon("KP20LE") and P.loc_latlon("kp20") == (60.5, 25.0)
+    assert P.loc_latlon("JO62qm34xx") and P.loc_latlon("") is None and P.loc_latlon("ZZ99") is None
+    assert P.grid4(60.17, 24.94) == "KP20" and P.latlon_loc6(60.17, 24.94) == "KP20le"
+    assert P.band_of("20m") == "20m" and P.band_of("", 144_174_000) == "2m" and P.band_of(None, 432_174_000) == "70cm"
+    assert P.base_call("oh/dl1abc/p") == "DL1ABC" and P.base_call("OH2BEA") == "OH2BEA"
+    assert P.topics_for("F/M0LTE", "KP20", True, True) == ["pskr/filter/v2/+/+/F.M0LTE/#", "pskr/filter/v2/+/+/+/+/KP20/#",
+                                                             "pskr/filter/v2/+/+/+/+/+/KP20/#"]
+    assert P.topics_for("", "", True, True) == []
+    assert P.mqtt_connect_packet("x")[:2] == b"\x10\x0d" and P.mqtt_subscribe_packet(1, ["a/b"])[:2] == b"\x82\x08"
+    assert P._varint(321) == b"\xc1\x02"
+    cfg = {"propagation": {**P.DEFAULT_PROP, "enabled": True}, "services": {"location": {"lat": 60.17, "lon": 24.94}}}
+    mon = SimpleNamespace(cfg=cfg, dirty=False, qso=SimpleNamespace(my_call=lambda: "OH2BEA"))
+    f = P.PropFeed(mon)
+    now = _t.time()
+    assert f.add_spot({"sq": 1, "f": 14074000, "b": "20m", "md": "FT8", "rp": -12, "t": now - 60, "sc": "OH2BEA", "sl": "KP20le",
+                       "rc": "K1ABC", "rl": "FN42aa"})
+    assert not f.add_spot({"sq": 1, "sc": "OH2BEA", "sl": "KP20le", "rc": "K1ABC", "rl": "FN42aa", "t": now})   # sama sq
+    assert not f.add_spot({"sq": 2, "sc": "X", "sl": "??", "rc": "Y", "rl": "FN42", "t": now})                  # ei sijaintia
+    f.add_spot({"sq": 3, "b": "2m", "md": "FT8", "rp": 3, "t": now - 30, "sc": "ES2HIJ", "sl": "KO29", "rc": "OH2XA", "rl": "KP20kf"})
+    f.add_spot({"sq": 4, "b": "40m", "md": "CW", "t": now - 30, "sc": "OH2XD", "sl": "KP20", "rc": "G4STU", "rl": "IO91"})
+    f.add_spot({"sq": 5, "b": "40m", "md": "CW", "t": now - 7200, "sc": "OH2XD", "sl": "KP20", "rc": "W6X", "rl": "CM87"})
+    q = f.query(60)
+    kinds = sorted((p["kind"], p["b"], p["call"]) for p in q["points"])
+    assert kinds == [("heard", "2m", "ES2HIJ"), ("mine", "20m", "K1ABC"), ("sent", "40m", "G4STU")]
+    s20 = next(b for b in q["summary"] if b["b"] == "20m")
+    assert s20["mine"] == 1 and 6000 < s20["far"] < 7500 and s20["modes"] == ["FT8"]
+    assert [b["b"] for b in q["summary"]] == ["40m", "20m", "2m"]
+    assert len(f.query(360)["points"]) == 4 and [p["b"] for p in f.query(60, bands=["2m"])["points"]] == ["2m"]
+    assert [p["md"] for p in f.query(60, modes=["CW"])["points"]] == ["CW"]
+
+    async def broker_test():
+        got = {}
+
+        async def handle(reader, writer):
+            typ, _, body = await P.mqtt_read_packet(reader)
+            got["connect"] = (typ, body)
+            writer.write(b"\x20\x02\x00\x00")                        # CONNACK
+            typ, _, body = await P.mqtt_read_packet(reader)
+            got["sub"] = body
+            writer.write(b"\x90\x03\x00\x01\x00")                    # SUBACK
+            payload = json.dumps({"sq": 99, "b": "15m", "md": "FT8", "rp": -5, "t": _t.time(), "sc": "OH2BEA", "sl": "KP20le",
+                                  "rc": "ZS6JKL", "rl": "KG33"}).encode()
+            topic = b"pskr/filter/v2/15m/FT8/OH2BEA/ZS6JKL/KP20/KG33/224/462"
+            body = len(topic).to_bytes(2, "big") + topic + payload
+            writer.write(b"\x30" + P._varint(len(body)) + body)
+            await writer.drain()
+            await asyncio.sleep(0.3)
+            writer.close()
+
+        srv = await asyncio.start_server(handle, "127.0.0.1", 0)
+        g = P.PropFeed(mon)
+        g.host, g.port, g.tls = "127.0.0.1", srv.sockets[0].getsockname()[1], False
+        with pytest.raises(ConnectionError):
+            await asyncio.wait_for(g._mqtt_once(["pskr/filter/v2/+/+/OH2BEA/#"]), 5)
+        srv.close()
+        return got, g
+
+    got, g = asyncio.run(broker_test())
+    assert got["connect"][0] == 1 and b"MonitorForAmateurRadio-" in got["connect"][1]
+    assert b"pskr/filter/v2/+/+/OH2BEA/#" in got["sub"]
+    assert [(p["call"], p["kind"]) for p in g.query(60)["points"]] == [("ZS6JKL", "mine")]

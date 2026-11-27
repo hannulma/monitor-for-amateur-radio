@@ -35,6 +35,7 @@ from . import APP_ID, APP_NAME, __date__, __version__, desktop, feedback, secret
 from .nets import DEFAULT_NETS, NetCalendar, normalize_nets
 from .qso import DEFAULT_LOG, SECRETS as QSO_SECRETS, QsoLog, adif_file, csv_file, normalize_log
 from .ais import DEFAULT_AIS, AisFeed, normalize_ais
+from .propagation import DEFAULT_PROP, WINDOWS as PROP_WINDOWS, PropFeed, normalize_prop
 from .aprsrx import DEFAULT_APRSRX, DEFAULT_TILES, DEFAULT_TILES_ATTR, AprsRx, normalize_aprsrx
 from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
                         validate_passcode, ws_options)
@@ -91,7 +92,8 @@ DEFAULT_CONFIG = {
 }
 CALLS_LIMITS = (10, 25, 50, 100)      # 0.17: 150 poistettu (tallennettu 150 → 100)
 # välilehdet, jotka käyttäjä voi piilottaa (Ohjelma = "asetukset" on aina näkyvissä)
-HIDEABLE_TABS = ("seuranta", "tilastot", "kaverit", "laitteet", "checkin", "aprs", "viestit", "lokit", "palvelut", "satelliitit")
+HIDEABLE_TABS = ("seuranta", "tilastot", "kaverit", "laitteet", "checkin", "aprs", "viestit", "lokit", "palvelut", "satelliitit",
+                 "radiosaa")
 
 
 def nearest_calls_limit(n) -> int:
@@ -208,6 +210,7 @@ class Monitor:
         self.cfg["nets"] = {**DEFAULT_NETS, **(self.cfg.get("nets") or {})}
         self.cfg["log"] = {**DEFAULT_LOG, **(self.cfg.get("log") or {})}
         self.cfg["ais"] = {**DEFAULT_AIS, **(self.cfg.get("ais") or {})}
+        self.cfg["propagation"] = {**DEFAULT_PROP, **(self.cfg.get("propagation") or {})}
         if "update_beta" not in self.cfg:
             # beta-asennuksen käyttäjä pysyy testiversioissa myös vakaan version jälkeen; uusi vakaa asennus ei
             from .updater import is_prerelease
@@ -258,6 +261,7 @@ class Monitor:
         self.nets = NetCalendar(self, cfg_path.parent / "nets_cache")
         self.qso = QsoLog(self, cfg_path.parent / "qso_log.sqlite")
         self.ais = AisFeed(self, demo=demo)
+        self.prop = PropFeed(self, demo=demo)
         self.tile_sem = asyncio.Semaphore(4)
         self.tile_fail, self.tile_down_until = 0, 0.0
 
@@ -385,6 +389,12 @@ class Monitor:
             elif old != {k: self.cfg["ais"].get(k) for k in ("enabled", "source", "km")}:
                 self.ais.reconfigure()
             self.dirty = True
+        if "propagation" in new:
+            self.cfg["propagation"] = normalize_prop(new["propagation"] or {}, self.cfg["propagation"])
+            self.prop.reconfigure()
+            self.dirty = True
+        elif any(k in new for k in ("services", "log", "devices", "messaging")) and self.cfg["propagation"].get("enabled"):
+            self.prop.reconfigure()        # oma kutsu tai sijainti voi vaihtua → uudet tilaukset
         if "aprsrx" in new:
             old_km = self.cfg["aprsrx"].get("is_km")
             self.cfg["aprsrx"] = normalize_aprsrx(new["aprsrx"] or {}, self.cfg["aprsrx"])
@@ -699,6 +709,7 @@ class Monitor:
             "ui": {"window": self.ui is not None, "available": desktop.available()},
             "aprsrx": self.aprsrx.snapshot(),
             "ais": self.ais.snapshot(),
+            "prop": self.prop.snapshot(),
             "log": self.qso.snapshot(),
             "config": self.public_config(),
             "status": self.status,
@@ -1254,6 +1265,18 @@ def make_app(mon: Monitor) -> web.Application:
     async def ais_ships(_):
         return web.json_response({"ok": True, "ships": mon.ais.ship_list(), "state": mon.ais.snapshot()})
 
+    async def prop_data(request):
+        q = request.query
+        try:
+            mins = int(q.get("mins", 60))
+        except ValueError:
+            mins = 60
+        mins = mins if mins in PROP_WINDOWS else 60
+        bands = [b for b in q.get("bands", "").split(",") if b]
+        modes = [m for m in q.get("modes", "").split(",") if m]
+        return web.json_response({"ok": True, **(await in_thread(mon.prop.query, mins, bands, modes)),
+                                  "state": mon.prop.snapshot()})
+
     async def aprsrx_serialports(_):
         from .radios import serial_ports
         return web.json_response({"ports": await in_thread(serial_ports)})
@@ -1432,6 +1455,7 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_get("/api/aprsrx/serialports", aprsrx_serialports)
     app.router.add_get("/api/aprsrx/extra", aprsrx_extra)
     app.router.add_get("/api/ais", ais_ships)
+    app.router.add_get("/api/prop", prop_data)
     app.router.add_get("/api/log", log_list)
     app.router.add_post("/api/log", log_save)
     app.router.add_delete("/api/log/{id:\\d+}", log_delete)
@@ -1623,6 +1647,7 @@ async def _run(args, mon, cfg_path, ui):
     tasks.append(asyncio.create_task(mon.nets.run()))
     tasks.append(asyncio.create_task(mon.qso.run()))
     tasks.append(asyncio.create_task(mon.ais.run()))
+    tasks.append(asyncio.create_task(mon.prop.run()))
     start_loop_watchdog(asyncio.get_running_loop())
     if not args.demo:
         tasks.append(asyncio.create_task(mon.updater.run()))

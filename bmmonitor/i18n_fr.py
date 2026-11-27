@@ -5,6 +5,9 @@ Si une entrée manque, l'anglais est utilisé.
 """
 
 FR: dict[str, str] = {
+    "Set your callsign (Logs) or location (Services)": "Définissez votre indicatif (Carnets) ou votre position (Services)",
+    "The server refused the connection": "Le serveur a refusé la connexion",
+    "The server refused the subscription": "Le serveur a refusé l'abonnement",
     " (+{n} stations)": " (+{n} stations)",
     " (valid until {t} UTC)": " (valable jusqu'à {t} UTC)",
     ", cloud cover {c}/8": ", nébulosité {c}/8",
