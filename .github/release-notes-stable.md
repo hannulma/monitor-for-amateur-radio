@@ -1,17 +1,16 @@
-**Vakaa versio 0.16.0.** Tämän version tärkeimmät uutuudet ovat useat APRS-radiot ja TNC:t, monipuolisempi APRS-kartta ja saksankielinen käyttöliittymä.
-*Stable release 0.16.0 – several APRS radios and TNCs, a richer APRS map and a German user interface.*
+**Vakaa versio 0.17.0.** Tämän version tärkeimmät uutuudet ovat laivat APRS-kartalla, espanjan- ja ranskankielinen käyttöliittymä sekä eQSL- ja HamQTH-lokipalvelut.
+*Stable release 0.17.0 – ships on the APRS map, Spanish and French user interfaces, and eQSL and HamQTH log upload.*
 
-### Uutta 0.15.0:n jälkeen / New since 0.15.0
+### Uutta 0.16.0:n jälkeen / New since 0.16.0
 
-- **Radiot ja TNC:t:** useita radioita yhtä aikaa (APRS → Asetukset → Radiot ja TNC:t): KISS TCP (Graywolf, Dire Wolf), KISS TNC sarjaportissa (USB tai Bluetooth), AGWPE (Dire Wolf, soundmodem), Kenwood TM-D710 / TH-D72 ja Kantronics KPC-3+ (kokeellinen) sekä simuloitu radio testaukseen. Aiempi Graywolf-yhteys siirtyy listan ensimmäiseksi radioksi automaattisesti.
-- **APRS-kartan uudet tasot:** sääasemat (lämpötila, tuuli, kosteus, ilmanpaine, sade), objektit ja itemit sekä valinnaiset APRS-IS-asemat kotisijainnin ympäriltä. iGaten radioon välittämät asemat näkyvät onttoina, eivätkä ne vaikuta RF-kuuluvuuteen.
-- **APRS-viestien merkki:** uusien viestien määrä näkyy APRS-välilehden nimen perässä; työpöytäilmoituksen voi ottaa käyttöön APRS-asetuksista.
-- **Liikennemerkki:** BrandMeister-välilehden perässä näkyy antennikuvake, kun jossakin seuratussa puheryhmässä on lähetys käynnissä.
-- **Deutsch:** käyttöliittymä, hälytykset, radioon menevät vastaukset ja Google-taulukon ohje saksaksi (konekäännös – korjausehdotukset palautetoiminnolla). Kieli valitaan ensimmäisellä käynnistyksellä käyttöjärjestelmän mukaan.
-- **Ohjelman kuvaus** ja README:t päivitetty vastaamaan nykyistä ohjelmaa; näkyvä nimi on kaikkialla *Monitor for Amateur Radio*.
-- Korjauksia: palautelomakkeen tekstikentän ohje käännetään, oman kutsun toiselta SSID:ltä tullut viesti näkyy uutena viestinä.
+- **Laivat (AIS) APRS-kartalla:** oma karttataso, lähteenä Fintrafficin Digitraffic (Suomi ja Itämeri, ei avainta) tai aisstream.io (koko maailma, oma ilmainen avain). Alustyypit valitaan kartan yläpuolelta *Laivat*-valikosta, ja laiturissa tai ankkurissa olevat voi piilottaa. APRS-asetuksiin uudet osiot *Kartta* ja *Laivat (AIS)*.
+- **Lokipalvelut:** loki voidaan lähettää QRZ.comin lisäksi eQSL:ään (salasana enintään 14 merkkiä) ja HamQTH:hon. Lokiin uusi etenemistapa (ADIF PROP_MODE): BrandMeisterin, toistinten ja EchoLinkin kautta pidetyt yhteydet merkitään internetin kautta pidetyiksi, ja niiden lähetyksen voi ohittaa palvelukohtaisesti.
+- **Viimeisimmät puhelut:** käynnissä oleva lähetys näkyy heti listan alussa.
+- **Español ja Français:** käyttöliittymä, hälytykset, radioon menevät vastaukset ja Google-taulukon ohje espanjaksi ja ranskaksi (konekäännös – korjausehdotukset palautetoiminnolla).
+- **Viestien muotoilu** (ääkkösten muunnos, viestien määrä) on nyt APRS-asetuksissa kohdassa *Viestit radioon*.
+- Korjauksia: välilehtirivi pysyy aina yläpalkin alla (aiemmin sisältöä saattoi näkyä niiden välistä), selaimesta haetun sijainnin nimi ei ole enää suomeksi muilla kielillä, englanniksi "Update now".
 
-*Several radios and TNCs at the same time: KISS TCP, KISS TNC on a serial port (USB/Bluetooth), AGWPE, Kenwood TM-D710 / TH-D72 and Kantronics KPC-3+ (experimental) and a simulated radio; the previous Graywolf connection becomes the first radio automatically. New APRS map layers: weather stations, objects and items, and optional APRS-IS stations around your home; stations relayed by an iGate are shown hollow and do not affect RF coverage. New-message count after the APRS tab name with an optional desktop notification, and an antenna icon on the BrandMeister tab while a monitored talkgroup is on the air. German user interface (machine translation – corrections welcome via the feedback function). Updated program description and READMEs. Fixes: feedback form placeholder translated; messages from another SSID of your own callsign count as new.*
+*Ships (AIS) on the APRS map from Fintraffic Digitraffic (Finland and the Baltic Sea, no key) or aisstream.io (worldwide, own free key), with vessel-type filters and hiding of moored/anchored ships; new Map and Ships (AIS) sections in the APRS settings. Log upload to eQSL and HamQTH in addition to QRZ.com, and ADIF PROP_MODE: contacts via BrandMeister, repeaters or EchoLink are marked as internet-assisted and can be skipped per service. Ongoing transmissions at the top of Latest calls. Spanish and French user interfaces (machine translation – corrections welcome via the feedback function). Message formatting settings moved to APRS → Settings → APRS messages on the radio. Fixes: the tab bar always stays right below the header, the browser location label is no longer Finnish in other languages, "Update now" in English.*
 
 ### Lataa / Download
 

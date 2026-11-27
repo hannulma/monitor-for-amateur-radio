@@ -133,7 +133,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .form textarea { width: 100%; min-height: 54px; font-family: ui-monospace, Menlo, Consolas, monospace; }
   .inner { padding: 14px; }
   h3 { font-size: 13px; color: var(--text); margin: 18px 0 6px; font-weight: 600; }
-  nav.tabs { display: flex; gap: 2px; padding: 0 18px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 49px; z-index: 4; overflow-x: auto; }
+  nav.tabs { display: flex; gap: 2px; padding: 0 18px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: var(--hdrh, 49px); z-index: 4; overflow-x: auto; }
   nav.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 9px 14px; color: var(--muted); font-size: 13px; white-space: nowrap; }
   nav.tabs button:hover { color: var(--text); }
   nav.tabs .tabhint { align-self: center; margin-left: 12px; font-size: 12px; color: var(--muted); white-space: nowrap; text-decoration: none; }
@@ -1918,6 +1918,14 @@ function fetchT(url, ms, opts) {   // fetch aikakatkaisulla, ettei jumittunut py
   return fetch(url, {...(opts || {}), signal: c.signal}).finally(() => clearTimeout(t));
 }
 const col = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+// Välilehtirivi tarttuu heti yläpalkin alle: yläpalkin korkeus vaihtelee (fontit, beta-merkki, ikkunan leveys)
+(function () {
+  const h = document.querySelector("body > header");
+  if (!h) return;
+  const set = () => document.documentElement.style.setProperty("--hdrh", Math.round(h.getBoundingClientRect().height) + "px");
+  set();
+  if (window.ResizeObserver) new ResizeObserver(set).observe(h); else window.addEventListener("resize", set);
+})();
 // ---------------- teema ----------------
 const themeMQ = window.matchMedia("(prefers-color-scheme: dark)");
 let THEME = "dark";
