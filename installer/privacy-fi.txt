@@ -10,7 +10,7 @@ Ohjelma ottaa yhteyttä ulkoisiin palveluihin vain niiden toimintojen ollessa k�
 - OpenStreetMap-karttatiilet APRS-kuuluvuuskarttaa katsottaessa
 - net-kalenterit (6kw.fi, Google-kalenteri), kun Netit-osio on päällä
 - itse lisäämäsi syötteet ja kalenterit sekä check-in-taulukko, jos yhdistät sen
-- QRZ Logbook, jos kytket lokin synkronoinnin päälle
+- QRZ Logbook, eQSL ja HamQTH, jos kytket lokin lähetyksen päälle
 - palaute ylläpitäjälle vain, kun itse lähetät sen (salaisuudet poistetaan)
 
 Jokaisen toiminnon voi kytkeä pois ohjelman asetuksista. Koko tietosuojaseloste:

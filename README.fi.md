@@ -2,7 +2,7 @@
 
 **Työpöytäsovellus radioamatöörin asemalle** – samassa ohjelmassa [BrandMeister](https://brandmeister.network)-DMR-verkon
 seuranta, **APRS** omien radioiden ja TNC:iden kautta (viestit, kartta asemasi kuulemista asemista, RF-kuuluvuus ja digit),
-**yhteysloki** QRZ Logbook -synkronoinnilla, **check-in-netit** yhteiseen Google-taulukkoon, **satelliittien ylilennot** sekä
+**yhteysloki** QRZ Logbook-, eQSL- ja HamQTH-lähetyksellä, **check-in-netit** yhteiseen Google-taulukkoon, **satelliittien ylilennot** sekä
 avoimen datan **hälytykset** (säävaroitukset, avaruussää, revontulet, salamat, säteily, tieliikenne) tekstiviesteinä radioosi.
 Windows, macOS ja Linux; kaikki toimii omalla koneellasi.
 
@@ -70,7 +70,7 @@ Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · 
 - **Viimeisimmät puhelut:** 10, 25, 50, 100 tai 150 viimeisintä, suodatettavissa puheryhmän mukaan.
 - **Kirjaa yhteys (QSO) lokiin:** kun sinä ja toinen asema vuorottelette samassa puheryhmässä (vuorojen väli enintään 3 min) tai
   pidätte yksityispuhelun, yhteys näkyy ehdokkaana. *Lisää lokiin* avaa valmiiksi täytetyn lomakkeen (tila DMR); *Ohita* poistaa ehdokkaan.
-  Loki tallentuu oletuksena paikallisesti; QRZ.com-synkronointi on valinnainen (maksullinen QRZ-tilaus).
+  Loki tallentuu oletuksena paikallisesti; lähetys QRZ.comiin, eQSL:ään ja HamQTH:hon on valinnainen.
 - **Netit tänään ja huomenna:** FinDMR-kierros ([6kw.fi](https://6kw.fi/findmr/)), W0WC:n BrandMeister-nettikalenteri
   ja omat ICS-kalenterit sekä oma lista. Ajat omassa ajassa, "käynnissä – liikennettä" kun netin puheryhmässä
   puhutaan, kuuntelu- ja check-in-painikkeet, muistutus ennen seurattujen puheryhmien nettejä.
@@ -81,9 +81,19 @@ Välilehdet on ryhmitelty ohuilla pystyviivoilla: **BrandMeister · Tilastot · 
 - **Tila (mode):** pikapainikkeet SSB · CW · AM · FM · RTTY · PSK31 · D-STAR · DMR · C4FM sekä valikko kaikista ADIF-tiloista
   (esim. FT8, FT4, JS8, SSTV, M17). Digitaaliset puhetilat viedään ADIF-muodossa DIGITALVOICE / DMR, DSTAR tai C4FM ja PSK31 muodossa PSK / PSK31.
   Raportin oletus vaihtuu tilan mukaan: puhe 59, CW ja datatilat 599. BrandMeisterista tunnistetut yhteydet ovat aina DMR.
-- **Asetukset** (välilehden alimpana): oma kutsu ja lokaattori, oletusraportti, -kaista ja -tila (käsin lisättävät), tunnistus päälle/pois sekä QRZ Logbook.
+- **Etenemistapa (PROP_MODE):** BrandMeisterista tunnistetut yhteydet merkitään internet-avusteisiksi (ADIF `PROP_MODE=INTERNET`),
+  samoin käsin lisätyt DMR-, D-STAR-, C4FM- ja M17-yhteydet oletuksena; valittavissa myös toistin, satelliitti ja EchoLink.
+  Lokin voi suodattaa etenemistavan mukaan, ja jokaisessa palvelussa voi valita *Älä lähetä internetin kautta pidettyjä
+  yhteyksiä* (ne eivät kelpaa useimpiin diplomeihin; ohitetun voi lähettää käsin ↻-painikkeella).
+- **Asetukset** (välilehden alimpana): oma kutsu ja lokaattori, oletusraportti, -kaista ja -tila (käsin lisättävät), tunnistus päälle/pois sekä QRZ Logbook, eQSL ja HamQTH.
 - **QRZ Logbook:** lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan (vaatii QRZ-tilauksen, XML-taso tai ylempi).
   API-avain tallennetaan salasanavarastoon. Jokaisen yhteyden lähetystila näkyy lokissa; epäonnistuneet voi lähettää uudelleen.
+- **eQSL:** lokiin lisätyt yhteydet lähetetään eQSL.cc:hen (ilmainen tili): käyttäjätunnus, salasana ja valinnainen QTH-lempinimi.
+  **eQSL:n rajapinta ei hyväksy yli 14 merkin salasanaa** – vaihda tarvittaessa lyhyempi salasana eQSL.cc:ssä (ohjelma varoittaa).
+  Muokkaukset eivät päivity eQSL:ään jälkikäteen.
+- **HamQTH:** lokiin lisätyt yhteydet lähetetään HamQTH.comin lokikirjaan heti; myös muokkaukset ja poistot päivittyvät. Tarvitset
+  oman API-avaimen (HamQTH → Settings → Apps and API keys, alkaa `hqk_`); salasanaa ei tarvita. *Lokin lähetys: [HamQTH.com](https://www.hamqth.com/)*
+  – HamQTH toivoo, että rekisteröidyt ja pidät profiilisi ajan tasalla.
 
 ### APRS
 - **APRS-viestit:** kutsusi kaikkien SSID:iden saapuvat ja lähtevät APRS-viestit, myös BrandMeisterin kautta
@@ -189,15 +199,15 @@ Toimintojen asetukset ovat kunkin välilehden alimmassa, pienennettävässä **A
 - **BrandMeister:** seurattavat puheryhmät, lyhyiden avausten ohitus, CSV-loki, oma kutsu ja BrandMeister API-avain.
 - **APRS:** radiot ja TNC:t, APRS-viestit radiolla, APRS-IS-yhteys ja vastaanottajat, komennot radiosta.
 - **Syötteet:** syötteet ja viestit radioon.
-- **Lokit:** oma asema, oletustila ja tunnistus, QRZ Logbook.
+- **Lokit:** oma asema, oletustila ja tunnistus, QRZ Logbook, eQSL, HamQTH.
 
 **Ohjelma**-välilehdellä ovat **kieli**, **Ulkoasu** (teema: vaalea, tumma tai käyttöjärjestelmän mukaan;
 käyttöliittymä omassa ikkunassa tai selaimessa; **näytettävät välilehdet**), **päivitykset** sekä palaute, vikailmoitukset ja
 **Sulje ohjelma**. Käyttämättömät välilehdet voi piilottaa; niiden toiminnot jatkavat taustalla, ja Ohjelma-välilehti on aina näkyvissä.
 
-- **Kieli (suomi / English / Deutsch)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
+- **Kieli (suomi / English / Deutsch / Español)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
   Ensimmäisellä käynnistyksellä kieli valitaan käyttöjärjestelmän kielen mukaan (muuten englanti). Radiokomennot toimivat
-  suomeksi ja englanniksi (`OHJE`/`CMD`, `KUKA`/`WHO`, `NYT`/`NOW`; saksaksi käytetään englanninkielisiä). Saksankielinen
+  suomeksi ja englanniksi (`OHJE`/`CMD`, `KUKA`/`WHO`, `NYT`/`NOW`; saksaksi ja espanjaksi käytetään englanninkielisiä). Saksan- ja espanjankielinen
   käännös on konekäännös – korjausehdotukset ovat tervetulleita palautetoiminnolla. Ilmatieteen laitoksen varoitukset ja
   Digitrafficin tiedotteet ovat lähteen kielellä (suomeksi).
 - **Palaute / lokit** (Ohjelma-välilehti) lähettää viestin ja zip-paketin ylläpidolle. Salaisuudet (API-avain, passcode,

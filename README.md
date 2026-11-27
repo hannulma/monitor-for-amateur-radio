@@ -6,7 +6,7 @@
 
 **A desktop companion for the radio amateur** – one app for the [BrandMeister](https://brandmeister.network) DMR network,
 **APRS** through your own radios and TNCs (messaging, a map of what your station hears, RF coverage and digipeaters),
-a **contact log** with QRZ Logbook sync, **check-in nets** with a shared Google Sheet, **satellite passes**, and
+a **contact log** with QRZ Logbook, eQSL and HamQTH upload, **check-in nets** with a shared Google Sheet, **satellite passes**, and
 open-data **alerts** (weather, space weather, aurora, lightning, radiation, road traffic) delivered to your radio
 as text messages. Windows, macOS and Linux; everything runs on your own computer.
 
@@ -19,7 +19,7 @@ internal names still use that name so that updates and saved settings keep worki
 > **Stable release 0.16.0.** New features arrive first in test versions (beta), which you can enable in
 > *App → Version and updates*. Bug reports and feedback are very welcome in
 > [Issues](https://github.com/hannulma/monitor-for-amateur-radio/issues).
-> The user interface is available in **English**, **Finnish** and **German** (App → Language and units). Feature settings are in the *Settings* section at the bottom of each tab.
+> The user interface is available in **English**, **Finnish**, **German** and **Spanish** (App → Language and units). Feature settings are in the *Settings* section at the bottom of each tab.
 
 ![Monitor view](docs/screenshot-monitor.png)
 
@@ -86,7 +86,12 @@ The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Chec
 - **Contact log** – contacts (QSOs) are recognised from BrandMeister calls when you and another station take turns
   on a talkgroup or have a private call; add them to the log with one click. Manual entries for any mode (SSB, CW, FM, FT8, D-STAR, C4FM, …;
   quick buttons plus all ADIF modes, RST defaults 59/599). Logs tab: search, filter by mode, edit, ADIF/CSV export.
-  The log is stored locally; optional sync to **QRZ Logbook** (requires a QRZ subscription, XML level or higher).
+  The log is stored locally; optional upload to **QRZ Logbook** (requires a QRZ subscription, XML level or higher),
+  **eQSL** (free account; note that eQSL's interface does not accept passwords longer than 14 characters) and
+  **HamQTH** (free; your own API key from HamQTH → Settings → Apps and API keys – *log upload provided by
+  [HamQTH.com](https://www.hamqth.com/)*). Contacts recognised from BrandMeister are marked as internet-assisted
+  (ADIF `PROP_MODE=INTERNET`, also DMR/D-STAR/C4FM/M17 by default); each service can be set to skip them, since they do
+  not count for most awards. The log can be filtered by propagation mode.
 
 ### Services and satellites
 
@@ -110,10 +115,10 @@ The tabs are grouped: **BrandMeister · Statistics · Friends · Devices · Chec
 
 ### App
 
-- **English, Finnish and German (Deutsch)** – choose the language on the App tab; on first start it follows the
+- **English, Finnish, German (Deutsch) and Spanish (Español)** – choose the language on the App tab; on first start it follows the
   operating system language (English otherwise). It covers the user interface, the program's own alerts and the
   replies sent to your radio (radio commands: `CMD`, `WHO`, `NOW`, in Finnish also `OHJE`, `KUKA`, `NYT`). The German
-  translation is machine-made – corrections are welcome through the feedback function. FMI warnings and Digitraffic
+  and Spanish translations are machine-made – corrections are welcome through the feedback function. FMI warnings and Digitraffic
   bulletins stay in Finnish, their source language.
 - **Light, dark or automatic theme** (follows the operating system).
 - **Automatic updates** – the app checks GitHub for a new version once a day (can be turned off). On Windows
@@ -178,7 +183,7 @@ BrandMeister), `-v` (verbose).
 6. **Services:** *Services* → set your location (coordinates or Maidenhead locator) and switch on the services you want. Weather warnings can come from the Finnish Meteorological Institute or MeteoAlarm (38 European countries), and the aurora alert from FMI magnetometers or the NOAA OVATION forecast (worldwide). Satellite passes lists upcoming passes of the ISS and active amateur radio satellites (CelesTrak orbits, SatNOGS DB frequencies, SGP4) with visible ISS passes and alerts before rise. The *Satellites* tab shows the satellites chosen for alerts on a world map (position, ground track, coverage circle, day/night, next in-range window in the name tag) and a sky plot of the next pass. Base map: Natural Earth (public domain).
 7. **APRS radios (optional):** *APRS* tab → *Settings* → *Radios and TNCs* → add Graywolf/Dire Wolf (KISS TCP or AGWPE),
    a KISS TNC on a serial port or a Kenwood/Kantronics TNC.
-8. **Log:** *Logs* tab → *Settings* → own callsign and locator; optionally the QRZ Logbook API key.
+8. **Log:** *Logs* tab → *Settings* → own callsign and locator; optionally QRZ Logbook, eQSL and HamQTH.
 
 ### Commands from your radio
 

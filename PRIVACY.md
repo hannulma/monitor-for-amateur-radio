@@ -29,6 +29,8 @@ tavallisesti tapaan IP-osoitteesi ja sen, mitä pyydetään; palveluiden omat ti
 | Google Apps Script: check-in-taulukko | vain jos yhdistät check-in-taulukon | kirjatut check-in-rivit omaan taulukkoosi | irrota taulukko |
 | Google Apps Script: palaute (script.google.com) | **vain kun itse lähetät palautteen** | viestisi ja halutessasi lokit; salaisuudet poistetaan ja sijainti pyöristetään 4-merkkiseksi lokaattoriksi; paketin voi tarkistaa ennen lähetystä | älä lähetä palautetta |
 | QRZ Logbook (logbook.qrz.com) | vain jos kytket QRZ-synkronoinnin päälle (Lokit-välilehti) | lokiin lisäämäsi yhteydet (kutsu, aika, kaista, raportit, nimi, kommentti) ja oma API-avaimesi; poistettaessa halutessasi poisto QRZ:sta | Lokit → QRZ Logbook → lähetys pois |
+| eQSL (www.eqsl.cc) | vain jos kytket eQSL-lähetyksen päälle (Lokit-välilehti) | lokiin lisäämäsi yhteydet sekä eQSL-käyttäjätunnuksesi ja -salasanasi (HTTPS) | Lokit → eQSL → lähetys pois |
+| HamQTH (www.hamqth.com) | vain jos kytket HamQTH-lähetyksen päälle (Lokit-välilehti) | lokiin lisäämäsi yhteydet, muokkaukset ja halutessasi poistot sekä oma API-avaimesi | Lokit → HamQTH → lähetys pois |
 | Radiot ja TNC:t (Graywolf / Dire Wolf KISS TCP tai AGWPE, oletus 127.0.0.1; KISS-TNC sarjaportissa) | kun vastaanotto on päällä | ei mitään; vain jos sallit APRS-viestien lähetyksen radiolla, viestit ja kuittaukset lähetetään radiolla (ja Graywolfin iGate voi välittää ne APRS-IS:ään) | APRS → Asetukset → Radiot ja TNC:t pois tai Asetukset → APRS-viestit radiolla pois |
 
 Ohjelman lähettämät APRS- ja DMR-viestit ovat radioamatööriliikennettä, joka on luonteeltaan julkista.
@@ -61,6 +63,10 @@ and what is requested, as with any internet connection; their own privacy polici
   4-character locator; you can inspect the bundle before sending).
 - **QRZ Logbook** (logbook.qrz.com) – only if you switch QRZ sync on (Logs tab): the contacts you add to your log and
   your own API key; optionally deletions.
+- **eQSL** (www.eqsl.cc) – only if you switch eQSL upload on (Logs tab): the contacts you add to your log and your eQSL
+  username and password (over HTTPS).
+- **HamQTH** (www.hamqth.com) – only if you switch HamQTH upload on (Logs tab): the contacts you add, edits and optionally
+  deletions, and your own API key.
 - **Radios and TNCs** (Graywolf / Dire Wolf KISS TCP or AGWPE, KISS TNC on a serial port) – receive only, unless you allow APRS messages on the radio (Settings);
   then your messages and acks are transmitted on the radio (and an iGate may pass them to APRS-IS).
 

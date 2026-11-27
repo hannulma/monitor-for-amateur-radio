@@ -1091,6 +1091,157 @@ def test_sheet_guide_languages():
     """Check-in-taulukon ohjeikkunassa on oma lohko jokaiselle kielelle (fi, en, de)."""
     html = (Path(__file__).resolve().parent.parent / "bmmonitor" / "static" / "index.html").read_text(encoding="utf-8")
     guide = html[html.index('id="shBg"'):html.index('id="modalBg"')]
-    for lang in ("fi", "en", "de"):
+    for lang in ("fi", "en", "de", "es"):
         assert guide.count(f'<div lang="{lang}" data-noi18n>') == 1, lang
         assert f'.guide.{lang} [lang="{lang}"]' in html
+
+
+def test_no_duplicate_translation_keys():
+    """Käännöstiedostoissa ei ole samaa avainta kahdesti (myöhempi kumoaisi aiemman huomaamatta,
+    kuten 'Päivitä nyt' → 'Refresh now' kumosi 'Update now')."""
+    import ast
+    import collections
+    root = Path(__file__).resolve().parent.parent / "bmmonitor"
+    pat = re.compile(r'"((?:[^"\\]|\\.)*)":\s*\n?\s*"(?:[^"\\]|\\.)*"')
+    for f in sorted((root / "static").glob("i18n*.js")):
+        keys = pat.findall(f.read_text("utf-8"))
+        dup = [k for k, n in collections.Counter(keys).items() if n > 1]
+        assert not dup, (f.name, dup)
+    for f in sorted(root.glob("i18n*.py")):
+        for node in ast.walk(ast.parse(f.read_text("utf-8"))):
+            if isinstance(node, ast.Dict):
+                ks = [k.value for k in node.keys if isinstance(k, ast.Constant)]
+                dup = [k for k, n in collections.Counter(ks).items() if n > 1]
+                assert not dup, (f.name, dup)
+
+
+def test_log_prop_mode_and_services(tmp_path, monkeypatch):
+    """PROP_MODE (BrandMeister = INTERNET), internet-yhteyksien ohitus palvelukohtaisesti, eQSL ja HamQTH."""
+    import sqlite3
+    from types import SimpleNamespace
+    from bmmonitor.qso import DEFAULT_LOG, QsoLog, adif_file, normalize_log, qso_adif
+    # vanha tietokanta ilman uusia sarakkeita päivittyy
+    db = tmp_path / "log.sqlite"
+    c = sqlite3.connect(str(db))
+    c.execute("""CREATE TABLE qsos (id INTEGER PRIMARY KEY AUTOINCREMENT, call TEXT NOT NULL, name TEXT, start REAL NOT NULL,
+        end REAL, band TEXT, freq REAL, freq_rx REAL, mode TEXT, submode TEXT, rst_sent TEXT, rst_rcvd TEXT, qth TEXT,
+        grid TEXT, comment TEXT, tg INTEGER, via TEXT, my_call TEXT, my_grid TEXT, source TEXT, created REAL, updated REAL,
+        qrz_status TEXT, qrz_logid TEXT, qrz_error TEXT, qrz_time REAL)""")
+    c.execute("INSERT INTO qsos (call, start, mode, submode, source) VALUES ('OH1OLD', 1700000000, 'DIGITALVOICE', 'DMR', 'candidate')")
+    c.commit()
+    c.close()
+    cfg = {**DEFAULT_LOG, "qrz": True, "qrz_inet": False, "eqsl": True, "hamqth": True}
+    mon = SimpleNamespace(cfg={"log": cfg, "devices": {"my_call": "OH2BEA"}, "messaging": {}},
+                          dirty=False, save_config=lambda: None, devmon=SimpleNamespace(state={}))
+    lg = QsoLog(mon, db)
+    lg.secrets.update(qrz="K", eqsl="salasana", hamqth="hqk_" + "0" * 64)
+    assert lg.get(1)["prop_mode"] == "INTERNET"
+    a = lg.add({"call": "OH2ABC", "start": 1_700_000_100, "mode_label": "DMR"})          # DMR → INTERNET
+    b = lg.add({"call": "OH2CW", "start": 1_700_000_200, "mode_label": "CW", "band": "20m"})
+    s = lg.add({"call": "OH2SAT", "start": 1_700_000_300, "mode_label": "FM", "prop_mode": "SAT"})
+    ra, rb = lg.get(a), lg.get(b)
+    assert ra["prop_mode"] == "INTERNET" and rb["prop_mode"] == "" and lg.get(s)["prop_mode"] == "SAT"
+    assert "<PROP_MODE:8>INTERNET" in qso_adif(ra) and "PROP_MODE" not in qso_adif(rb)
+    assert "<PROP_MODE:8>INTERNET" in adif_file([ra])
+    # QRZ ei saa internet-yhteyksiä (asetus), eQSL ja HamQTH saavat
+    assert (ra["qrz_status"], ra["eqsl_status"], ra["hamqth_status"]) == ("skip", "queued", "queued")
+    assert rb["qrz_status"] == "queued"
+    assert {r["call"] for r in lg.list(0, prop="inet")} == {"OH1OLD", "OH2ABC"}
+    assert {r["call"] for r in lg.list(0, prop="direct")} == {"OH2CW", "OH2SAT"}
+    lg.retry("qrz", a)                                     # ohitetun voi lähettää käsin
+    assert lg.get(a)["qrz_status"] == "queued"
+    with pytest.raises(ValueError):
+        lg.add({"call": "OH2X", "start": 1_700_000_000, "prop_mode": "MOON"})
+    assert normalize_log({"eqsl_user": "oh2bea", "hamqth": 1}, cfg)["eqsl_user"] == "OH2BEA"
+
+    # eQSL: vastausten tulkinta
+    r = QsoLog.eqsl_result
+    assert r(200, "<!-- Reply form eQSL.cc ADIF Real-time Interface --> Result: 1 out of 1 records added") == ("ok", None)
+    assert r(200, "Warning: Y=2016 M=11 D=13 DK4LI 20M RTTY Bad record: Duplicate Result: 0 out of 1 records added")[0] == "ok"
+    assert r(200, "Error: No match on eQSL_User/eQSL_Pswd for date 20231114 22:13")[0] == "auth"
+    assert r(200, "Error: The system is down until 0300")[0] == "error"
+    assert r(200, "Warning: Y=2023 M=11 D=14 Bad Mode: XYZ Result: 0 out of 1 records added") == \
+        ("failed", "Warning: Y=2023 M=11 D=14 Bad Mode: XYZ Result: 0 out of 1 records added")
+    assert r(503, "")[0] == "error"
+    posted = []
+
+    async def fake_eqsl(adif):
+        posted.append(adif)
+        return 200, "Result: 1 out of 1 records added"
+    monkeypatch.setattr(lg, "_eqsl_post", fake_eqsl)
+    cfg["eqsl_qth"] = "Koti"
+
+    # HamQTH: POST, muokkaus PUT, kaksoiskappale 409, väärä avain 401, poisto
+    calls = []
+    replies = iter([(201, "{}"), (201, "{}"), (201, "{}"), (200, "{}"), (409, "{}"), (401, "{}"), (204, "")])
+
+    async def fake_hq(method, path, body=None, params=None):
+        calls.append((method, path, body, params))
+        return next(replies)
+    monkeypatch.setattr(lg, "_hamqth", fake_hq)
+    sent_qrz = []
+
+    async def fake_qrz(data):
+        sent_qrz.append(data)
+        return {"RESULT": "OK", "LOGID": str(len(sent_qrz))}
+    monkeypatch.setattr(lg, "_qrz", fake_qrz)
+
+    async def go():
+        await lg.sync_once()
+        assert posted and "<EQSL_USER" not in posted[0] and "<APP_EQSL_QTH_NICKNAME:4>Koti" in posted[0]
+        assert lg.get(a)["eqsl_status"] == "ok" and lg.get(a)["hamqth_status"] == "ok"
+        assert [c[0] for c in calls] == ["POST", "POST", "POST"]
+        q = calls[0][2]["qso"]                            # vanhaa (ennen palvelua lisättyä) ei lähetetä
+        assert q["call"] == "OH2ABC" and q["prop_mode"] == "INTERNET" and q["submode"] == "DMR" and q["band"] == "70CM"
+        assert calls[1][2]["qso"]["call"] == "OH2CW" and "prop_mode" not in calls[1][2]["qso"]
+        assert lg.get(a)["qrz_status"] == "ok"            # käsin uudelleen lähetetty
+        lg.update(a, {"name": "Matti"})                    # HamQTH: PUT alkuperäisellä tunnisteella; eQSL ei muutu
+        assert lg.get(a)["hamqth_status"] == "queued" and lg.get(a)["eqsl_status"] == "ok"
+        await lg.sync_once()
+        put = [c for c in calls if c[0] == "PUT"][0]
+        assert put[2]["original"]["call"] == "OH2ABC" and put[2]["qso"]["name"] == "Matti"
+        d = lg.add({"call": "OH2DUP", "start": 1_700_000_400, "mode_label": "SSB", "band": "20m"})
+        e = lg.add({"call": "OH2BAD", "start": 1_700_000_500, "mode_label": "SSB", "band": "20m"})
+        await lg.sync_once()
+        assert lg.get(d)["hamqth_status"] == "ok" and lg.get(e)["hamqth_status"] == "auth"
+        assert lg.svc_state["hamqth"]["ok"] is False
+        lg.delete(a, remote=True)
+        await lg.sync_once()
+        dl = [c for c in calls if c[0] == "DELETE"][0]
+        assert dl[3]["call"] == "OH2ABC" and dl[3]["qso_date"] == "20231114"
+    asyncio.run(go())
+    snap = lg.snapshot()
+    assert snap["eqsl"]["enabled"] and not snap["eqsl"]["long_pass"] and snap["hamqth"]["key"]
+    lg.secrets["eqsl"] = "x" * 15
+    assert lg.snapshot()["eqsl"]["long_pass"]
+    lg.close()
+
+
+def test_spanish_translation_complete():
+    """Espanja: jokaisella englanninkielisellä tekstillä on käännös samoilla paikkamerkeillä; tr/num/ilmansuunnat/ASCII."""
+    from bmmonitor import i18n
+    from bmmonitor.i18n_es import ES
+    from bmmonitor.messaging import clean_text
+    root = Path(__file__).resolve().parent.parent / "bmmonitor" / "static"
+    ph = re.compile(r"\{(\w*)\}")
+    pairs = re.findall(r'"((?:[^"\\]|\\.)*)":\s*\n?\s*"((?:[^"\\]|\\.)*)"', (root / "i18n.js").read_text("utf-8"))
+    en_ui = {json.loads('"' + en + '"') for en in dict(pairs).values()}
+    es_pairs = re.findall(r'"((?:[^"\\]|\\.)*)":\s*"((?:[^"\\]|\\.)*)"', (root / "i18n.es.js").read_text("utf-8"))
+    es_ui = {json.loads('"' + k + '"'): json.loads('"' + v + '"') for k, v in es_pairs}
+    missing = sorted(en_ui - set(es_ui))
+    assert not missing, missing[:10]
+    for en, es in es_ui.items():
+        assert sorted(ph.findall(en)) == sorted(ph.findall(es)), en
+    missing = sorted(set(i18n.EN.values()) - set(ES))
+    assert not missing, missing[:10]
+    for en, es in ES.items():
+        assert sorted(ph.findall(en)) == sorted(ph.findall(es)), en
+    html = (root / "index.html").read_text("utf-8")
+    assert '<script src="/static/i18n.es.js"></script>' in html and '<option value="es">Español</option>' in html
+    try:
+        i18n.set_lang("es")
+        assert i18n.tr("Tuntematon komento. Laheta OHJE") == "Comando desconocido. Envía CMD"
+        assert i18n.num(1.25, 2) == "1,25" and i18n.bearing(270) == "O"
+        assert clean_text("¿Qué tal, España?", True) == "Que tal, Espana?"
+    finally:
+        i18n.set_lang("fi")

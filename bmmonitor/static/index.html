@@ -211,7 +211,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   .guide dl.faq dt { font-weight: 600; margin-top: 8px; }
   .guide dl.faq dd { margin: 2px 0 0 14px; color: var(--muted); }
   .guide [lang] { display: none; }
-  .guide.fi [lang="fi"], .guide.en [lang="en"], .guide.de [lang="de"] { display: block; }
+  .guide.fi [lang="fi"], .guide.en [lang="en"], .guide.de [lang="de"], .guide.es [lang="es"] { display: block; }
   .about { font-size: 14px; color: var(--text); margin: 4px 0 6px; }
   .about b { font-weight: 700; }
   .fbform textarea, .fbform input[type=text], .fbform input[type=email] { background: var(--bg); color: var(--text); border: 1px solid var(--line);
@@ -437,7 +437,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="inner">
     <div class="row">
       <div><label for="langSel">Käyttöliittymän kieli</label>
-        <select id="langSel" data-noi18n><option value="fi">Suomi</option><option value="en">English</option><option value="de">Deutsch</option></select></div>
+        <select id="langSel" data-noi18n><option value="fi">Suomi</option><option value="en">English</option><option value="de">Deutsch</option><option value="es">Español</option></select></div>
       <div><label for="unitSel">Mittayksiköt</label>
         <select id="unitSel"><option value="metric">Metrijärjestelmä (km)</option><option value="imperial">Yhdysvaltalainen (mailit)</option></select></div>
       <div class="hint" style="max-width:560px">Kieli koskee myös ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
@@ -649,6 +649,15 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
             <label style="margin-top:8px"><input type="checkbox" id="mNotifyMsgs"> Työpöytäilmoitus uudesta APRS-viestistä</label>
             <div class="hint">Ilmoituksessa näkyvät lähettäjä ja viestin alku; klikkaus avaa APRS-välilehden. Uusien viestien määrä näkyy aina APRS-välilehden nimen perässä.</div></div>
         </div>
+        <h3>Viestit radioon</h3>
+        <div class="hint" style="margin-bottom:6px">Koskee kaikkia ohjelman lähettämiä APRS-viestejä: syötteet, hälytykset, komentojen vastaukset ja itse kirjoitetut viestit.</div>
+        <div class="frow">
+          <div class="fld"><label for="mParts">Viestejä enintään / ilmoitus</label><input type="number" id="mParts" min="1" max="5" style="width:90px">
+            <div class="hint">67 merkkiä / viesti</div></div>
+          <div class="fld checks">
+            <label><input type="checkbox" id="mAscii"> Muunna ääkköset (ä→a)</label>
+            <div class="hint">Jos radio ei näytä ääkkösiä oikein.</div></div>
+        </div>
         <div class="frow svcsave"><button class="primary" id="btnAprsSave">Tallenna</button><span class="err" id="aprsErr"></span></div>
         <h3>Testiviesti</h3>
         <div class="frow" style="align-items:center">
@@ -699,16 +708,10 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <h2>Syötteet → DMR-tekstiviestit
         <label class="switch" title="Lähetys päällä"><input type="checkbox" id="mEnabled"><span class="sl"></span><span class="swtxt" id="mEnabledTxt">Pois</span></label></h2>
       <div class="inner form msgform">
-        <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. APRS-IS-tunnus, vastaanottajat ja viestiasetukset ovat <a href="#" id="toAprs">APRS-välilehden asetuksissa</a>.</div>
-        <h3>Viestit radioon</h3>
+        <div class="note">Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. APRS-IS-tunnus, vastaanottajat ja viestien muotoilu (ääkköset, viestien määrä) ovat <a href="#" id="toAprs">APRS-välilehden asetuksissa</a>.</div>
         <div class="frow">
-          <div class="fld"><label for="mParts">Viestejä / otsikko</label><input type="number" id="mParts" min="1" max="5" style="width:90px">
-            <div class="hint">67 merkkiä / viesti</div></div>
           <div class="fld"><label for="mInterval">Tarkistusväli (min)</label><input type="number" id="mInterval" min="1" style="width:90px">
             <div class="hint">kuinka usein syötteet haetaan</div></div>
-          <div class="fld checks">
-            <label><input type="checkbox" id="mAscii"> Muunna ääkköset (ä→a)</label>
-            <div class="hint">Jos radio ei näytä ääkkösiä oikein.</div></div>
         </div>
         <h3>Syötteet (RSS, Atom tai JSON Feed)</h3>
         <div class="feedrow feedhead"><span class="fen-h">Käytössä</span><span class="fname">Etuliite</span><span class="furl">Osoite</span><span class="fcmd">Komento</span><span class="fbtns"></span></div>
@@ -871,11 +874,14 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <h2>Loki <span class="count" id="logCount"></span>
       <input type="search" class="filter" id="logSearch" placeholder="Hae kutsu, nimi tai kommentti" style="width:220px">
       <select class="filter" id="logMode" style="margin-left:6px" title="Mode"></select>
+      <select class="filter" id="logProp" style="margin-left:6px" title="Etenemistapa">
+        <option value="">Kaikki etenemistavat</option><option value="inet">Internetin kautta (BrandMeister, toistin, EchoLink)</option>
+        <option value="direct">Suorat yhteydet</option></select>
       <button class="filter" id="btnLogNew" style="margin-left:6px">+ Uusi yhteys</button>
       <a class="filter" href="/api/log/export.adi" download style="margin-left:6px">ADIF ↓</a>
       <a class="filter" href="/api/log/export.csv" download style="margin-left:6px">CSV ↓</a></h2>
     <div class="scroll" style="max-height:none">
-      <table><thead><tr><th>Päivä (UTC)</th><th>Aika</th><th>Kutsu</th><th>Nimi</th><th>Kaista</th><th>Mode</th><th>RST</th><th>Kommentti</th><th>QRZ</th><th></th></tr></thead>
+      <table><thead><tr><th>Päivä (UTC)</th><th>Aika</th><th>Kutsu</th><th>Nimi</th><th>Kaista</th><th>Mode</th><th>RST</th><th>Kommentti</th><th>Palvelut</th><th></th></tr></thead>
         <tbody id="logBody"></tbody></table>
       <div class="empty" id="logEmpty">Lokissa ei ole vielä yhteyksiä.</div>
       <div style="text-align:center;margin:8px"><button id="btnLogMore" style="display:none">Näytä kaikki</button></div>
@@ -909,7 +915,10 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="note">Lokiin lisätyt yhteydet lähetetään QRZ.comin lokikirjaan. API-avaimen käyttö vaatii maksullisen QRZ.com-tilauksen (XML-taso tai ylempi).
         API-avaimen löydät QRZ.comista: Logbook → Settings → API Key. Avain tallennetaan käyttöjärjestelmän salasanavarastoon.</div>
       <div class="frow" style="margin-top:10px">
-        <div class="fld checks"><label><input type="checkbox" id="qrzOn"> Lähetä lokiin lisätyt yhteydet QRZ Logbookiin</label></div>
+        <div class="fld checks"><label><input type="checkbox" id="qrzOn"> Lähetä lokiin lisätyt yhteydet QRZ Logbookiin</label>
+          <label><input type="checkbox" id="qrzNoInet"> Älä lähetä internetin kautta pidettyjä yhteyksiä</label>
+          <div class="hint">BrandMeisterin, toistimien ja EchoLinkin kautta pidetyt yhteydet (ADIF PROP_MODE INTERNET, RPT tai ECH) eivät kelpaa useimpiin diplomeihin.
+            Ohitetun yhteyden voi silti lähettää lokilistan ↻-painikkeella.</div></div>
       </div>
       <div class="frow">
         <div class="fld"><label for="qrzKey">API-avain</label><input id="qrzKey" type="password" autocomplete="off" placeholder="ABCD-0A0B-1C1D-2E2F" style="width:240px"></div>
@@ -917,6 +926,48 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="frow svcsave"><button class="primary" id="btnQrzSave">Tallenna</button><button id="btnQrzTest">Testaa yhteys</button>
         <button id="btnQrzRetry">Lähetä epäonnistuneet uudelleen</button><span class="err" id="qrzErr"></span></div>
       <div class="hint" id="qrzState"></div>
+      </div>
+    </section>
+    <section class="cfg form" data-tab="lokit" data-fold="log-eqsl">
+      <h2>eQSL <span class="count" id="eqslHead"></span></h2>
+      <div class="inner">
+      <div class="note">Lokiin lisätyt yhteydet lähetetään eQSL.cc:hen, joka lähettää niistä sähköiset QSL-kortit. Tarvitset eQSL.cc-tilin (ilmainen).
+        Salasana tallennetaan käyttöjärjestelmän salasanavarastoon.
+        <b>Huom:</b> eQSL:n rajapinta ei hyväksy yli 14 merkin salasanaa. Jos salasanasi on pidempi, vaihda eQSL.cc:ssä enintään 14 merkin salasana.
+        Muokkaukset eivät päivity eQSL:ään jälkikäteen.</div>
+      <div class="frow" style="margin-top:10px;margin-bottom:8px">
+        <div class="fld checks"><label><input type="checkbox" id="eqslOn"> Lähetä lokiin lisätyt yhteydet eQSL:ään</label>
+          <label><input type="checkbox" id="eqslNoInet"> Älä lähetä internetin kautta pidettyjä yhteyksiä</label></div>
+      </div>
+      <div class="frow">
+        <div class="fld"><label for="eqslUser">eQSL-käyttäjätunnus</label><input id="eqslUser" type="text" autocomplete="off" style="width:150px;text-transform:uppercase">
+          <div class="hint" id="eqslUserHint">tyhjä = oma kutsu</div></div>
+        <div class="fld"><label for="eqslPass">Salasana</label><input id="eqslPass" type="password" autocomplete="off" style="width:180px">
+          <div class="hint" id="eqslPassHint">enintään 14 merkkiä</div></div>
+        <div class="fld"><label for="eqslQth">QTH-lempinimi (valinnainen)</label><input id="eqslQth" type="text" style="width:180px">
+          <div class="hint">jos eQSL-tililläsi on useita QTH:ita</div></div>
+      </div>
+      <div class="frow svcsave"><button class="primary" id="btnEqslSave">Tallenna</button>
+        <button id="btnEqslRetry">Lähetä epäonnistuneet uudelleen</button><span class="err" id="eqslErr"></span></div>
+      <div class="hint" id="eqslState"></div>
+      </div>
+    </section>
+    <section class="cfg form" data-tab="lokit" data-fold="log-hamqth">
+      <h2>HamQTH <span class="count" id="hamqthHead"></span></h2>
+      <div class="inner">
+      <div class="note">Lokiin lisätyt yhteydet lähetetään <a href="https://www.hamqth.com/" target="_blank" rel="noopener">HamQTH.com</a>-lokikirjaasi; myös muokkaukset ja poistot päivittyvät.
+        Ohjelma käyttää lokin lähetykseen HamQTH.comin ilmaista rajapintaa (<i>Log upload provided by HamQTH.com</i>). HamQTH toivoo, että rekisteröidyt ja pidät profiilisi ajan tasalla.
+        API-avaimen luot HamQTH:ssa kohdassa <b>Settings → Apps and API keys</b> (alkaa <code>hqk_</code>). Avain tallennetaan käyttöjärjestelmän salasanavarastoon; salasanaa ei tarvita.</div>
+      <div class="frow" style="margin-top:10px;margin-bottom:8px">
+        <div class="fld checks"><label><input type="checkbox" id="hamqthOn"> Lähetä lokiin lisätyt yhteydet HamQTH:hon</label>
+          <label><input type="checkbox" id="hamqthNoInet"> Älä lähetä internetin kautta pidettyjä yhteyksiä</label></div>
+      </div>
+      <div class="frow">
+        <div class="fld"><label for="hamqthKey">API-avain</label><input id="hamqthKey" type="password" autocomplete="off" placeholder="hqk_…" style="width:320px"></div>
+      </div>
+      <div class="frow svcsave"><button class="primary" id="btnHamqthSave">Tallenna</button><button id="btnHamqthTest">Testaa yhteys</button>
+        <button id="btnHamqthRetry">Lähetä epäonnistuneet uudelleen</button><span class="err" id="hamqthErr"></span></div>
+      <div class="hint" id="hamqthState"></div>
       </div>
     </section>
     </div>
@@ -973,7 +1024,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
         <div class="fld"><label for="dOff">Hälytä, kun ei nähty (min)</label><input id="dOff" type="number" min="2" style="width:90px"></div>
         <div class="fld checks" style="padding-top:22px"><label><input type="checkbox" id="dSms"> Tekstiviesti radioon</label></div>
       </div>
-      <div class="frow svcsave"><button class="primary" id="btnDSave">Tallenna</button> <button id="btnDRefresh">Päivitä nyt</button> <span class="err" id="dErr"></span></div>
+      <div class="frow svcsave"><button class="primary" id="btnDSave">Tallenna</button> <button id="btnDRefresh">Päivitä tiedot</button> <span class="err" id="dErr"></span></div>
       <div id="dFound"></div>
       <div class="hint" id="dKeyHint"></div>
     </div>
@@ -1005,7 +1056,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="inner">
       <div id="ciSheetOn" style="display:none; align-items:center; gap:12px; flex-wrap:wrap">
         <span id="ciSheetInfo"></span>
-        <button id="ciSheetSync">Päivitä nyt</button>
+        <button id="ciSheetSync">Päivitä tiedot</button>
         <button id="ciSheetOff">Irrota taulukko</button>
       </div>
       <div id="ciSheetForm" class="cibar">
@@ -1281,6 +1332,9 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       <div class="fld"><label for="qFreq">Taajuus (MHz)</label><input id="qFreq" type="text" inputmode="decimal" style="width:110px"></div>
       <div class="fld"><label for="qRstS">RST lähetetty</label><input id="qRstS" type="text" style="width:60px"></div>
       <div class="fld"><label for="qRstR">RST vastaanotettu</label><input id="qRstR" type="text" style="width:60px"></div>
+      <div class="fld"><label for="qProp">Etenemistapa</label><select id="qProp">
+        <option value="">Suora (ei merkintää)</option><option value="INTERNET">Internet (BrandMeister, hotspot)</option>
+        <option value="RPT">Toistin</option><option value="SAT">Satelliitti</option><option value="ECH">EchoLink</option></select></div>
     </div>
     <div class="frow">
       <div class="fld" style="flex:1"><label for="qQth">QTH</label><input id="qQth" type="text" style="width:100%"></div>
@@ -1290,7 +1344,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     <div class="hint"><span id="qAdif"></span> <span id="qInfo"></span></div>
     <div class="frow svcsave" style="justify-content:flex-end">
       <span class="err" id="qErr" style="margin-right:auto"></span>
-      <label id="qDelRemoteL" style="display:none"><input type="checkbox" id="qDelRemote"> myös QRZ:sta</label>
+      <label id="qDelRemoteL" style="display:none"><input type="checkbox" id="qDelRemote"> <span id="qDelRemoteT"></span></label>
       <button id="qDelete" style="display:none">Poista</button>
       <button class="primary" id="qSave">Lisää lokiin</button><button id="qCancel">Peruuta</button>
     </div>
@@ -1575,6 +1629,95 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
       </dl>
       <p class="muted">Meldungen des Skripts erscheinen auf Finnisch, da die Vorlage (FinDMR) finnisch ist. Quellcode des Skripts und eine ausführlichere Sicherheitsbeschreibung: <a href="https://github.com/hannulma/monitor-for-amateur-radio/tree/main/sheets" target="_blank" rel="noopener">GitHub → sheets</a>.</p>
     </div>
+    <div lang="es" data-noi18n>
+      <p>Con una hoja conectada, las entradas de check-in van directamente a Google Sheets. La hoja asigna el número de registro,
+        así que varios conductores de red pueden registrar a la vez sin números duplicados.</p>
+      <p class="who"><b>¿Quién hace qué?</b> El <b>propietario</b> de la hoja hace los pasos 1–9 una sola vez. Los demás <b>conductores de red</b> solo hacen el paso 10:
+        no necesitan cuenta de Google ni permiso de edición en la hoja.</p>
+
+      <h3>A. Instalar el script (propietario)</h3>
+      <ol class="steps">
+        <li><b>Abre la hoja.</b> Inicia sesión en el navegador con la cuenta de Google propietaria de la hoja y ábrela.
+          <div class="tip">Consejo: pruébalo primero con una copia (<b>Archivo → Hacer una copia</b>). Cuando todo funcione, repite los pasos en la hoja real.
+          La hoja debe tener una pestaña de plantilla cuyo nombre empiece por <code>LOGIPOHJA</code> (hoja FinDMR v0.68).</div></li>
+        <li><b>Abre el editor de scripts.</b> En el menú de la hoja elige <b>Extensiones → Apps Script</b>. El editor se abre en una nueva pestaña del navegador.
+          Arriba a la izquierda puedes dar nombre al proyecto, p. ej. <i>Check-in</i>.</li>
+        <li><b>Pega Code.gs.</b> Pulsa <b>Copiar Code.gs</b> arriba en esta ventana. En el panel izquierdo del editor elige <b>Archivos → Code.gs</b>,
+          selecciona todo su contenido (<kbd>Ctrl</kbd>+<kbd>A</kbd>, en Mac <kbd>Cmd</kbd>+<kbd>A</kbd>) y sustitúyelo por el texto copiado
+          (<kbd>Ctrl</kbd>+<kbd>V</kbd> / <kbd>Cmd</kbd>+<kbd>V</kbd>).</li>
+        <li><b>Muestra appsscript.json.</b> En el panel izquierdo elige <b>Configuración del proyecto</b> (icono de engranaje) y marca
+          <b>Mostrar el archivo de manifiesto «appsscript.json» en el editor</b>. Vuelve al editor (icono <b>&lt;&gt;</b>).</li>
+        <li><b>Pega appsscript.json.</b> Pulsa <b>Copiar appsscript.json</b>, abre en el editor el archivo <b>appsscript.json</b> y sustituye
+          todo su contenido como en el paso 3. Guarda (<kbd>Ctrl</kbd>+<kbd>S</kbd> / <kbd>Cmd</kbd>+<kbd>S</kbd> o el icono del disquete).
+          <div class="tip">Este archivo limita el acceso del script a <b>solo esta hoja</b>. No puede acceder a otros archivos del propietario.</div></li>
+        <li><b>Revisa los ajustes.</b> Al principio de <code>Code.gs</code> hay un bloque <code>CONFIG</code>. Los valores por defecto sirven para la hoja FinDMR:
+          pestaña de plantilla <code>LOGIPOHJA</code>, pestañas de ronda <code>Kierros &lt;número&gt; &lt;ddmmaa&gt;</code>, datos desde la fila 3 en las columnas A–F
+          (NRO, indicativo, RPT/HOTSPOT, KUNTA, Lisätietoja, Oper), fecha en D1, número de ronda en F1 y operador en G2.
+          Si tu hoja es distinta, cambia los valores y guarda. Si no, déjalos como están.</li>
+        <li><b>Impleméntalo como aplicación web.</b> Arriba a la derecha elige <b>Implementar → Nueva implementación</b>. Pulsa el engranaje junto a
+          <b>Seleccionar tipo</b> y elige <b>Aplicación web</b>. Configura:
+          <ul><li><b>Ejecutar como:</b> Yo (tu dirección)</li>
+              <li><b>Quién tiene acceso:</b> Cualquier usuario</li></ul>
+          y pulsa <b>Implementar</b>.
+          <div class="tip">«Cualquier usuario» solo significa que se pueden enviar solicitudes a la dirección sin iniciar sesión. Aun así, el script solo acepta
+          solicitudes firmadas con la clave propia de un conductor de red añadido. Sin este ajuste el programa no puede conectarse.</div></li>
+        <li><b>Autoriza.</b> Google pide autorización: pulsa <b>Autorizar acceso</b> y elige tu cuenta.
+          Como el script es tuyo y Google no lo ha revisado, aparece el aviso <i>«Google no ha verificado esta aplicación»</i>.
+          Elige <b>Configuración avanzada → Ir a … (no seguro)</b> y después <b>Permitir</b>.</li>
+        <li><b>Copia la dirección.</b> Copia la <b>URL de la aplicación web</b> que se muestra. Tiene este aspecto:
+          <code>https://script.google.com/macros/s/…/exec</code>. Usa la dirección que termina en <code>/exec</code>, no <code>/dev</code>.
+          Después recarga la hoja en el navegador: en la barra de menús aparece (tras unos segundos) el menú <b>Check-in</b>.</li>
+      </ol>
+
+      <h3>B. Añadir y conectar conductores de red</h3>
+      <ol class="steps" start="10">
+        <li><b>Crea un código de emparejamiento y conecta.</b> El propietario elige en la hoja <b>Check-in → Lisää ylläpitäjä / uusi parituskoodi</b> (añadir conductor de red)
+          e introduce el indicativo del conductor (también el suyo propio si registra él mismo). La primera vez, Google puede volver a pedir
+          autorización como en el paso 8. La hoja muestra un código, p. ej. <code>K7M-42Q</code>. El código vale 15 minutos y funciona una vez.
+          <ul><li>Da al conductor de red el código y la dirección de la aplicación web.</li>
+              <li>El conductor los introduce en esta pestaña, en la sección <b>Hoja de Google</b>, en los campos <b>Dirección del script</b> y <b>Código de emparejamiento</b>, y pulsa <b>Conectar</b>.</li>
+              <li>El programa cambia el código por una clave propia que se guarda en el almacén de contraseñas del sistema operativo. La clave nunca
+                se envía por la red; cada solicitud se firma con ella.</li></ul></li>
+      </ol>
+
+      <h3>Gestionar conductores de red</h3>
+      <ul>
+        <li><b>Check-in → Poista ylläpitäjä</b> (quitar): el programa del conductor ya no puede escribir en la hoja.</li>
+        <li><b>Check-in → Näytä ylläpitäjät</b> (mostrar): conductores añadidos y cuándo usaron la hoja por última vez.</li>
+        <li>Si un conductor cambia de ordenador, crea un nuevo código de emparejamiento para él. La clave antigua deja de funcionar.</li>
+        <li>Todos los eventos (emparejamientos, entradas, cambios) se registran en la pestaña oculta <i>Check-in-tapahtumat</i>.</li>
+      </ul>
+
+      <h3>Durante la red</h3>
+      <p>Inicia la ronda en el programa como siempre. Si la pestaña de la ronda aún no existe, el script la crea a partir de la plantilla, la coloca al principio y
+        rellena la fecha, el número de ronda y el operador. Si otro conductor ya ha iniciado la misma ronda, todos registran en la misma pestaña.
+        El programa lee la hoja cada 5 segundos, así que también ves las entradas de los demás.</p>
+
+      <h3>Actualizar el script</h3>
+      <p>Cuando el programa trae una versión nueva del script: copia Code.gs de nuevo, pégalo y guarda. Luego elige <b>Implementar → Gestionar implementaciones</b>,
+        pulsa el icono del lápiz, elige <b>Versión: Nueva versión</b> e <b>Implementar</b>. La dirección no cambia y los conductores no tienen que hacer nada.
+        <span class="warnline">No uses «Nueva implementación» para actualizar: crea una dirección nueva y todos tendrían que volver a conectarse.</span></p>
+
+      <h3>Problemas frecuentes</h3>
+      <dl class="faq">
+        <dt>«La hoja respondió de forma inesperada (HTTP …)»</dt>
+        <dd>La dirección es incorrecta o el acceso no está en «Cualquier usuario». Comprueba que la dirección termina en <code>/exec</code> y corrige el ajuste en
+          Implementar → Gestionar implementaciones → lápiz.</dd>
+        <dt>«Parituskoodi ei kelpaa tai se on jo käytetty» / «Parituskoodi on vanhentunut» (código no válido, ya usado o caducado)</dt>
+        <dd>Un código funciona una vez y durante 15 minutos. Crea uno nuevo desde el menú Check-in de la hoja.</dd>
+        <dt>«Falló la autenticación»</dt>
+        <dd>Se ha retirado el acceso o se ha creado un código nuevo para ti en otro ordenador. Pide al propietario un nuevo código de emparejamiento y vuelve a conectar.</dd>
+        <dt>«El reloj del ordenador está mal»</dt>
+        <dd>Las solicitudes se rechazan si el reloj difiere más de 5 minutos. Activa la hora automática en el sistema operativo.</dd>
+        <dt>«Pohjavälilehteä "LOGIPOHJA…" ei löytynyt» (no se encontró la pestaña de plantilla)</dt>
+        <dd>La hoja no tiene pestaña de plantilla o tiene otro nombre. Añade la pestaña o cambia <code>TEMPLATE_PREFIX</code> en CONFIG.</dd>
+        <dt>El menú Check-in no aparece en la hoja</dt>
+        <dd>Recarga la hoja y espera un momento. Comprueba que Code.gs está guardado.</dd>
+        <dt>Un cambio en el script no surte efecto</dt>
+        <dd>Un cambio guardado solo surte efecto cuando implementas una versión nueva (ver Actualizar el script).</dd>
+      </dl>
+      <p class="muted">Los mensajes del script aparecen en finés, porque la plantilla (FinDMR) es finlandesa. Código fuente del script y descripción de seguridad más detallada: <a href="https://github.com/hannulma/monitor-for-amateur-radio/tree/main/sheets" target="_blank" rel="noopener">GitHub → sheets</a>.</p>
+    </div>
   </div>
 </div></div>
 
@@ -1593,6 +1736,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   <button id="dockClose">Lopeta</button>
 </div>
 <script src="/static/i18n.de.js"></script>
+<script src="/static/i18n.es.js"></script>
 <script src="/static/i18n.js"></script>
 <script src="/static/player.js"></script>
 
@@ -1965,6 +2109,7 @@ function setQsoMode(m, fromUser) {
   $("qModeBtns").querySelectorAll("button").forEach(b => { b.classList.toggle("on", b.dataset.m === m); b.setAttribute("aria-pressed", b.dataset.m === m); });
   if (fromUser && prev && prev !== m) {   // raportin oletus seuraa tilaa (59 / 599), ellei sitä ole muutettu
     for (const id of ["qRstS", "qRstR"]) if (!$(id).value || $(id).value === modeRst(prev)) $(id).value = modeRst(m);
+    if (!$("qProp").dataset.user) $("qProp").value = modeProp(m);   // etenemistapa seuraa tilaa (DMR → internet)
   }
   $("qAdif").textContent = T("ADIF-tila: {m}.", {m: ADIF_MODE[m] || m});
 }
@@ -1972,6 +2117,8 @@ $("qModeBtns").innerHTML = MODE_QUICK.map(m => `<button type="button" class="mod
 $("qModeBtns").addEventListener("click", e => { const b = e.target.closest("button[data-m]"); if (b) setQsoMode(b.dataset.m, true); });
 $("qMode").onchange = () => setQsoMode($("qMode").value, true);
 $("logMode").onchange = () => loadLog();
+$("logProp").onchange = () => loadLog();
+$("qProp").onchange = () => { $("qProp").dataset.user = "1"; };
 function openQso(q) {
   q = q || {};
   qsoEdit = {id: q.id || null, candidate: q.candidate || null, tg: q.tg, via: q.via};
@@ -1987,9 +2134,12 @@ function openQso(q) {
   const rst = modeRst(mode) === "59" ? (lc.rst || "59") : modeRst(mode);
   $("qRstS").value = q.rst_sent || (q.id ? "" : rst); $("qRstR").value = q.rst_rcvd || (q.id ? "" : rst);
   $("qQth").value = q.qth || ""; $("qGrid").value = q.grid || ""; $("qComment").value = q.comment || "";
+  $("qProp").value = q.prop_mode != null ? q.prop_mode : modeProp(mode); $("qProp").dataset.user = q.id ? "1" : "";
   $("qDelete").style.display = q.id ? "" : "none";
-  $("qDelRemoteL").style.display = q.id && q.qrz_logid ? "" : "none"; $("qDelRemote").checked = false;
-  $("qInfo").textContent = q.id && q.qrz_status ? T("QRZ: {s}", {s: qrzLabel(q)[1]}) : "";
+  const remote = [q.qrz_logid && "QRZ", q.hamqth_logid && "HamQTH"].filter(Boolean);
+  $("qDelRemoteL").style.display = q.id && remote.length ? "" : "none"; $("qDelRemote").checked = false;
+  $("qDelRemoteT").textContent = T("poista myös palvelusta: {s}", {s: remote.join(", ")});
+  $("qInfo").textContent = q.id ? SVCS.filter(s => q[s + "_status"]).map(s => `${SVC_NAME[s]}: ${svcLabel(q, s)[1]}`).join(" · ") : "";
   $("qErr").textContent = ""; $("qDelete").dataset.armed = "";
   $("qsoBg").classList.add("open");
   setTimeout(() => (q.call ? $("qRstR") : $("qCall")).focus(), 50);
@@ -2004,7 +2154,8 @@ $("qSave").onclick = async () => {
   if (!start) { $("qErr").textContent = T("Anna alkuaika"); return; }
   const j = await api("/api/log", {id: qsoEdit.id, candidate: qsoEdit.candidate, tg: qsoEdit.tg, via: qsoEdit.via,
     call: $("qCall").value, name: $("qName").value, start, end, band: $("qBand").value, freq: $("qFreq").value, mode_label: $("qMode").value,
-    rst_sent: $("qRstS").value, rst_rcvd: $("qRstR").value, qth: $("qQth").value, grid: $("qGrid").value, comment: $("qComment").value});
+    rst_sent: $("qRstS").value, rst_rcvd: $("qRstR").value, qth: $("qQth").value, grid: $("qGrid").value, comment: $("qComment").value,
+    prop_mode: $("qProp").value});
   if (!j.ok) { $("qErr").textContent = j.error; return; }
   qsoClose(); logRev = -1; if (TAB === "lokit") loadLog();
 };
@@ -2013,36 +2164,46 @@ $("qDelete").onclick = async () => {
   try { await fetchT(`/api/log/${qsoEdit.id}?remote=${$("qDelRemote").checked ? 1 : 0}`, 15000, {method: "DELETE"}); } catch (e) { /* */ }
   $("qDelete").textContent = T("Poista"); qsoClose(); logRev = -1; loadLog();
 };
-function qrzLabel(r) {
+const SVCS = ["qrz", "eqsl", "hamqth"], SVC_NAME = {qrz: "QRZ", eqsl: "eQSL", hamqth: "HamQTH"};
+const ASSISTED = ["INTERNET", "RPT", "ECH"];
+function modeProp(m) { const e = ((S.log && S.log.modes) || []).find(x => x[0] === m); return e && e[2] != null ? e[2] : (["DMR", "DSTAR", "C4FM", "M17"].includes(m) ? "INTERNET" : ""); }
+function svcLabel(r, svc) {
   return {ok: ["ok", "✓"], queued: ["muted", T("jonossa")], error: ["warn", T("virhe – yritetään uudelleen")],
-          failed: ["bad", T("hylätty")], auth: ["bad", T("API-avain ei kelpaa")]}[r.qrz_status] || ["muted", "–"];
+          failed: ["bad", T("hylätty")], auth: ["bad", T(svc === "eqsl" ? "tunnus tai salasana ei kelpaa" : "API-avain ei kelpaa")],
+          skip: ["muted", T("ohitettu (internet)")]}[r[svc + "_status"]] || ["muted", "–"];
 }
+function qrzLabel(r) { return svcLabel(r, "qrz"); }
 async function loadLog() {
   const q = $("logSearch").value.trim();
-  const md = $("logMode").value;
-  let j; try { j = await (await fetchT(`/api/log?limit=${logAll ? 0 : 200}&q=${encodeURIComponent(q)}&mode=${encodeURIComponent(md)}`, 30000)).json(); } catch (e) { return; }
+  const md = $("logMode").value, pr = $("logProp").value;
+  let j; try { j = await (await fetchT(`/api/log?limit=${logAll ? 0 : 200}&q=${encodeURIComponent(q)}&mode=${encodeURIComponent(md)}&prop=${pr}`, 30000)).json(); } catch (e) { return; }
   logRev = S && S.log ? S.log.rev : -1;
   logRows = j.rows || [];
   $("logCount").textContent = j.count ? `(${j.count})` : "";
   $("logEmpty").style.display = logRows.length ? "none" : "";
-  $("logEmpty").textContent = T(q || md ? "Ei hakua vastaavia yhteyksiä." : "Lokissa ei ole vielä yhteyksiä.");
-  $("btnLogMore").style.display = !logAll && !q && !md && j.count > logRows.length ? "" : "none";
+  $("logEmpty").textContent = T(q || md || pr ? "Ei hakua vastaavia yhteyksiä." : "Lokissa ei ole vielä yhteyksiä.");
+  $("btnLogMore").style.display = !logAll && !q && !md && !pr && j.count > logRows.length ? "" : "none";
   $("logBody").innerHTML = logRows.map(r => {
-    const [cls, txt] = qrzLabel(r);
-    const retry = ["error", "failed", "auth"].includes(r.qrz_status) ? ` <button class="linkbtn" data-lretry="${r.id}" title="${esc(T("Lähetä uudelleen"))}">↻</button>` : "";
+    const svc = SVCS.filter(s => r[s + "_status"]).map(s => {
+      const [cls, txt] = svcLabel(r, s);
+      const retry = ["error", "failed", "auth", "skip"].includes(r[s + "_status"]) ?
+        ` <button class="linkbtn" data-lretry="${r.id}" data-svc="${s}" title="${esc(T("Lähetä uudelleen"))}">↻</button>` : "";
+      return `<span class="${cls}" title="${esc(r[s + "_error"] || "")}">${esc(SVC_NAME[s])} ${esc(txt)}${retry}</span>`;
+    }).join("<br>") || `<span class="muted">–</span>`;
+    const net = ASSISTED.includes(r.prop_mode) ? ` <span class="muted" title="${esc(T("Internetin kautta (PROP_MODE {p})", {p: r.prop_mode}))}">🌐</span>` : "";
     return `<tr><td style="white-space:nowrap">${esc(utcDate(r.start))}</td>
       <td style="white-space:nowrap">${esc(utcHM(r.start))}${r.end ? "–" + esc(utcHM(r.end)) : ""}</td>
-      <td><b>${esc(r.call)}</b></td><td>${esc(r.name || "")}</td><td>${esc(r.band || "")}</td><td>${esc(MODE_NAME[r.mode_label] || r.mode_label || "")}</td>
+      <td><b>${esc(r.call)}</b></td><td>${esc(r.name || "")}</td><td>${esc(r.band || "")}</td><td style="white-space:nowrap">${esc(MODE_NAME[r.mode_label] || r.mode_label || "")}${net}</td>
       <td style="white-space:nowrap">${esc(r.rst_sent || "")}/${esc(r.rst_rcvd || "")}</td>
       <td class="logcomment" title="${esc(r.comment || "")}">${esc(r.comment || "")}</td>
-      <td class="${cls}" style="white-space:nowrap" title="${esc(r.qrz_error || r.qrz_logid || "")}">${esc(txt)}${retry}</td>
+      <td style="white-space:nowrap">${svc}</td>
       <td><button data-ledit="${r.id}">${esc(T("Muokkaa"))}</button></td></tr>`;
   }).join("");
 }
 $("logBody").addEventListener("click", async e => {
   const ed = e.target.closest("button[data-ledit]"), rt = e.target.closest("button[data-lretry]");
   if (ed) openQso(logRows.find(r => String(r.id) === ed.dataset.ledit));
-  if (rt) { await api("/api/log/qrz/retry", {id: +rt.dataset.lretry}); }
+  if (rt) { await api(`/api/log/${rt.dataset.svc || "qrz"}/retry`, {id: +rt.dataset.lretry}); }
 });
 $("logSearch").oninput = () => { clearTimeout(logSearchT); logSearchT = setTimeout(loadLog, 300); };
 $("btnLogMore").onclick = () => { logAll = true; loadLog(); };
@@ -2053,7 +2214,10 @@ function fillLogCfg() {
   $("logMyGrid").value = c.my_grid || ""; $("logRst").value = c.rst || "59";
   fillBands($("logBand"), c.band); $("logDetect").checked = c.detect !== false;
   fillModeSelect($("logModeDef"), c.mode || "DMR"); fillModeSelect($("logMode"), $("logMode").value, true);
-  $("qrzOn").checked = !!c.qrz; $("qrzKey").value = c.qrz_key || "";
+  $("qrzOn").checked = !!c.qrz; $("qrzKey").value = c.qrz_key || ""; $("qrzNoInet").checked = c.qrz_inet === false;
+  $("eqslOn").checked = !!c.eqsl; $("eqslNoInet").checked = c.eqsl_inet === false; $("eqslUser").value = c.eqsl_user || "";
+  $("eqslUser").placeholder = (S.log && S.log.my_call) || ""; $("eqslPass").value = c.eqsl_pass || ""; $("eqslQth").value = c.eqsl_qth || "";
+  $("hamqthOn").checked = !!c.hamqth; $("hamqthNoInet").checked = c.hamqth_inet === false; $("hamqthKey").value = c.hamqth_key || "";
   renderQrzState();
 }
 function renderQrzState() {
@@ -2065,7 +2229,45 @@ function renderQrzState() {
   if (q.pending) parts.push(esc(T("Odottaa lähetystä: {n}", {n: q.pending})));
   const h = parts.map(x => x.startsWith("<") ? x : esc(x)).join(" ");
   if ($("qrzState").dataset.html !== h) { $("qrzState").innerHTML = h; $("qrzState").dataset.html = h; }
+  for (const svc of ["eqsl", "hamqth"]) {
+    const st = (S.log && S.log[svc]) || {};
+    $(svc + "Head").textContent = st.enabled ? T("· päällä") : "";
+    const p = [esc(T(svc === "eqsl" ? (st.key ? "Salasana tallennettu." : "Ei salasanaa.") : (st.key ? "API-avain tallennettu." : "Ei API-avainta.")))];
+    if (svc === "eqsl" && st.long_pass) p.push(`<span class="bad">${esc(T("Salasana on yli 14 merkkiä – eQSL:n rajapinta ei hyväksy sitä."))}</span>`);
+    if (st.ok === true) p.push(`<span class="ok">${esc(T("Yhteys toimii"))}</span>`);
+    else if (st.ok === false) p.push(`<span class="bad">${esc(T("Virhe: {e}", {e: st.error || "?"}))}</span>`);
+    if (st.pending) p.push(esc(T("Odottaa lähetystä: {n}", {n: st.pending})));
+    const hh = p.join(" ");
+    if ($(svc + "State").dataset.html !== hh) { $(svc + "State").innerHTML = hh; $(svc + "State").dataset.html = hh; }
+  }
 }
+function eqslPassCheck() {
+  const long = $("eqslPass").value.length > 14 && $("eqslPass").value !== "********";
+  $("eqslPassHint").className = long ? "hint bad" : "hint";
+  $("eqslPassHint").textContent = T(long ? "liian pitkä: eQSL hyväksyy enintään 14 merkkiä" : "enintään 14 merkkiä");
+}
+$("eqslPass").oninput = eqslPassCheck;
+$("btnEqslSave").onclick = async () => {
+  $("eqslErr").textContent = "";
+  const j = await saveCfg({log: {eqsl: $("eqslOn").checked, eqsl_inet: !$("eqslNoInet").checked, eqsl_user: $("eqslUser").value,
+    eqsl_qth: $("eqslQth").value, eqsl_pass: $("eqslPass").value}});
+  if (!j.ok) { $("eqslErr").textContent = j.error; return; }
+  S.config = j.config; fillLogCfg(); eqslPassCheck(); $("eqslErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+};
+$("btnEqslRetry").onclick = async () => { await api("/api/log/eqsl/retry", {}); $("eqslErr").innerHTML = `<span class="ok">${esc(T("Lisätty jonoon"))}</span>`; };
+$("btnHamqthSave").onclick = async () => {
+  $("hamqthErr").textContent = "";
+  const j = await saveCfg({log: {hamqth: $("hamqthOn").checked, hamqth_inet: !$("hamqthNoInet").checked, hamqth_key: $("hamqthKey").value}});
+  if (!j.ok) { $("hamqthErr").textContent = j.error; return; }
+  S.config = j.config; fillLogCfg();
+  if ($("hamqthKey").value) $("btnHamqthTest").onclick(); else $("hamqthErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+};
+$("btnHamqthTest").onclick = async () => {
+  $("hamqthErr").textContent = T("Testataan…");
+  const j = await api("/api/log/hamqth/test", {});
+  $("hamqthErr").innerHTML = j.ok ? `<span class="ok">${esc(T("Yhteys toimii"))}</span>` : esc(j.error || "?");
+};
+$("btnHamqthRetry").onclick = async () => { await api("/api/log/hamqth/retry", {}); $("hamqthErr").innerHTML = `<span class="ok">${esc(T("Lisätty jonoon"))}</span>`; };
 $("btnLogCfgSave").onclick = async () => {
   $("logCfgErr").textContent = "";
   const j = await saveCfg({log: {my_call: $("logMyCall").value, my_grid: $("logMyGrid").value, rst: $("logRst").value,
@@ -2075,7 +2277,7 @@ $("btnLogCfgSave").onclick = async () => {
 };
 $("btnQrzSave").onclick = async () => {
   $("qrzErr").textContent = "";
-  const j = await saveCfg({log: {qrz: $("qrzOn").checked, qrz_key: $("qrzKey").value}});
+  const j = await saveCfg({log: {qrz: $("qrzOn").checked, qrz_inet: !$("qrzNoInet").checked, qrz_key: $("qrzKey").value}});
   if (!j.ok) { $("qrzErr").textContent = j.error; return; }
   S.config = j.config; fillLogCfg();
   if ($("qrzKey").value) $("btnQrzTest").onclick(); else $("qrzErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
@@ -2338,7 +2540,7 @@ $("ciCopyAll").onclick = () => ciCopy(false);
 
 // ---------------- kieli ja päivitykset ----------------
 const DIRS = {fi: ["P", "KO", "I", "KA", "E", "LO", "L", "LU"], en: ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
-              de: ["N", "NO", "O", "SO", "S", "SW", "W", "NW"]};
+              de: ["N", "NO", "O", "SO", "S", "SW", "W", "NW"], es: ["N", "NE", "E", "SE", "S", "SO", "O", "NO"]};
 function DIRS8() { return DIRS[LANG] || DIRS.en; }   // ilmansuunnat pohjoisesta myötäpäivään
 function initLang() {
   let l = S.config.language;
@@ -2582,7 +2784,7 @@ $("toLogCfg").onclick = e => { e.preventDefault(); showTab("lokit"); unfold("log
 function openSheetHelp(e) {
   if (e) e.preventDefault();
   const g = document.querySelector("#shBg .guide"); const gl = g.querySelector(`[lang="${LANG}"]`) ? LANG : "en";   // ohje kielellä, jos sellainen on, muuten englanniksi
-  for (const l of ["fi", "en", "de"]) g.classList.toggle(l, l === gl);
+  for (const l of ["fi", "en", "de", "es"]) g.classList.toggle(l, l === gl);
   $("shCopied").textContent = ""; $("shBg").classList.add("open"); $("shBg").scrollTop = 0;
 }
 $("ciSheetHelp").onclick = openSheetHelp; $("ciSheetHelp2").onclick = openSheetHelp;

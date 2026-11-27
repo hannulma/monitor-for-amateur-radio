@@ -1,4 +1,4 @@
-/* Monitor for Amateur Radio – käyttöliittymän kieliversiot (suomi / englanti / saksa).
+/* Monitor for Amateur Radio – käyttöliittymän kieliversiot (suomi / englanti / saksa / espanja).
  *
  * Sivu kirjoitetaan suomeksi. Kieltä vaihdettaessa jokainen sivun tekstisolmu ja
  * placeholder/title-attribuutti käännetään: suomenkielinen teksti (välilyönnit normalisoituina)
@@ -12,11 +12,9 @@
 
   const EN = {
     // ---- yläpalkki ja välilehdet ----
-    "Yhdistetään…": "Connecting…",
     "Seuranta": "Monitor", "Kaverit": "Friends", "Laitteet": "Devices", "Tilastot": "Statistics",
     "Palvelut": "Services", "Syötteet": "Feeds", "BrandMeister": "BrandMeister", "APRS": "APRS", "Asetukset": "Settings",
     "Päivitys {v} saatavilla": "Update {v} available",
-
     // ---- asetukset ----
     "Seurattavat puheryhmät": "Talkgroups to monitor",
     "Erota välilyönnillä tai pilkulla.": "Separate with spaces or commas.",
@@ -46,8 +44,7 @@
     "Erota välilyönnillä, esim. OH2ABC-6 OH2ABC-8": "Separate with spaces, e.g. OH2ABC-6 OH2ABC-8",
     "kuinka usein syötteet haetaan": "how often the feeds are fetched",
     "Jos radio ei näytä ääkkösiä oikein.": "If your radio does not show Finnish letters correctly.",
-    "Käytössä": "Enabled", "Osoite": "Address", "Lähetys päällä": "Sending enabled",
-    "Lähde": "Source",
+    "Osoite": "Address", 
     "Ilmatieteen laitos (Suomi)": "Finnish Meteorological Institute (Finland)",
     "MeteoAlarm (Eurooppa)": "MeteoAlarm (Europe)",
     "Maa": "Country",
@@ -66,11 +63,9 @@
     "Suoraan yläpuolella": "Directly overhead",
     "ennuste klo {t}": "forecast {t}",
     "NOAA SWPC OVATION. Raja {thr} %.": "NOAA SWPC OVATION. Threshold {thr} %.",
-    "vain Suomessa": "Finland only",
     "µSv/h. Pylvään täysi pituus = hälytysraja {thr} µSv/h.": "µSv/h. A full bar = alert threshold {thr} µSv/h.",
     "Oma laite": "Own device",
     "Näytä hallintatyökalut tälle laitteelle": "Show the management tools for this device",
-    "Oma kutsu": "Your callsign",
     "Laitteet, joiden kutsu on tämä, tunnistetaan omiksi.": "Devices with this callsign are recognised as yours.",
     "Avain tallentuu käyttöjärjestelmän salasanavarastoon.": "The key is stored in the operating system's credential store.",
     "Poistaa puhelu- ja tapahtumahistorian": "Clears the call and event history",
@@ -99,10 +94,8 @@
     "Taivaskartta: seuraavan ylilennon reitti": "Sky plot: path of the next pass",
     "Kartalla ovat Palvelut-välilehdellä hälytettäviksi valitut satelliitit (🔔). Nimitagissa on seuraava aikaväli, jolloin satelliitti on sijaintisi yhteysalueella; ympyrä on satelliitin kuuluvuusalue. Klikkaa satelliittia nähdäksesi sen taivaskartan. Zoomaa hiiren rullalla tai nipistämällä ja siirrä karttaa raahaamalla. Karttapohja: Natural Earth.": "The map shows the satellites chosen for alerts on the Services tab (🔔). The name tag shows the next time window when the satellite is in range of your location; the circle is the satellite's coverage area. Click a satellite to see its sky plot. Zoom with the mouse wheel or by pinching and drag to move the map. Base map: Natural Earth.",
     "Ota satelliittipalvelu käyttöön Palvelut-välilehdellä.": "Turn on the satellite service on the Services tab.",
-    "Aseta oma sijainti Palvelut-välilehdellä.": "Set your location on the Services tab.",
     "Valitse kartalla näytettävät satelliitit Palvelut-välilehdellä hälytettäviksi (🔔).": "Choose the satellites to show by turning on their alerts (🔔) on the Services tab.",
     "Korkeus": "Altitude",
-    "Nopeus": "Speed",
     "Sinusta": "From you",
     "korkeus": "elevation",
     "horisontin alapuolella": "below the horizon",
@@ -113,7 +106,7 @@
     "vain Suomessa": "Finland only", "Lähde kattaa vain Suomen": "The data source covers Finland only",
     "Pilvisyys: Suomessa lähimmän Ilmatieteen laitoksen sääaseman havainto, muualla Open-Meteon malliarvo (CC BY 4.0).": "Cloud cover: in Finland the observation of the nearest FMI weather station, elsewhere the Open-Meteo model value (CC BY 4.0).",
     "Kieli ja yksiköt": "Language and units", "Mittayksiköt": "Units", "Metrijärjestelmä (km)": "Metric (km)",
-    "Yhdysvaltalainen (mailit)": "US customary (miles)", "Etäisyys": "Distance", "Säde (": "Radius (",
+    "Yhdysvaltalainen (mailit)": "US customary (miles)", "Säde (": "Radius (",
     "Lähennä": "Zoom in",
     "Loitonna": "Zoom out",
     "Koko maailma": "Whole world",
@@ -135,7 +128,6 @@
     "Brandmeisterin API-avain, APRS-passcode, check-in-taulukon avain ja muut salaisuudet. Ne poistetaan automaattisesti asetuksista ja lokista.": "the BrandMeister API key, APRS passcode, check-in sheet key and other secrets. They are removed automatically from the settings and the log.",
     "Ne poistetaan automaattisesti asetuksista ja lokista.": "They are removed automatically from the settings and the log.",
     "pyöristetään noin 100 km tarkkuuteen (lokaattori 4 merkkiä). Voit tarkistaa paketin ennen lähetystä lataamalla sen yllä olevasta linkistä.": "is rounded to about 100 km (4-character locator). You can check the package before sending by downloading it from the link above.",
-    "Peruuta": "Cancel",
     "tekijä": "by",
     "Sisältö: {f}": "Contents: {f}",
     "tiedostoa": "files",
@@ -156,13 +148,12 @@
       "Quit Monitor for Amateur Radio? Monitoring and alerts stop until you start the program again.",
     "Ohjelma on suljettu. Voit sulkea tämän välilehden.": "The program has been closed. You can close this tab.",
     "Sovellus ei vastaa – onko se suljettu? Yritetään uudelleen…": "The program is not responding – has it been closed? Retrying…",
-
     // ---- päivitykset ----
     "Asennettu versio: {v}": "Installed version: {v}",
     "Windows (asennettu)": "Windows (installed)", "Windows (ilman asennusta)": "Windows (portable)",
     "Ladataan päivitystä…": "Downloading update…", "Asennetaan…": "Installing…", "Käynnistetään uudelleen…": "Restarting…",
     "Uusi versio {v} on saatavilla.": "New version {v} is available.",
-    "Mitä uutta": "What's new", "Päivitä nyt": "Update now",
+    "Mitä uutta": "What's new", 
     "Uusi versio ladataan, sen tarkistussumma tarkistetaan ja ohjelma käynnistyy uudelleen. Tämä sivu yhdistää automaattisesti.":
       "The new version is downloaded, its checksum is verified and the program restarts. This page reconnects automatically.",
     "Päivitä komennolla:": "Update with:",
@@ -179,7 +170,6 @@
     "Päivityksiä ei ole vielä tarkistettu.": "Updates have not been checked yet.",
     "Päivitetään – ohjelma käynnistyy uudelleen…": "Updating – the program is restarting…",
     "Päivitetäänkö ohjelma versioon {v}? Ohjelma käynnistyy uudelleen.": "Update the program to version {v}? The program will restart.",
-
     // ---- syötteet ja viestit ----
     "Syötteet → DMR-tekstiviestit": "Feeds → DMR text messages",
     "Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. Brandmeister välittää ne DMR-tekstiviesteinä sille radiolle, jonka DMR-ID:hen kutsu ja SSID on liitetty":
@@ -199,7 +189,7 @@
     "Näytä APRS-viestit kutsuille": "Show APRS messages for callsigns",
     "oma kutsu (oletus)": "your callsign (default)",
     "Kaikki SSID:t, esim. OH2ABC = OH2ABC-1 … -15": "All SSIDs, e.g. OH2ABC = OH2ABC-1 … -15",
-    "Viestejä / otsikko": "Messages / headline",
+
     "67 merkkiä / viesti": "67 characters / message",
     "Tarkistusväli (min)": "Check interval (min)",
     "Muunna ääkköset (ä→a)": "Convert accented letters (ä→a)",
@@ -216,8 +206,8 @@
     "Lähetä testiviesti": "Send test message",
     "Komennot radiosta": "Commands from your radio",
     "APRS-IS-yhteys ja vastaanottajat": "APRS-IS connection and recipients",
-    "Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. APRS-IS-tunnus, vastaanottajat ja viestiasetukset ovat":
-      "New headlines are sent to your radio as APRS messages. The APRS-IS login, recipients and message settings are on the",
+    "Uusien uutisten otsikot lähetetään radioosi APRS-viesteinä. APRS-IS-tunnus, vastaanottajat ja viestien muotoilu (ääkköset, viestien määrä) ovat":
+      "New headlines are sent to your radio as APRS messages. The APRS-IS login, recipients and message formatting (accented letters, number of messages) are on the",
     "APRS-välilehdellä": "APRS tab", "APRS-välilehden asetuksissa": "APRS tab settings",
     "Lähetä radiosta tekstiviesti Brandmeisterin APRS-palvelunumeroon": "Send a text message from your radio to BrandMeister's APRS service number",
     "(yksityisviesti) muodossa": "(private message) in the form",
@@ -233,38 +223,36 @@
     "Lisäksi sallitut kutsut": "Additional allowed callsigns",
     "Oletuksena komentoja saa lähettää oma kutsusi ja vastaanottajien kutsut (kaikki SSID:t).":
       "By default, commands are accepted from your own callsign and the recipients' callsigns (all SSIDs).",
-    "Syötteiden tila": "Feed status", "Syöte": "Feed", "Tarkistettu": "Checked", "Uusin otsikko": "Latest headline", "Tila": "Status",
+    "Syötteiden tila": "Feed status", "Syöte": "Feed", "Tarkistettu": "Checked", "Uusin otsikko": "Latest headline", 
     "Viestiloki": "Message log", "Aika": "Time", "Suunta": "Direction", "Kenelle / keneltä": "To / from", "Teksti": "Text",
     "Ei viestejä vielä.": "No messages yet.",
     "Lähetys ei ole päällä.": "Sending is not enabled.",
     "APRS-IS yhdistetty": "APRS-IS connected", ", tunnus vahvistettu": ", login verified",
     "APRS-IS ei yhteyttä": "APRS-IS not connected",
-    "pois päältä": "disabled", "odottaa": "waiting", "OK · {n} uutista": "OK · {n} items",
+    "pois päältä": "disabled", "OK · {n} uutista": "OK · {n} items",
     "↓ saapunut": "↓ incoming", "↑ lähtevä": "↑ outgoing",
-    "Esikatsele": "Preview", "Poista": "Remove", "Etuliite": "Prefix", "Komento": "Command",
+    "Esikatsele": "Preview", "Etuliite": "Prefix", "Komento": "Command",
     "Radiokomento, esim. SAA": "Radio command, e.g. WX",
-    "Virhe: {e}": "Error: {e}",
     // viestien tilat (palvelimelta)
     "kuitattu": "acknowledged", "vastaanotettu": "received", "lähetetty (ei kuittausta)": "sent (no ack)",
-    "lähetetty": "sent", "jonossa": "queued", "uudelleen": "retrying", "hylätty": "rejected",
+    "lähetetty": "sent", "uudelleen": "retrying", 
     "ei kuittauspyyntöä": "no ack requested", "lähetys pois päältä": "sending disabled",
     "ei vastaanottajia": "no recipients", "ei kuittausta": "no ack", "virhe: passcode": "error: passcode",
-
     // ---- seuranta ----
     "Puheryhmät": "Talkgroups", "Kuuntele Hoselinella": "Listen on Hoseline",
-    "Nimi": "Name", "Viimeksi": "Last", "Puhuja": "Talker", "Kesto": "Duration", "Kautta": "Via",
+    "Puhuja": "Talker", "Kesto": "Duration", "Kautta": "Via",
     "Avauksia": "Keyups", "Yht. aika": "Total time",
     "Ei liikennettä vielä seuratuissa puheryhmissä.": "No traffic in the monitored talkgroups yet.",
     "Viimeisimmät puhelut": "Latest calls", "Kaikki seuratut": "All monitored",
     "Näytettävien puheluiden määrä": "Number of calls to show",
     "10 viimeisintä": "Last 10", "25 viimeisintä": "Last 25", "50 viimeisintä": "Last 50", "100 viimeisintä": "Last 100", "150 viimeisintä": "Last 150",
     "Kutsu": "Callsign", "Ei puheluita.": "No calls.",
-    "LÄHETYS": "ON AIR", "ei liikennettä": "no traffic",
+    "ei liikennettä": "no traffic",
     "Lopeta kuuntelu": "Stop listening", "Kuuntele TG {tg}": "Listen to TG {tg}", "Lopeta TG {tg}": "Stop TG {tg}",
     "Näytä kaikki puhelut": "Show all calls",
     "Alle {n} s puhelut ohitetaan asetusten mukaan ({k} ohitettu).": "Calls shorter than {n} s are skipped per your settings ({k} skipped).",
     "Yhdistetty · {n} tapahtumaa": "Connected · {n} events", " · viimeisin {ago}": " · latest {ago}",
-    "Ei yhteyttä": "Not connected", "Seurataan: {list}": "Monitoring: {list}",
+    "Seurataan: {list}": "Monitoring: {list}",
     "{n} s sitten": "{n} s ago", "{n} min sitten": "{n} min ago", "{h} h {m} min sitten": "{h} h {m} min ago", "{n} pv sitten": "{n} d ago",
     "APRS-viestit": "APRS messages", "Keneltä → kenelle": "From → to", "Viesti": "Message",
     "Lähettäjä": "Sender", "Vastaanottaja": "Recipient",
@@ -277,10 +265,8 @@
     "APRS-IS-yhteys ei ole auki": "The APRS-IS connection is not open",
     "Ei viestejä vielä. Näytetään kutsujen {c} kaikki saapuvat ja lähtevät APRS-viestit.":
       "No messages yet. All incoming and outgoing APRS messages for {c} are shown here.",
-
     // ---- check-in ----
-    "Check-in": "Check-in",
-    "Check-in-netti": "Check-in net", "Netti": "Net", "Kierros": "Round", "Päivämäärä": "Date", "Operaattori": "Operator",
+    "Check-in-netti": "Check-in net", "Kierros": "Round", "Päivämäärä": "Date", "Operaattori": "Operator",
     "Aloita kierros": "Start round", "Päätä kierros": "End round",
     "Suomi": "Finland", "Viro": "Estonia", "Worldwide": "Worldwide", "Muu puheryhmä…": "Other talkgroup…",
     "kirjattu": "logged", "odottaa": "waiting", "kuultu verkossa": "heard on network", "eri toistinta": "repeaters",
@@ -289,7 +275,7 @@
     "Hae kutsu": "Find callsign", "esim. KXA": "e.g. KXA",
     "Enter kirjaa, kun haku osuu yhteen kirjaamattomaan asemaan. Esc tyhjentää.":
       "Enter logs the station when the search matches exactly one unlogged station. Esc clears.",
-    "Tila": "Status", "Kutsu / nimi": "Callsign / name", "RPT / hotspot": "RPT / hotspot", "Kunta": "Town", "Kirjaus": "Log",
+    "Kutsu / nimi": "Callsign / name", "RPT / hotspot": "RPT / hotspot", "Kunta": "Town", "Kirjaus": "Log",
     "Aloita kierros, niin puheryhmässä avaavat asemat tulevat tähän.": "Start a round and stations keying up in the talkgroup appear here.",
     "Odotetaan ensimmäistä asemaa puheryhmässä {tg}…": "Waiting for the first station in talkgroup {tg}…",
     "Lista ei vieritä itsestään. Kutsua klikkaamalla aukeaa aseman kortti.": "The list never scrolls by itself. Click a callsign to open the station card.",
@@ -315,15 +301,14 @@
     "{n} riviä kopioitu – liitä taulukkoon": "{n} rows copied – paste them into the sheet",
     "Kopiointi ei onnistunut": "Copying failed",
     "BM-laite": "BM device", "Oper": "Oper", "Lisätietoja": "Additional info",
-
-    "Google-taulukko": "Google Sheet", "Päivitä nyt": "Refresh now", "Irrota taulukko": "Disconnect sheet",
+    "Google-taulukko": "Google Sheet", "Päivitä nyt": "Update now", "Päivitä tiedot": "Refresh now", "Irrota taulukko": "Disconnect sheet",
     "Skriptin osoite": "Script address", "Parituskoodi": "Pairing code", "Yhdistä": "Connect",
     "Kun taulukko on yhdistetty, kirjaukset menevät taulukkoon heti ja lokinumeron antaa taulukko, joten useampi ylläpitäjä voi kirjata samaan aikaan. Taulukon omistaja antaa skriptin osoitteen ja kertakäyttöisen parituskoodin (taulukon valikko Check-in → Lisää ylläpitäjä). Ilman taulukkoa lokin voi kopioida leikepöydän kautta.":
       "When the sheet is connected, entries go to the sheet immediately and the sheet assigns the log numbers, so several operators can log at the same time. The sheet owner gives you the script address and a one-time pairing code (sheet menu Check-in → Add operator). Without a sheet, copy the log via the clipboard.",
     "Yhdistetään…": "Connecting…",
     "Irrotetaanko taulukko? Avain poistetaan tältä koneelta, ja yhdistäminen vaatii uuden parituskoodin.":
       "Disconnect the sheet? The key is removed from this computer and reconnecting needs a new pairing code.",
-    "virhe": "error", "yhdistetty": "connected", "ei käytössä – loki kopioidaan leikepöydän kautta": "not in use – copy the log via the clipboard",
+    "yhdistetty": "connected", "ei käytössä – loki kopioidaan leikepöydän kautta": "not in use – copy the log via the clipboard",
     "Ylläpitäjä {c}": "Operator {c}", "välilehti {s}": "tab {s}", "päivitetty {ago}": "updated {ago}",
     "avain salasanavarastossa": "key in the system keychain", "avain asetustiedostossa": "key in the settings file",
     // ---- kuuntelu ----
@@ -332,7 +317,6 @@
     "Ääni alkaa, kun joku puhuu valitussa ryhmässä.": "Audio starts when someone talks in the selected group.",
     "yhteys katkesi, yhdistetään uudelleen…": "connection lost, reconnecting…", "yhteysvirhe": "connection error",
     "Signaalin taso": "Signal level", "Äänenvoimakkuus": "Volume", "Lopeta": "Stop", "Sulje": "Close",
-
     // ---- kutsukortti ----
     "haetaan…": "loading…", "virhe": "error",
     "Poista kaverilistalta": "Remove from friends", "Lisää kaverilistaan": "Add to friends",
@@ -342,19 +326,17 @@
     "Tyyppi": "Type", "Sijainti": "Location", "Taajuus": "Frequency", "Nähty": "Seen", "Seuraa": "Watch",
     "Ei laitteita tällä kutsulla.": "No devices for this callsign.",
     "Kuultu verkossa (ohjelman käynnistyksen jälkeen)": "Heard on the network (since the program started)",
-    "Missä": "Where", "NYT": "NOW", "Ei kuultu vielä.": "Not heard yet.",
+    "NYT": "NOW", "Ei kuultu vielä.": "Not heard yet.",
     "Puhelut seuratuissa ryhmissä": "Calls in monitored groups", "Seurannassa ✓": "Watching ✓",
-
     // ---- kaverit ----
     "Kaverilista": "Friends list", "Seurattavat kutsut tai DMR-ID:t": "Callsigns or DMR IDs to watch",
     "Hälytä uudestaan, kun asema ollut hiljaa (min)": "Alert again when the station has been quiet for (min)",
     "0 = hälytä jokaisesta avauksesta": "0 = alert on every keyup",
-    "Vain seuratut puheryhmät": "Only monitored talkgroups",
     "Työpöytäilmoitus": "Desktop notification", "Äänimerkki": "Sound", "Tekstiviesti radioon": "Text message to radio",
     "Testaa hälytys": "Test alert", "Salli työpöytäilmoitukset": "Allow desktop notifications",
     "Kaverien tila": "Friends' status", "Lisää kutsuja kaverilistaan.": "Add callsigns to the friends list.",
     "Hälytykset": "Alerts", "Kuka / mitä": "Who / what", "Ei hälytyksiä.": "No alerts.",
-    "kuultu": "heard", "ei kuultu": "not heard",
+    "kuultu": "heard", 
     "Palvelu": "Service", "Kaveri": "Friend", "Laite pois": "Device offline", "Laite palasi": "Device back", "Testi": "Test",
     "Laite {call} pois verkosta": "Device {call} went offline", "Laite {call} palasi verkkoon": "Device {call} is back online",
     "{who} aktiivinen": "{who} active",
@@ -428,7 +410,7 @@
     "Radiot ja TNC:t": "Radios and TNCs", "+ Lisää radio": "+ Add radio", "Radion tyyppi": "Radio type",
     "KISS TCP (Graywolf, Direwolf)": "KISS TCP (Graywolf, Direwolf)", "KISS TNC sarjaportissa (USB, Bluetooth)": "KISS TNC on a serial port (USB, Bluetooth)",
     "AGWPE (Direwolf, soundmodem)": "AGWPE (Direwolf, soundmodem)", "Simuloitu radio (testaukseen)": "Simulated radio (for testing)",
-    "Palvelin": "Server", "Portti": "Port", "Sarjaportti": "Serial port", "Nopeus": "Speed", "Päivitä porttilista": "Refresh port list",
+    "Portti": "Port", "Sarjaportti": "Serial port", "Nopeus": "Speed", "Päivitä porttilista": "Refresh port list",
     "esim. Graywolf": "e.g. Graywolf", "Lähetys sallittu": "Transmit allowed", "Poista radio": "Remove radio",
     "Ei radioita. Lisää radio alta.": "No radios. Add one below.", "Tallentamaton": "Not saved",
     "Vastaanotto pois päältä": "Receiving is off", "Ei käytössä": "Not in use", "Yhdistetty": "Connected",
@@ -471,15 +453,14 @@
     "käsin lisättävät; tunnistetut aina DMR": "for manual entries; detected ones are always DMR",
     "Toimintojen asetukset ovat kunkin välilehden alimmassa Asetukset-osiossa (BrandMeister, APRS, Syötteet, Lokit). Tällä välilehdellä ovat ohjelman yleiset asetukset, päivitykset ja tiedot.": "Feature settings are in the Settings section at the bottom of each tab (BrandMeister, APRS, Feeds, Logs). This tab has the general app settings, updates and information.",
     "Lokit": "Logs",
-    "Loki": "Log",
+    "Loki": "Logbook",
     "Yhteydet (QSO)": "Contacts (QSO)",
     "Aika (UTC)": "Time (UTC)",
     "Missä": "Where",
     "Vuoroja": "Overs",
     "Lisää lokiin": "Add to log",
     "Ohita": "Skip",
-    "käynnissä": "in progress",
-    "päättynyt": "ended",
+    
     "yksityispuhelu": "private call",
     "Aseta oma kutsu Lokit-välilehden asetuksissa, niin ohjelma tunnistaa yhteytesi puhelulistasta.": "Set your callsign in the Logs tab settings so the program can recognise your contacts in the call list.", "Oma kutsu, tunnistus ja QRZ-lähetys:": "Own callsign, detection and QRZ upload:", "Lokit → Asetukset": "Logs → Settings",
     "Ei yhteysehdokkaita. Kun sinä ja toinen asema vuorottelette samassa puheryhmässä, yhteys näkyy tässä.": "No contact candidates. When you and another station take turns on the same talkgroup, the contact shows up here.",
@@ -494,7 +475,6 @@
     "QRZ": "QRZ",
     "Lokissa ei ole vielä yhteyksiä.": "No contacts in the log yet.",
     "Ei hakua vastaavia yhteyksiä.": "No matching contacts.",
-    "Näytä kaikki": "Show all",
     "Muokkaa": "Edit",
     "Oma kutsu": "Own callsign",
     "tyhjä = BrandMeister-asetusten oma kutsu": "empty = own callsign from the BrandMeister settings", "Oma asema ja tunnistus": "Own station and detection",
@@ -519,7 +499,6 @@
     "Lokaattori": "Locator",
     "Tila: DIGITALVOICE / DMR.": "Mode: DIGITALVOICE / DMR.",
     "myös QRZ:sta": "also from QRZ",
-    "Poista": "Delete",
     "Vahvista poisto": "Confirm delete",
     "Peruuta": "Cancel",
     "Anna alkuaika": "Enter the start time",
@@ -569,7 +548,6 @@
     "viimeisin paketti {a}": "last packet {a}",
     "Ei yhteyttä": "Not connected",
     "{n} pakettia": "{n} packets",
-    "Eri asemia": "Different stations",
     "Digin kautta": "Via digipeater",
     "Sijainnillisia": "With position",
     "Vain {c} kautta": "Only via {c}",
@@ -606,7 +584,6 @@
     "+ Lisää kalenteri": "+ Add calendar",
     "Esim. kerhon Google-kalenterin julkinen iCal-osoite. Puheryhmä luetaan tapahtuman tekstistä (esim. \"TG 244\" tai \"(31424)\").": "For example a club Google Calendar public iCal address. The talkgroup is read from the event text (e.g. \"TG 244\" or \"(31424)\").",
     "Omat netit": "My nets",
-    "Päivä": "Day",
     "Klo": "Time",
     "Min": "Min",
     "+ Lisää netti": "+ Add net",
@@ -647,7 +624,6 @@
     "Työpöytäilmoitukset estetty selaimen asetuksissa.": "Desktop notifications are blocked in the browser settings.",
     "Työpöytäilmoituksia ei ole vielä sallittu.": "Desktop notifications have not been allowed yet.",
     "Testihälytys": "Test alert",
-
     // ---- laitteet ----
     "Seurattavat toistimet ja hotspotit": "Watched repeaters and hotspots",
     "Lisää laitteen ID": "Add device ID", "244207 tai 244203901": "244207 or 244203901",
@@ -667,7 +643,6 @@
     "Anna puheryhmä": "Enter a talkgroup", "Tehty": "Done",
     "Nollataanko laitteen yhteys Brandmeisteriin? Laite yhdistää uudelleen hetken kuluttua.":
       "Reset the device's connection to BrandMeister? The device reconnects shortly.",
-
     // ---- tilastot ----
     "Aktiivisuus seuratuissa puheryhmissä": "Activity in monitored talkgroups",
     "7 pv": "7 d", "14 pv": "14 d", "Puheluita aikajaksoittain": "Calls per period",
@@ -683,7 +658,6 @@
     "{n} puhelua · {d}": "{n} calls · {d}",
     "Anna puheryhmän numero": "Enter a talkgroup number", "Haetaan Brandmeisteriltä…": "Fetching from BrandMeister…",
     "TG {tg} {name}: {u} asemaa, {c} avausta": "TG {tg} {name}: {u} stations, {c} keyups", " (vanhin {t})": " (oldest {t})",
-
     // ---- palvelut ----
     "Oma sijainti": "Your location", "Koordinaatit tai lokaattori": "Coordinates or locator",
     "60.17, 24.94 tai KP20LE": "60.17, 24.94 or KP20LE",
@@ -739,6 +713,43 @@
     "Ilmoita myös päivitykset": "Report updates too", "Tarkka paikka hälytykseen": "Exact place in alert",
     "{n} voimassa olevaa tiedotetta valituilla ehdoilla · klikkaa nähdäksesi tarkemmin": "{n} active bulletins matching your conditions · click for details",
     "Ei tiedotteita valituilla ehdoilla.": "No bulletins matching your conditions.",
+    // 0.17
+    "Koskee kaikkia ohjelman lähettämiä APRS-viestejä: syötteet, hälytykset, komentojen vastaukset ja itse kirjoitetut viestit.":
+      "Applies to all APRS messages the program sends: feeds, alerts, command replies and messages you write.",
+    "Viestejä enintään / ilmoitus": "Max. messages / notification",
+    "(alkaa": "(starts with",
+    "). Avain tallennetaan käyttöjärjestelmän salasanavarastoon; salasanaa ei tarvita.": "). The key is stored in the operating system's password store; no password is needed.",
+    "). HamQTH toivoo, että rekisteröidyt ja pidät profiilisi ajan tasalla. API-avaimen luot HamQTH:ssa kohdassa": "). HamQTH asks you to register and keep your profile up to date. Create the API key on HamQTH under",
+    "-lokikirjaasi; myös muokkaukset ja poistot päivittyvät. Ohjelma käyttää lokin lähetykseen HamQTH.comin ilmaista rajapintaa (": " logbook; edits and deletions are updated too. The program uses the free HamQTH.com API for log uploads (",
+    "BrandMeisterin, toistimien ja EchoLinkin kautta pidetyt yhteydet (ADIF PROP_MODE INTERNET, RPT tai ECH) eivät kelpaa useimpiin diplomeihin. Ohitetun yhteyden voi silti lähettää lokilistan ↻-painikkeella.": "Contacts made via BrandMeister, repeaters or EchoLink (ADIF PROP_MODE INTERNET, RPT or ECH) do not count for most awards. You can still send a skipped contact with the ↻ button in the log list.",
+    "Etenemistapa": "Propagation",
+    "Huom:": "Note:",
+    "Internet (BrandMeister, hotspot)": "Internet (BrandMeister, hotspot)",
+    "Internetin kautta (BrandMeister, toistin, EchoLink)": "Via internet (BrandMeister, repeater, EchoLink)",
+    "Internetin kautta (PROP_MODE {p})": "Via internet (PROP_MODE {p})",
+    "Kaikki etenemistavat": "All propagation modes",
+    "Lokiin lisätyt yhteydet lähetetään": "Logged contacts are sent to your",
+    "Lokiin lisätyt yhteydet lähetetään eQSL.cc:hen, joka lähettää niistä sähköiset QSL-kortit. Tarvitset eQSL.cc-tilin (ilmainen). Salasana tallennetaan käyttöjärjestelmän salasanavarastoon.": "Logged contacts are sent to eQSL.cc, which sends electronic QSL cards for them. You need an eQSL.cc account (free). The password is stored in the operating system's password store.",
+    "Lähetä lokiin lisätyt yhteydet HamQTH:hon": "Send logged contacts to HamQTH",
+    "Lähetä lokiin lisätyt yhteydet eQSL:ään": "Send logged contacts to eQSL",
+    "QTH-lempinimi (valinnainen)": "QTH nickname (optional)",
+    "Salasana": "Password",
+    "Salasana on yli 14 merkkiä – eQSL:n rajapinta ei hyväksy sitä.": "The password is longer than 14 characters – the eQSL interface does not accept it.",
+    "Suora (ei merkintää)": "Direct (not marked)",
+    "Suorat yhteydet": "Direct contacts",
+    "Toistin": "Repeater",
+    "eQSL-käyttäjätunnus": "eQSL username",
+    "eQSL:n rajapinta ei hyväksy yli 14 merkin salasanaa. Jos salasanasi on pidempi, vaihda eQSL.cc:ssä enintään 14 merkin salasana. Muokkaukset eivät päivity eQSL:ään jälkikäteen.": "the eQSL interface does not accept passwords longer than 14 characters. If yours is longer, change it on eQSL.cc to one of at most 14 characters. Later edits are not updated to eQSL.",
+    "enintään 14 merkkiä": "at most 14 characters",
+    "jos eQSL-tililläsi on useita QTH:ita": "if your eQSL account has several QTHs",
+    "ohitettu (internet)": "skipped (internet)",
+    "poista myös palvelusta: {s}": "also delete from: {s}",
+    "tyhjä = oma kutsu": "empty = your callsign",
+    "Älä lähetä internetin kautta pidettyjä yhteyksiä": "Don't send contacts made via the internet",
+    "tunnus tai salasana ei kelpaa": "username or password not accepted",
+    "Salasana tallennettu.": "Password saved.",
+    "Ei salasanaa.": "No password.",
+    "liian pitkä: eQSL hyväksyy enintään 14 merkkiä": "too long: eQSL accepts at most 14 characters",
   };
 
   const ATTRS = ["placeholder", "title", "aria-label"];
@@ -781,7 +792,7 @@
     if (vars) out = out.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
     return out;
   };
-  const LOCALES = {fi: "fi-FI", en: "en-GB", de: "de-DE"};
+  const LOCALES = {fi: "fi-FI", en: "en-GB", de: "de-DE", es: "es-ES"};
   window.LOC = () => LOCALES[window.LANG] || "en-GB";
   window.dec = s => (window.LANG === "en" ? String(s) : String(s).replace(".", ","));   // desimaalipilkku muilla kuin englannilla
 

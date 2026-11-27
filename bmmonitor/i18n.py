@@ -1,7 +1,7 @@
-"""Ohjelman omien tekstien kieli (suomi/englanti/saksa).
+"""Ohjelman omien tekstien kieli (suomi/englanti/saksa/espanja).
 
 Avaimina ovat suomenkieliset tekstit, joten suomi toimii ilman sanakirjaa. Englanti on tämän
-tiedoston EN-sanakirjassa; muut kielet omissa tiedostoissaan (i18n_de.py), avaimena
+tiedoston EN-sanakirjassa; muut kielet omissa tiedostoissaan (i18n_de.py, i18n_es.py), avaimena
 englanninkielinen teksti. Puuttuva käännös → englanti.
 Käyttö:  tr("Virheellinen kutsu: {x}", x=call)
 
@@ -12,8 +12,9 @@ tiedotteet) ovat lähteen kielellä.
 from __future__ import annotations
 
 from .i18n_de import DE
+from .i18n_es import ES
 
-LANGS = ("fi", "en", "de")
+LANGS = ("fi", "en", "de", "es")
 _lang = "fi"
 
 
@@ -32,6 +33,8 @@ def tr(text: str, **kw) -> str:
         out = EN.get(text, text)
         if _lang == "de":
             out = DE.get(out, out)
+        elif _lang == "es":
+            out = ES.get(out, out)
     return out.format(**kw) if kw else out
 
 
@@ -69,6 +72,7 @@ BEARINGS = {
     "fi": ["pohjoisessa", "koillisessa", "idässä", "kaakossa", "etelässä", "lounaassa", "lännessä", "luoteessa"],
     "en": ["N", "NE", "E", "SE", "S", "SW", "W", "NW"],
     "de": ["N", "NO", "O", "SO", "S", "SW", "W", "NW"],
+    "es": ["N", "NE", "E", "SE", "S", "SO", "O", "NO"],
 }
 
 
@@ -279,9 +283,11 @@ EN: dict[str, str] = {
     "Ei yhteyttä Graywolfiin – viestiä ei voi lähettää radiolla": "No connection to Graywolf – the message cannot be sent on the radio",
     "Polussa voi olla enintään 8 osaa": "The path can have at most 8 parts",
     "Virheellinen polku: {x}": "Invalid path: {x}",
-    "Virheellinen kutsu: {x}": "Invalid callsign: {x}",
     "Virheellinen lokaattori: {x}": "Invalid locator: {x}",
     "Virheellinen aika": "Invalid time",
+    "oli jo eQSL:ssä": "was already in eQSL",
+    "oli jo HamQTH:ssa": "was already in HamQTH",
+    "Aseta HamQTH:n API-avain": "Set the HamQTH API key",
     "yksityispuhelu": "private call",
     "Ehdokasta ei löydy": "Candidate not found",
     "Aseta QRZ Logbookin API-avain": "Set the QRZ Logbook API key",

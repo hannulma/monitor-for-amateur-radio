@@ -33,7 +33,7 @@ from .checkin import CheckIn
 from .sheetsync import SheetError
 from . import APP_ID, APP_NAME, __date__, __version__, desktop, feedback, secret_store
 from .nets import DEFAULT_NETS, NetCalendar, normalize_nets
-from .qso import DEFAULT_LOG, QsoLog, adif_file, csv_file, normalize_log
+from .qso import DEFAULT_LOG, SECRETS as QSO_SECRETS, QsoLog, adif_file, csv_file, normalize_log
 from .aprsrx import DEFAULT_APRSRX, DEFAULT_TILES, DEFAULT_TILES_ATTR, AprsRx, normalize_aprsrx
 from .messaging import (DEFAULT_MESSAGING, MessagingHub, friendly_error, http_session, normalize_messaging, split_message,
                         validate_passcode, ws_options)
@@ -266,7 +266,8 @@ class Monitor:
         """Asetukset sivulle: salaisuudet vain peitettyinä."""
         return {**self.cfg, "bm_api_key": "********" if self.bm_key else "",
                 "messaging": {**self.cfg["messaging"], "passcode": "********" if self.hub.passcode_secret else ""},
-                "log": {**self.cfg["log"], "qrz_key": "********" if self.qso.qrz_key else ""}}
+                "log": {**self.cfg["log"], **{f: "********" if self.qso.secrets.get(svc) else ""
+                                               for svc, (f, _) in QSO_SECRETS.items()}}}
 
     def save_config(self):
         self.cfg_path.write_text(json.dumps(self.cfg, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -361,10 +362,11 @@ class Monitor:
             set_units(new["units"])
         if "log" in new:
             lg = dict(new["log"] or {})
-            key = lg.pop("qrz_key", None)
+            keys = {svc: lg.pop(f, None) for svc, (f, _) in QSO_SECRETS.items()}
             self.cfg["log"] = normalize_log(lg, self.cfg["log"])
-            if key is not None and key != "********":
-                self.qso.set_qrz_key(str(key))
+            for svc, key in keys.items():
+                if key is not None and key != "********":
+                    self.qso.set_secret(svc, str(key))
             self.qso._changed()
         if "nets" in new:
             self.cfg["nets"] = normalize_nets(new["nets"] or {}, self.cfg["nets"])
@@ -1261,7 +1263,8 @@ def make_app(mon: Monitor) -> web.Application:
             limit = max(0, min(5000, int(q.get("limit", 200))))
         except ValueError:
             limit = 200
-        return web.json_response({"ok": True, "rows": mon.qso.list(limit, q.get("q", "").strip(), q.get("mode", "").strip()),
+        return web.json_response({"ok": True, "rows": mon.qso.list(limit, q.get("q", "").strip(), q.get("mode", "").strip(),
+                                                                   q.get("prop", "").strip()),
                                   "count": mon.qso.count()})
 
     async def log_save(request):
@@ -1311,6 +1314,21 @@ def make_app(mon: Monitor) -> web.Application:
         body = await request.json() if request.can_read_body else {}
         mon.qso.retry_qrz(int(body["id"]) if body.get("id") else None)
         return web.json_response({"ok": True})
+
+    async def log_svc_retry(request):
+        body = await request.json() if request.can_read_body else {}
+        try:
+            mon.qso.retry(request.match_info["svc"], int(body["id"]) if body.get("id") else None)
+        except ValueError:
+            return web.json_response({"ok": False, "error": tr("Tuntematon toiminto")})
+        return web.json_response({"ok": True})
+
+    async def log_hamqth_test(request):
+        try:
+            st = await mon.qso.hamqth_test()
+            return web.json_response({"ok": bool(st.get("ok")), "state": st, "error": st.get("error")})
+        except Exception as e:  # noqa: BLE001
+            return web.json_response({"ok": False, "error": friendly_error(e)})
 
     async def aprsrx_stations(request):
         q = request.query
@@ -1403,6 +1421,8 @@ def make_app(mon: Monitor) -> web.Application:
     app.router.add_post("/api/log/dismiss", log_dismiss)
     app.router.add_post("/api/log/qrz/test", log_qrz_test)
     app.router.add_post("/api/log/qrz/retry", log_qrz_retry)
+    app.router.add_post("/api/log/hamqth/test", log_hamqth_test)
+    app.router.add_post("/api/log/{svc:(eqsl|hamqth)}/retry", log_svc_retry)
     app.router.add_get("/tiles/{z}/{x}/{y}.png", tile)
     app.router.add_get("/api/station", station)
     app.router.add_get("/api/stats", stats)

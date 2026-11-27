@@ -5,6 +5,9 @@ Fehlt ein Eintrag, wird Englisch verwendet.
 """
 
 DE: dict[str, str] = {
+    "Set the HamQTH API key": "Lege den HamQTH-API-Schlüssel fest",
+    "was already in HamQTH": "war bereits in HamQTH",
+    "was already in eQSL": "war bereits in eQSL",
     " (+{n} stations)": " (+{n} Stationen)",
     " (valid until {t} UTC)": " (gültig bis {t} UTC)",
     ", cloud cover {c}/8": ", Bewölkung {c}/8",

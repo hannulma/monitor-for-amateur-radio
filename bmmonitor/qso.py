@@ -3,13 +3,16 @@
 Tunnistus: kun oma kutsu ja toinen asema vuorottelevat samassa puheryhmässä (oma–toinen–oma tai
 toinen–oma–toinen) ja vuorojen väli on enintään QSO_GAP sekuntia, syntyy yhteysehdokas. Ehdokas päättyy,
 kun QSO_QUIET sekuntia on hiljaista. Yksityispuhelu omaan kutsuun tai omasta kutsusta on aina ehdokas.
-Käyttäjä lisää ehdokkaan lokiin (tai ohittaa sen); lokiin lisätty yhteys lähetetään valittuihin palveluihin.
+Käyttäjä lisää ehdokkaan lokiin (tai ohittaa sen); lokiin lisätty yhteys lähetetään valittuihin palveluihin
+(QRZ Logbook, eQSL, HamQTH). BrandMeisterin kautta pidetyt yhteydet ovat internet-avusteisia (ADIF PROP_MODE=INTERNET);
+kunkin palvelun kohdalla voi valita, ettei niitä lähetetä.
 """
 from __future__ import annotations
 
 import asyncio
 import csv
 import io
+import json
 import logging
 import re
 import sqlite3
@@ -29,6 +32,16 @@ TURN_KEEP = 1800       # s: puheryhmän vuorot muistissa
 CAND_KEEP = 24 * 3600  # s: päättyneet ehdokkaat näkyvät vuorokauden
 QRZ_URL = "https://logbook.qrz.com/api"
 QRZ_RETRY = 300        # s: verkkovirheen jälkeen uusi yritys
+EQSL_URL = "https://www.eqsl.cc/qslcard/ImportADIF.cfm"
+HAMQTH_API = "https://www.hamqth.com/api/v2"
+EQSL_PASS_MAX = 14     # eQSL:n rajapinta ei hyväksy pidempää salasanaa (käyttäjien raportit)
+SERVICES = ("qrz", "eqsl", "hamqth")
+SECRETS = {"qrz": ("qrz_key", "qrz-logbook-key"), "eqsl": ("eqsl_pass", "eqsl-password"),
+           "hamqth": ("hamqth_key", "hamqth-api-key")}
+# ADIF PROP_MODE: etenemistapa. Internet-avusteiset (BrandMeister, EchoLink, toistimet) eivät kelpaa useimpiin diplomeihin.
+PROP_MODES = ("", "INTERNET", "RPT", "SAT", "ECH")
+ASSISTED = {"INTERNET", "RPT", "ECH"}
+NET_MODES = {"DMR", "DSTAR", "C4FM", "M17"}          # näillä tiloilla oletuksena INTERNET
 
 DEFAULT_LOG = {
     "my_call": "",          # tyhjä = Laitteet-osion oma kutsu tai APRS-IS-tunnus
@@ -38,8 +51,17 @@ DEFAULT_LOG = {
     "detect": True,         # tunnista yhteysehdokkaat BrandMeisterin puheluista
     "mode": "DMR",          # käsin lisättävien yhteyksien oletustila
     "qrz": False,           # lähetä lokiin lisätyt QRZ Logbookiin
+    "qrz_inet": True,       # lähetä myös internet-avusteiset (PROP_MODE INTERNET/RPT/ECH)
     # "qrz_key": salasanavarastossa (qrz-logbook-key)
+    "eqsl": False, "eqsl_user": "", "eqsl_qth": "", "eqsl_inet": True,
+    # "eqsl_pass": salasanavarastossa (eqsl-password)
+    "hamqth": False, "hamqth_inet": True,
+    # "hamqth_key": salasanavarastossa (hamqth-api-key)
 }
+
+
+def default_prop(label: str) -> str:
+    return "INTERNET" if label in NET_MODES else ""
 
 # Tila käyttöliittymän nimellä → ADIF MODE / SUBMODE (ADIF 3.1). Pikapainikkeet ensin.
 MODES = {
@@ -132,6 +154,7 @@ def qso_adif(q: dict) -> str:
         _adif_field("COMMENT", q.get("comment")),
         _adif_field("STATION_CALLSIGN", q.get("my_call")),
         _adif_field("MY_GRIDSQUARE", (q.get("my_grid") or "").upper()),
+        _adif_field("PROP_MODE", q.get("prop_mode")),
     ]
     return "".join(parts) + "<eor>"
 
@@ -147,14 +170,15 @@ def adif_file(rows: list[dict]) -> str:
 def csv_file(rows: list[dict]) -> str:
     out = io.StringIO()
     w = csv.writer(out, delimiter=";")
-    w.writerow(["date_utc", "time_on", "time_off", "call", "name", "band", "freq", "mode", "rst_sent", "rst_rcvd",
-                "qth", "grid", "tg", "via", "comment", "qrz"])
+    w.writerow(["date_utc", "time_on", "time_off", "call", "name", "band", "freq", "mode", "prop_mode", "rst_sent",
+                "rst_rcvd", "qth", "grid", "tg", "via", "comment", "qrz", "eqsl", "hamqth"])
     for r in rows:
         w.writerow([_utc(r["start"], "%Y-%m-%d"), _utc(r["start"], "%H:%M"), _utc(r["end"], "%H:%M") if r.get("end") else "",
                     r["call"], r.get("name") or "", r.get("band") or "", r.get("freq") or "",
-                    mode_label(r.get("mode"), r.get("submode")) or "DMR",
+                    mode_label(r.get("mode"), r.get("submode")) or "DMR", r.get("prop_mode") or "",
                     r.get("rst_sent") or "", r.get("rst_rcvd") or "", r.get("qth") or "", r.get("grid") or "",
-                    r.get("tg") or "", r.get("via") or "", r.get("comment") or "", r.get("qrz_status") or ""])
+                    r.get("tg") or "", r.get("via") or "", r.get("comment") or "", r.get("qrz_status") or "",
+                    r.get("eqsl_status") or "", r.get("hamqth_status") or ""])
     return out.getvalue()
 
 
@@ -181,9 +205,16 @@ def normalize_log(new: dict, old: dict) -> dict:
         if m not in MODES:
             raise ValueError(tr("Virheellinen arvo: {x}", x=m))
         out["mode"] = m
-    for k in ("detect", "qrz"):
+    for k in ("detect", "qrz", "eqsl", "hamqth", "qrz_inet", "eqsl_inet", "hamqth_inet"):
         if k in new:
             out[k] = bool(new[k])
+    if "eqsl_user" in new:
+        u = str(new["eqsl_user"] or "").strip().upper()
+        if u and not re.match(r"^[A-Z0-9/]{3,20}$", u):
+            raise ValueError(tr("Virheellinen kutsu: {x}", x=u))
+        out["eqsl_user"] = u
+    if "eqsl_qth" in new:
+        out["eqsl_qth"] = str(new["eqsl_qth"] or "").strip()[:40]
     return out
 
 
@@ -305,7 +336,7 @@ class QsoLog:
     """Paikallinen loki (SQLite) ja synkronointi palveluihin (QRZ Logbook)."""
 
     FIELDS = ("call", "name", "start", "end", "band", "freq", "freq_rx", "mode", "submode", "rst_sent", "rst_rcvd",
-              "qth", "grid", "comment", "tg", "via", "my_call", "my_grid")
+              "qth", "grid", "comment", "tg", "via", "my_call", "my_grid", "prop_mode")
 
     def __init__(self, mon, path: Path):
         self.mon = mon
@@ -319,14 +350,28 @@ class QsoLog:
             created REAL, updated REAL,
             qrz_status TEXT, qrz_logid TEXT, qrz_error TEXT, qrz_time REAL)""")
         self.db.execute("CREATE INDEX IF NOT EXISTS qsos_start ON qsos(start)")
+        cols = {r[1] for r in self.db.execute("PRAGMA table_info(qsos)")}
+        if "prop_mode" not in cols:           # 0.17: etenemistapa; BrandMeisterista tunnistetut = INTERNET
+            self.db.execute("ALTER TABLE qsos ADD COLUMN prop_mode TEXT")
+            self.db.execute("UPDATE qsos SET prop_mode='INTERNET' WHERE source='candidate' OR submode IN ('DMR','DSTAR','C4FM','M17')")
+        for svc in ("eqsl", "hamqth"):
+            for c, t in (("status", "TEXT"), ("logid", "TEXT"), ("error", "TEXT"), ("time", "REAL")):
+                if f"{svc}_{c}" not in cols:
+                    self.db.execute(f"ALTER TABLE qsos ADD COLUMN {svc}_{c} {t}")
         self.db.commit()
         self.rev = 0
         self.detector = QsoDetector(self.is_mine)
-        self.qrz_key, moved = secret_store.load_field(self.cfg, "qrz_key", "qrz-logbook-key")
-        if moved:
+        self.secrets: dict[str, str] = {}
+        moved_any = False
+        for svc, (field, name) in SECRETS.items():
+            self.secrets[svc], moved = secret_store.load_field(self.cfg, field, name)
+            moved_any = moved_any or moved
+        if moved_any:
             mon.save_config()
         self.qrz_state = {"ok": None, "error": None, "callsign": None, "count": None, "checked": None}
+        self.svc_state = {s: {"ok": None, "error": None, "checked": None} for s in ("eqsl", "hamqth")}
         self._pending_deletes: list[str] = []
+        self._pending_hq_deletes: list[dict] = []
         self._wake = asyncio.Event()
 
     # ---------------- asetukset ----------------
@@ -343,15 +388,38 @@ class QsoLog:
         mc = self.my_call()
         return bool(mc) and base_call(call) == mc
 
-    def set_qrz_key(self, key: str):
-        key = (key or "").strip()
-        self.qrz_key = key
-        secret_store.save_field(self.cfg, "qrz_key", "qrz-logbook-key", key)
-        self.qrz_state = {"ok": None, "error": None, "callsign": None, "count": None, "checked": None}
-        # aiemmin avaimen takia hylätyt yritetään uudelleen
-        self.db.execute("UPDATE qsos SET qrz_status='queued' WHERE qrz_status='auth'")
+    @property
+    def qrz_key(self) -> str:
+        return self.secrets.get("qrz", "")
+
+    @qrz_key.setter
+    def qrz_key(self, v: str):
+        self.secrets["qrz"] = v
+
+    def set_secret(self, svc: str, value: str):
+        value = (value or "").strip()
+        field, name = SECRETS[svc]
+        self.secrets[svc] = value
+        secret_store.save_field(self.cfg, field, name, value)
+        if svc == "qrz":
+            self.qrz_state = {"ok": None, "error": None, "callsign": None, "count": None, "checked": None}
+        else:
+            self.svc_state[svc] = {"ok": None, "error": None, "checked": None}
+        # aiemmin tunnusten takia hylätyt yritetään uudelleen
+        self.db.execute(f"UPDATE qsos SET {svc}_status='queued' WHERE {svc}_status='auth'")
         self.db.commit()
         self._changed()
+
+    def set_qrz_key(self, key: str):
+        self.set_secret("qrz", key)
+
+    def _initial_status(self, svc: str, prop_mode: str | None) -> str | None:
+        """Uuden yhteyden tila palvelussa: None = ei käytössä, skip = internet-avusteinen ohitettu, queued = jonoon."""
+        if not self.cfg.get(svc):
+            return None
+        if (prop_mode or "") in ASSISTED and not self.cfg.get(f"{svc}_inet", True):
+            return "skip"
+        return "queued"
 
     # ---------------- tunnistus ----------------
     def on_event(self, p: dict):
@@ -380,7 +448,7 @@ class QsoLog:
                 "band": band_for(freq) or self.cfg.get("band") or "70cm", "freq": freq, "freq_rx": freq_rx,
                 "rst_sent": self.cfg.get("rst") or "59", "rst_rcvd": self.cfg.get("rst") or "59",   # DMR = puhe
                 "comment": f"BrandMeister {where}" + (f" via {via}" if via else ""),
-                "tg": c.get("tg"), "via": via, "candidate": cid}
+                "tg": c.get("tg"), "via": via, "candidate": cid, "prop_mode": "INTERNET"}
 
     # ---------------- loki ----------------
     def _changed(self):
@@ -417,6 +485,13 @@ class QsoLog:
         if label not in MODES:
             raise ValueError(tr("Virheellinen arvo: {x}", x=label))
         out["mode"], out["submode"] = MODES[label]
+        if "prop_mode" in d and d.get("prop_mode") is not None:
+            pm = str(d.get("prop_mode") or "").upper()
+            if pm not in PROP_MODES:
+                raise ValueError(tr("Virheellinen arvo: {x}", x=pm))
+            out["prop_mode"] = pm
+        else:
+            out["prop_mode"] = default_prop(label)
         try:
             out["tg"] = int(d["tg"]) if d.get("tg") not in (None, "") else None
         except (TypeError, ValueError):
@@ -428,11 +503,11 @@ class QsoLog:
     def add(self, d: dict) -> int:
         q = self._clean(d)
         now = time.time()
-        status = "queued" if self.cfg.get("qrz") else None
+        st = [self._initial_status(s, q.get("prop_mode")) for s in SERVICES]
         cur = self.db.execute(
-            f"INSERT INTO qsos ({', '.join(self.FIELDS)}, source, created, updated, qrz_status) "
-            f"VALUES ({', '.join('?' * len(self.FIELDS))}, ?, ?, ?, ?)",
-            [q.get(f) for f in self.FIELDS] + ["candidate" if d.get("candidate") else "manual", now, now, status])
+            f"INSERT INTO qsos ({', '.join(self.FIELDS)}, source, created, updated, qrz_status, eqsl_status, hamqth_status) "
+            f"VALUES ({', '.join('?' * len(self.FIELDS))}, ?, ?, ?, ?, ?, ?)",
+            [q.get(f) for f in self.FIELDS] + ["candidate" if d.get("candidate") else "manual", now, now] + st)
         self.db.commit()
         if d.get("candidate"):
             self.detector.close(str(d["candidate"]))
@@ -443,11 +518,22 @@ class QsoLog:
         old = self.get(qid)
         if not old:
             raise KeyError(qid)
-        q = self._clean({**old, **d})
-        # QRZ:hen jo lähetetty korvataan (OPTION=REPLACE), muuten jonoon jos synkronointi päällä
-        status = "queued" if (old.get("qrz_status") or self.cfg.get("qrz")) else None
-        self.db.execute(f"UPDATE qsos SET {', '.join(f + '=?' for f in self.FIELDS)}, updated=?, qrz_status=?, qrz_error=NULL "
-                        f"WHERE id=?", [q.get(f) for f in self.FIELDS] + [time.time(), status, qid])
+        merged = {**old, **d}
+        if "prop_mode" not in d and "mode_label" in d:       # tila vaihtui eikä etenemistapaa annettu: oletus tilan mukaan
+            merged.pop("prop_mode", None)
+        q = self._clean(merged)
+        st = {}
+        for s in SERVICES:
+            prev = old.get(f"{s}_status")
+            if prev == "ok":
+                st[s] = "ok" if s == "eqsl" else "queued"    # eQSL ei tue muokkausta; QRZ: REPLACE, HamQTH: PUT
+            elif prev in ("queued", "error", "failed", "auth"):
+                st[s] = "queued"
+            else:
+                st[s] = self._initial_status(s, q.get("prop_mode"))
+        self.db.execute(f"UPDATE qsos SET {', '.join(f + '=?' for f in self.FIELDS)}, updated=?, "
+                        "qrz_status=?, qrz_error=NULL, eqsl_status=?, eqsl_error=NULL, hamqth_status=?, hamqth_error=NULL "
+                        "WHERE id=?", [q.get(f) for f in self.FIELDS] + [time.time(), st["qrz"], st["eqsl"], st["hamqth"], qid])
         self.db.commit()
         self._changed()
 
@@ -459,14 +545,23 @@ class QsoLog:
         self.db.commit()
         if remote and old.get("qrz_logid"):
             self._pending_deletes.append(old["qrz_logid"])
+        if remote and old.get("hamqth_logid"):
+            try:
+                self._pending_hq_deletes.append(json.loads(old["hamqth_logid"]))
+            except ValueError:
+                pass
         self._changed()
 
     def get(self, qid: int) -> dict | None:
         r = self.db.execute("SELECT * FROM qsos WHERE id=?", (qid,)).fetchone()
         return {**dict(r), "mode_label": mode_label(r["mode"], r["submode"])} if r else None
 
-    def list(self, limit: int = 200, q: str = "", mode: str = "") -> list[dict]:
+    def list(self, limit: int = 200, q: str = "", mode: str = "", prop: str = "") -> list[dict]:
         sql, args, where = "SELECT * FROM qsos", [], []
+        if prop == "inet":
+            where.append("prop_mode IN ('INTERNET','RPT','ECH')")
+        elif prop == "direct":
+            where.append("(prop_mode IS NULL OR prop_mode NOT IN ('INTERNET','RPT','ECH'))")
         if q:
             where.append("(call LIKE ? OR name LIKE ? OR comment LIKE ?)")
             args += [f"%{q.upper()}%", f"%{q}%", f"%{q}%"]
@@ -489,11 +584,16 @@ class QsoLog:
         return self.db.execute("SELECT COUNT(*) FROM qsos").fetchone()[0]
 
     def snapshot(self) -> dict:
-        pend = self.db.execute("SELECT COUNT(*) FROM qsos WHERE qrz_status IN ('queued','error')").fetchone()[0]
+        def pend(s):
+            return self.db.execute(f"SELECT COUNT(*) FROM qsos WHERE {s}_status IN ('queued','error')").fetchone()[0]
         return {"rev": self.rev, "count": self.count(), "my_call": self.my_call(),
-                "modes": [[k, default_rst(k)] for k in MODES],
+                "modes": [[k, default_rst(k), default_prop(k)] for k in MODES],
                 "candidates": self.detector.snapshot() if self.cfg.get("detect", True) else [],
-                "qrz": {**self.qrz_state, "enabled": bool(self.cfg.get("qrz")), "key": bool(self.qrz_key), "pending": pend}}
+                "qrz": {**self.qrz_state, "enabled": bool(self.cfg.get("qrz")), "key": bool(self.qrz_key), "pending": pend("qrz")},
+                "eqsl": {**self.svc_state["eqsl"], "enabled": bool(self.cfg.get("eqsl")), "key": bool(self.secrets.get("eqsl")),
+                         "long_pass": len(self.secrets.get("eqsl") or "") > EQSL_PASS_MAX, "pending": pend("eqsl")},
+                "hamqth": {**self.svc_state["hamqth"], "enabled": bool(self.cfg.get("hamqth")),
+                           "key": bool(self.secrets.get("hamqth")), "pending": pend("hamqth")}}
 
     def housekeeping(self):
         before = self.detector.rev
@@ -557,19 +657,195 @@ class QsoLog:
         return True
 
     def _set_qrz(self, qid: int, status: str, logid, err):
-        self.db.execute("UPDATE qsos SET qrz_status=?, qrz_logid=COALESCE(?, qrz_logid), qrz_error=?, qrz_time=? WHERE id=?",
-                        (status, logid, err, time.time(), qid))
+        self._set(qid, "qrz", status, logid, err)
+
+    def _set(self, qid: int, svc: str, status: str, logid, err):
+        self.db.execute(f"UPDATE qsos SET {svc}_status=?, {svc}_logid=COALESCE(?, {svc}_logid), {svc}_error=?, {svc}_time=? "
+                        "WHERE id=?", (status, logid, err, time.time(), qid))
         self.db.commit()
         self.rev += 1
         self.mon.dirty = True
 
-    def retry_qrz(self, qid: int | None = None):
+    def retry(self, svc: str, qid: int | None = None):
+        if svc not in SERVICES:
+            raise ValueError(svc)
         if qid is None:
-            self.db.execute("UPDATE qsos SET qrz_status='queued' WHERE qrz_status IN ('error','failed','auth')")
-        else:
-            self.db.execute("UPDATE qsos SET qrz_status='queued' WHERE id=?", (qid,))
+            self.db.execute(f"UPDATE qsos SET {svc}_status='queued' WHERE {svc}_status IN ('error','failed','auth')")
+        else:      # myös ohitettu (internet-avusteinen) yhteys voidaan lähettää käsin
+            self.db.execute(f"UPDATE qsos SET {svc}_status='queued' WHERE id=?", (qid,))
         self.db.commit()
         self._changed()
+
+    def retry_qrz(self, qid: int | None = None):
+        self.retry("qrz", qid)
+
+    # ---------------- eQSL ----------------
+    async def _eqsl_post(self, adif: str) -> tuple[int, str]:
+        import aiohttp
+        from .messaging import http_session
+        form = aiohttp.FormData()
+        form.add_field("EQSL_USER", self.cfg.get("eqsl_user") or self.my_call())
+        form.add_field("EQSL_PSWD", self.secrets.get("eqsl") or "")
+        form.add_field("Filename", adif.encode("utf-8"), filename="upload.adi", content_type="text/plain")
+        async with http_session(30) as sess:
+            async with sess.post(EQSL_URL, data=form, headers={"User-Agent": self._ua()}) as r:
+                return r.status, await r.text()
+
+    def _eqsl_adif(self, row: dict) -> str:
+        rec = qso_adif(row)
+        if self.cfg.get("eqsl_qth"):
+            rec = rec[:-5] + _adif_field("APP_EQSL_QTH_NICKNAME", self.cfg["eqsl_qth"]) + "<eor>"
+        return (_adif_field("ADIF_VER", "3.1.4") + _adif_field("PROGRAMID", "MonitorForAmateurRadio")
+                + _adif_field("PROGRAMVERSION", __version__) + "<eoh>\n" + rec + "\n")
+
+    @staticmethod
+    def eqsl_result(status: int, text: str) -> tuple[str, str | None]:
+        """eQSL:n vastaus → (tila, virhe). ok / auth / error (uusi yritys) / failed."""
+        if status != 200:
+            return "error", f"HTTP {status}"
+        plain = re.sub(r"<[^>]*>", " ", text)
+        m = re.search(r"Result:\s*(\d+)\s+out of\s+(\d+)\s+records added", plain, re.I)
+        err = re.search(r"Error:\s*([^\r\n<]+)", plain)
+        if err:
+            msg = err.group(1).strip()
+            if "no match" in msg.lower() or "missing eqsl" in msg.lower() or "multiple accounts" in msg.lower():
+                return "auth", "Error: " + msg
+            if "down" in msg.lower():
+                return "error", "Error: " + msg
+            return "failed", "Error: " + msg
+        if re.search(r"Bad record:\s*Duplicate", plain, re.I):
+            return "ok", tr("oli jo eQSL:ssä")
+        if m and m.group(1) == m.group(2) and m.group(2) != "0":
+            return "ok", None
+        warn = re.search(r"Warning:\s*([^\r\n<]+)", plain)
+        return "failed", ("Warning: " + warn.group(1).strip()) if warn else (m.group(0) if m else "?")
+
+    async def _eqsl_send(self, row: dict) -> bool:
+        try:
+            status, text = await self._eqsl_post(self._eqsl_adif(row))
+        except Exception as e:  # noqa: BLE001
+            self._set(row["id"], "eqsl", "error", None, str(e) or e.__class__.__name__)
+            return False
+        st, err = self.eqsl_result(status, text)
+        self._set(row["id"], "eqsl", st, None, err)
+        if st == "auth":
+            self.svc_state["eqsl"] = {"ok": False, "error": err, "checked": time.time()}
+        elif st == "ok":
+            self.svc_state["eqsl"] = {"ok": True, "error": None, "checked": time.time()}
+        return st != "error"
+
+    # ---------------- HamQTH ----------------
+    @staticmethod
+    def hamqth_qso(row: dict) -> dict:
+        """Yhteys HamQTH:n API v2 -muodossa (ADIF-kenttänimet pienellä)."""
+        d = {"call": row["call"], "qso_date": _utc(row["start"], "%Y%m%d"), "time_on": _utc(row["start"], "%H%M%S"),
+             "band": (row.get("band") or "").upper(), "mode": row.get("mode") or "DIGITALVOICE"}
+        if row.get("submode"):
+            d["submode"] = row["submode"]
+        if row.get("freq"):
+            d["freq"] = f"{row['freq']:.6f}".rstrip("0").rstrip(".")
+        if row.get("end"):
+            d["time_off"] = _utc(row["end"], "%H%M%S")
+            d["qso_date_off"] = _utc(row["end"], "%Y%m%d")
+        for k, f in (("rst_sent", "rst_sent"), ("rst_rcvd", "rst_rcvd"), ("name", "name"), ("qth", "qth"),
+                     ("gridsquare", "grid"), ("comment", "comment"), ("my_gridsquare", "my_grid"),
+                     ("station_callsign", "my_call"), ("prop_mode", "prop_mode")):
+            v = row.get(f)
+            if v:
+                d[k] = v.upper() if k in ("gridsquare", "my_gridsquare") else v
+        return d
+
+    @staticmethod
+    def _hamqth_key_fields(q: dict) -> dict:
+        return {k: q[k] for k in ("call", "qso_date", "time_on", "band", "mode") if q.get(k)}
+
+    async def _hamqth(self, method: str, path: str, body: dict | None = None, params: dict | None = None) -> tuple[int, str]:
+        from .messaging import http_session
+        h = {"Authorization": f"Bearer {self.secrets.get('hamqth') or ''}", "User-Agent": self._ua(),
+             "Accept": "application/json"}
+        async with http_session(20) as sess:
+            async with sess.request(method, HAMQTH_API + path, json=body, params=params, headers=h) as r:
+                return r.status, await r.text()
+
+    async def hamqth_test(self) -> dict:
+        if not self.secrets.get("hamqth"):
+            raise ValueError(tr("Aseta HamQTH:n API-avain"))
+        status, _ = await self._hamqth("GET", f"/callbook/{self.my_call() or 'OH2BEA'}")
+        if status == 401:
+            self.svc_state["hamqth"] = {"ok": False, "error": tr("API-avain ei kelpaa"), "checked": time.time()}
+        elif status in (200, 404):
+            self.svc_state["hamqth"] = {"ok": True, "error": None, "checked": time.time()}
+        else:
+            self.svc_state["hamqth"] = {"ok": False, "error": f"HTTP {status}", "checked": time.time()}
+        self.mon.dirty = True
+        return self.svc_state["hamqth"]
+
+    async def _hamqth_send(self, row: dict) -> bool:
+        qso = self.hamqth_qso(row)
+        orig = None
+        if row.get("hamqth_logid"):
+            try:
+                orig = json.loads(row["hamqth_logid"])
+            except ValueError:
+                orig = None
+        try:
+            if orig:
+                status, text = await self._hamqth("PUT", "/log/qso", {"original": orig, "qso": qso})
+                if status == 404:          # poistettu HamQTH:sta: lisätään uudelleen
+                    status, text = await self._hamqth("POST", "/log/qso", {"qso": qso})
+            else:
+                status, text = await self._hamqth("POST", "/log/qso", {"qso": qso})
+        except Exception as e:  # noqa: BLE001
+            self._set(row["id"], "hamqth", "error", None, str(e) or e.__class__.__name__)
+            return False
+        ident = json.dumps(self._hamqth_key_fields(qso))
+        if status in (200, 201, 204):
+            self._set(row["id"], "hamqth", "ok", ident, None)
+            self.svc_state["hamqth"].update(ok=True, error=None)
+        elif status == 409:
+            self._set(row["id"], "hamqth", "ok", ident, tr("oli jo HamQTH:ssa"))
+        elif status in (401, 403):
+            err = tr("API-avain ei kelpaa") if status == 401 else _api_error(text) or f"HTTP {status}"
+            self._set(row["id"], "hamqth", "auth", None, err)
+            self.svc_state["hamqth"] = {"ok": False, "error": err, "checked": time.time()}
+        elif status in (422, 400, 404):
+            self._set(row["id"], "hamqth", "failed", None, _api_error(text) or f"HTTP {status}")
+        else:
+            self._set(row["id"], "hamqth", "error", None, f"HTTP {status}")
+            return False
+        return True
+
+    def _due(self, svc: str) -> list[dict]:
+        return [dict(r) for r in self.db.execute(
+            f"SELECT * FROM qsos WHERE {svc}_status='queued' OR ({svc}_status='error' AND {svc}_time < ?) "
+            "ORDER BY start LIMIT 20", (time.time() - QRZ_RETRY,))]
+
+    async def sync_once(self):
+        """Yksi synkronointikierros kaikkiin käytössä oleviin palveluihin."""
+        if self.qrz_key:
+            while self._pending_deletes:
+                logid = self._pending_deletes.pop(0)
+                try:
+                    await self._qrz({"ACTION": "DELETE", "LOGIDS": logid})
+                except Exception as e:  # noqa: BLE001
+                    log.info("QRZ-poisto epäonnistui: %s", e)
+        if self.secrets.get("hamqth"):
+            while self._pending_hq_deletes:
+                ident = self._pending_hq_deletes.pop(0)
+                try:
+                    await self._hamqth("DELETE", "/log/qso", params=ident)
+                except Exception as e:  # noqa: BLE001
+                    log.info("HamQTH-poisto epäonnistui: %s", e)
+        senders = {"qrz": self._qrz_send, "eqsl": self._eqsl_send, "hamqth": self._hamqth_send}
+        for svc, send in senders.items():
+            if not self.cfg.get(svc) or not self.secrets.get(svc):
+                continue
+            for row in self._due(svc):
+                if not await send(row):
+                    break          # verkkovirhe: yritetään myöhemmin
+                if self.db.execute(
+                        f"SELECT {svc}_status FROM qsos WHERE id=?", (row["id"],)).fetchone()[0] == "auth":
+                    break          # väärät tunnukset: ei toisteta pyyntöjä (palvelu voi estää osoitteen)
 
     async def run(self):
         while True:
@@ -578,23 +854,23 @@ class QsoLog:
             except asyncio.TimeoutError:
                 pass
             self._wake.clear()
-            if not self.qrz_key:
-                continue
             try:
-                while self._pending_deletes:
-                    logid = self._pending_deletes.pop(0)
-                    try:
-                        await self._qrz({"ACTION": "DELETE", "LOGIDS": logid})
-                    except Exception as e:  # noqa: BLE001
-                        log.info("QRZ-poisto epäonnistui: %s", e)
-                if not self.cfg.get("qrz"):
-                    continue
-                now = time.time()
-                rows = [dict(r) for r in self.db.execute(
-                    "SELECT * FROM qsos WHERE qrz_status='queued' OR (qrz_status='error' AND qrz_time < ?) "
-                    "ORDER BY start LIMIT 20", (now - QRZ_RETRY,))]
-                for row in rows:
-                    if not await self._qrz_send(row):
-                        break          # verkkovirhe: yritetään myöhemmin
+                await self.sync_once()
             except Exception:  # noqa: BLE001
-                log.exception("QRZ-synkronointi")
+                log.exception("Lokin synkronointi")
+
+
+def _api_error(text: str) -> str:
+    """JSON-virhevastauksen viesti (HamQTH: {"error": …} tai {"message": …})."""
+    try:
+        d = json.loads(text)
+    except ValueError:
+        return ""
+    if isinstance(d, dict):
+        for k in ("error", "message", "detail", "title"):
+            v = d.get(k)
+            if isinstance(v, str) and v:
+                return v[:200]
+            if isinstance(v, dict) and v.get("message"):
+                return str(v["message"])[:200]
+    return ""
