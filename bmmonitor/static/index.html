@@ -4192,8 +4192,10 @@ function renderProp() {
   for (const p of pts) {
     const c = PROP_COL[p.b] || "#999";
     const layer = p.kind === "mine" ? propMine : (PROP_HF.includes(p.b) ? propHf : propVhf);
-    L.polyline(propGc([p.olat, p.olon], [p.lat, p.lon]), {color: c, weight: 1.2, opacity: p.kind === "mine" ? 0.75 : 0.45, interactive: false}).addTo(layer);
-    L.circleMarker([p.lat, p.lon], {radius: p.kind === "mine" ? 5 : 4, color: col("--panel"), weight: 1, fillColor: c, fillOpacity: 0.95})
+    const path = propGc([p.olat, p.olon], [p.lat, p.lon]);
+    L.polyline(path, {color: c, weight: 1.2, opacity: p.kind === "mine" ? 0.75 : 0.45, interactive: false}).addTo(layer);
+    // päätepiste viivan päähän: päivämäärärajan yli kulkeva viiva jatkuu kartan seuraavalle kierrokselle (lon > 180)
+    L.circleMarker(path[path.length - 1], {radius: p.kind === "mine" ? 5 : 4, color: col("--panel"), weight: 1, fillColor: c, fillOpacity: 0.95})
       .bindPopup(propPopup(p)).addTo(layer);
   }
   if (propData.home) propHome = L.circleMarker(propData.home, {radius: 7, color: col("--panel"), weight: 2, fillColor: col("--accent"), fillOpacity: 1})
