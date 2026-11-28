@@ -1540,3 +1540,83 @@ def test_qso_candidates_persist(tmp_path):
     d4 = Q.QsoDetector(lambda c: c == "OH2BEA")
     d4.attach(db)
     assert "TG:244:OH9X:1" not in d4.cands and db.execute("SELECT COUNT(*) FROM candidates").fetchone()[0] == 0
+
+
+def test_lan_access():
+    """Selainkäyttö lähiverkossa: salasana, kirjautuminen, kielletyt toiminnot, Vain katselu, salaisuudet, väärät yritykset."""
+    import aiohttp
+    from aiohttp import web
+    from bmmonitor import lan as L
+    from bmmonitor.app import Monitor, config_dir, make_app
+    h = L.hash_password("salasana1", iters=1000)
+    assert L.verify_password("salasana1", h) and not L.verify_password("väärä", h) and not L.verify_password("x", "roskaa")
+    assert L.normalize_lan({"port": "9000", "mode": "view", "enabled": 1}, {})["port"] == 9000
+    with pytest.raises(ValueError):
+        L.normalize_lan({"port": 80}, {})
+    assert L.has_secret_change({"log": {"qrz_key": "abc"}}, ["qrz_key"]) and not L.has_secret_change({"log": {"qrz_key": "********"}}, ["qrz_key"])
+    assert L.has_secret_change({"messaging": {"passcode": "1234"}}, []) and not L.has_secret_change({"units": "metric"}, [])
+    acc = L.LanAccess()
+    for _ in range(5):
+        with pytest.raises(PermissionError):
+            acc.login("1.2.3.4", "x", h)
+    assert acc.blocked_for("1.2.3.4") > 0
+    with pytest.raises(PermissionError):
+        acc.login("1.2.3.4", "salasana1", h)               # estetty, vaikka salasana oikein
+    tok = acc.login("5.6.7.8", "salasana1", h)
+    assert acc.check(tok) and not acc.check("x")
+    assert "<svg" in (L.qr_svg("http://192.168.1.2:8766/") or "<svg")
+
+    async def run():
+        mon = Monitor(config_dir() / "config.json")
+        p1, p2 = _free_port(), _free_port()
+        runner = web.AppRunner(make_app(mon))
+        await runner.setup()
+        await web.TCPSite(runner, "127.0.0.1", p1).start()
+        mon.runner, mon.local_port = runner, p1
+        loc, rem = f"http://127.0.0.1:{p1}", f"http://127.0.0.1:{p2}"
+        async with aiohttp.ClientSession() as s:
+            r = await s.post(loc + "/api/lan", json={"enabled": True, "port": p2})
+            assert (await r.json())["ok"] is False                       # salasana puuttuu
+            r = await s.post(loc + "/api/lan", json={"enabled": True, "port": p2, "password": "lyhyt"})
+            assert r.status == 400
+            r = await s.post(loc + "/api/lan", json={"enabled": True, "port": p2, "password": "salasana1"})
+            j = await r.json()
+            assert j["ok"] and j["running"] and j["config"]["lan"]["pw"] == "********"
+        async with aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True)) as s:
+            r = await s.get(rem + "/", allow_redirects=False)
+            assert r.status == 302 and r.headers["Location"] == "/login"
+            assert (await s.get(rem + "/api/config")).status == 401
+            assert "password" in (await (await s.get(rem + "/login")).text())
+            r = await s.post(rem + "/api/lan/login", json={"password": "väärä"})
+            assert r.status == 401
+            r = await s.post(rem + "/api/lan/login", json={"password": "salasana1"})
+            assert (await r.json())["ok"]
+            me = await (await s.get(rem + "/api/lan/me")).json()
+            assert me == {"remote": True, "mode": "full"}
+            cfg = await (await s.get(rem + "/api/config")).json()
+            assert cfg["lan"]["pw"] == "********" and "pw_store" not in str(cfg.get("lan", {}).get("pw"))
+            r = await s.post(rem + "/api/config", json={"units": "metric"})
+            assert (await r.json())["ok"]                                  # täysi käyttö: tavallinen asetus käy
+            for path, body in (("/api/shutdown", {}), ("/api/update/install", {}), ("/api/lan", {"enabled": False}),
+                               ("/api/config", {"bm_api_key": "uusi"}), ("/api/config", {"lan": {"enabled": False}}),
+                               ("/api/checkin", {"action": "sheet_disconnect"})):
+                assert (await s.post(rem + path, json=body)).status == 403, path
+            assert (await s.get(rem + "/api/feedback/bundle")).status == 403
+            r = await s.post(rem + "/api/config", json={"units": "metric"}, headers={"Origin": "http://evil.example"})
+            assert r.status == 403
+        async with aiohttp.ClientSession() as s:                           # paikallinen: Vain katselu päälle
+            r = await s.post(loc + "/api/lan", json={"mode": "view"})
+            assert (await r.json())["ok"]
+            assert (await (await s.get(loc + "/api/lan/me")).json())["remote"] is False
+        async with aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True)) as s:
+            await s.post(rem + "/api/lan/login", json={"password": "salasana1"})
+            assert (await s.get(rem + "/api/config")).status == 200
+            assert (await s.post(rem + "/api/config", json={"units": "metric"})).status == 403
+            assert (await s.post(rem + "/api/lan/logout")).status == 200
+            assert (await s.get(rem + "/api/config")).status == 401
+        async with aiohttp.ClientSession() as s:
+            await s.post(loc + "/api/lan", json={"enabled": False})
+        assert mon.lan_site is None
+        await runner.cleanup()
+
+    asyncio.run(run())

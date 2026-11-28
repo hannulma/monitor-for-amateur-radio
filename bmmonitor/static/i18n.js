@@ -856,6 +856,23 @@
     "Oma ruutu: {g}": "Own square: {g}",
     "Omaa kutsua ei ole asetettu.": "Own callsign is not set.",
     "Sijaintia ei ole asetettu.": "Location is not set.",
+    "Aseta salasana (vähintään 8 merkkiä).": "Set a password (at least 8 characters).",
+    "Avaimia ja salasanoja voi muuttaa vain ohjelman omalla koneella.": "Keys and passwords can only be changed on the program's own computer.",
+    "Ei käytössä.": "Not in use.",
+    "Kirjaa etälaitteet ulos": "Log out remote devices",
+    "Kirjaudu ulos": "Log out",
+    "Kun tämä on päällä, ohjelmaa voi käyttää selaimella myös muilta kotiverkon laitteilta (puhelin, tabletti, toinen tietokone). Etälaitteelta kirjaudutaan alla asetettavalla salasanalla. Etälaitteelta ei voi sulkea tai päivittää ohjelmaa eikä muuttaa avaimia, salasanoja tai näitä asetuksia.": "When this is on, the program can also be used with a browser from other devices on your home network (phone, tablet, another computer). Remote devices log in with the password set below. A remote device cannot close or update the program or change keys, passwords or these settings.",
+    "Käyttöoikeus": "Access",
+    "Käytössä portissa {p}": "In use on port {p}",
+    "Salasana on asetettu. Jätä kentät tyhjiksi, jos et halua vaihtaa sitä.": "A password is set. Leave the fields empty if you do not want to change it.",
+    "Salasana uudelleen": "Repeat password",
+    "Salasanat eivät täsmää": "The passwords do not match",
+    "Selainkäyttö lähiverkossa": "Browser access on the local network",
+    "Selainkäyttö lähiverkossa päällä": "Browser access on the local network on",
+    "Täysi käyttö": "Full access",
+    "Vain katselu": "View only",
+    "Yhteys lähiverkossa on salaamaton (HTTP). Älä avaa porttia reitittimestä internetiin. Kun asetus otetaan käyttöön ensimmäisen kerran, Windowsin tai macOS:n palomuuri voi kysyä lupaa – salli yksityiset verkot.": "The connection on the local network is unencrypted (HTTP). Do not open the port to the internet in your router. When you turn this on for the first time, the Windows or macOS firewall may ask for permission – allow private networks.",
+    "kirjautuneita etälaitteita: {n}": "remote devices logged in: {n}",
   };
 
   const ATTRS = ["placeholder", "title", "aria-label"];

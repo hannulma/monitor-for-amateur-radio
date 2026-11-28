@@ -37,6 +37,13 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   body { margin: 0; background: var(--bg); color: var(--text); font-size: 14px; }
   header { display: flex; align-items: center; gap: 16px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
   header h1 { font-size: 17px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+  @media (max-width: 700px) {      /* puhelin (selainkäyttö lähiverkossa) */
+    header { flex-wrap: wrap; gap: 4px 12px; padding: 8px 12px; }
+    header h1 { font-size: 15px; width: 100%; }
+    header .spacer, header #watching { display: none; }
+    header .status { font-size: 12px; }
+    main { padding: 10px !important; }
+  }
   .status { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); display: inline-block; }
   .dot.ok { background: var(--live); }
@@ -263,6 +270,12 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   #propMap .leaflet-control-attribution { background: var(--overlay); color: var(--muted); }
   #propMap .leaflet-control-attribution a { color: var(--accent); }
   #propMap .leaflet-bar a { background: var(--panel); color: var(--text); border-color: var(--line); }
+  body.remote .localonly { display: none !important; }
+  body.viewonly section.cfg { display: none !important; }
+  .warnnote { border-color: var(--warn, #f59f00); }
+  .lanqr { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; }
+  .lanqr figure { margin: 0; text-align: center; font-size: 13px; }
+  .lanqr img { width: 140px; height: 140px; background: #fff; border-radius: 6px; padding: 4px; }
   .propwrap { grid-template-columns: minmax(0, 1fr) 400px; }
   @media (max-width: 980px) { .propwrap { grid-template-columns: 1fr; } }
   .tropostrip { display: flex; gap: 2px; margin: 6px 0; }
@@ -409,6 +422,7 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
   <span class="muted" id="watching"></span>
   <span id="updPill" class="pill updpill" style="display:none; cursor:pointer"></span>
   <span id="aprsBadge" class="muted"></span>
+  <a href="#" id="lanLogout" class="muted" style="display:none">Kirjaudu ulos</a>
 </header>
 <nav class="tabs" id="tabs">
   <button data-tab="seuranta" class="active">BrandMeister<span class="livetab" id="bmLive" role="img" style="display:none"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a2 2 0 0 0-1 3.7V22h2v-7.3A2 2 0 0 0 12 11zm-4.2-1.8-1.4-1.4a8 8 0 0 0 0 11.3l1.4-1.4a6 6 0 0 1 0-8.5zm8.4 0a6 6 0 0 1 0 8.5l1.4 1.4a8 8 0 0 0 0-11.3zM4.9 6.3 3.5 4.9a12 12 0 0 0 0 17l1.4-1.4a10 10 0 0 1 0-14.2zm14.2 0a10 10 0 0 1 0 14.2l1.4 1.4a12 12 0 0 0 0-17z"/></svg></span></button>
@@ -584,16 +598,41 @@ try { var t = localStorage.getItem("bmm.theme") || "dark";
     </div>
     </div>
   </section>
+  <section class="cfg form localonly" data-tab="asetukset" data-fold="cfg-lan">
+    <h2>Selainkäyttö lähiverkossa</h2>
+    <div class="inner form msgform">
+      <div class="note">Kun tämä on päällä, ohjelmaa voi käyttää selaimella myös muilta kotiverkon laitteilta (puhelin, tabletti,
+        toinen tietokone). Etälaitteelta kirjaudutaan alla asetettavalla salasanalla. Etälaitteelta ei voi sulkea tai päivittää
+        ohjelmaa eikä muuttaa avaimia, salasanoja tai näitä asetuksia.</div>
+      <div class="note warnnote">Yhteys lähiverkossa on salaamaton (HTTP). Älä avaa porttia reitittimestä internetiin.
+        Kun asetus otetaan käyttöön ensimmäisen kerran, Windowsin tai macOS:n palomuuri voi kysyä lupaa – salli yksityiset verkot.</div>
+      <div class="frow" style="margin-top:10px">
+        <div class="fld checks"><label><input type="checkbox" id="lanEnabled"> Selainkäyttö lähiverkossa päällä</label></div>
+        <div class="fld"><label for="lanPort">Portti</label><input type="number" id="lanPort" min="1024" max="65535" style="width:110px"></div>
+        <div class="fld"><label for="lanMode">Käyttöoikeus</label>
+          <select id="lanMode"><option value="full">Täysi käyttö</option><option value="view">Vain katselu</option></select></div>
+      </div>
+      <div class="frow">
+        <div class="fld"><label for="lanPw">Salasana</label><input type="password" id="lanPw" autocomplete="new-password" style="width:220px"></div>
+        <div class="fld"><label for="lanPw2">Salasana uudelleen</label><input type="password" id="lanPw2" autocomplete="new-password" style="width:220px"></div>
+      </div>
+      <div class="hint" id="lanPwHint"></div>
+      <div class="frow svcsave"><button class="primary" id="btnLanSave">Tallenna</button>
+        <button id="btnLanLogoutAll">Kirjaa etälaitteet ulos</button><span class="err" id="lanErr"></span></div>
+      <div id="lanState"></div>
+      <div class="lanqr" id="lanQr"></div>
+    </div>
+  </section>
   <section class="cfg form" data-tab="asetukset" data-fold="cfg-program">
     <h2>Palaute, vikailmoitukset ja tiedot</h2>
     <div class="inner">
     <div class="about" id="aboutLine"></div>
     <div class="frow" style="margin:10px 0 4px;align-items:center">
       <b style="min-width:90px">Palaute</b>
-      <button class="primary" id="btnFb">Lähetä palaute / lokit</button>
+      <button class="primary localonly" id="btnFb">Lähetä palaute / lokit</button>
       <span class="hint" style="margin:0">Lähettää viestisi ja ohjelman lokin ylläpidolle vian selvittämistä varten.</span>
     </div>
-    <div class="row"><div><button id="btnQuit">Sulje ohjelma</button></div>
+    <div class="row localonly"><div><button id="btnQuit">Sulje ohjelma</button></div>
       <div class="hint" style="max-width:520px"><span id="quitHint">Sulkee taustalla toimivan ohjelman. Ohjelman voi avata uudelleen käynnistämällä sen; jos se on jo käynnissä,
         käynnistys avaa vain tämän sivun.</span> <span id="verInfo"></span></div></div>
     <div class="paths" id="paths"></div>
@@ -2913,7 +2952,7 @@ function showTab(tab) {
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll("main > section, main > .svcgrid, main > .cigrid").forEach(s => { s.style.display = s.dataset.tab === tab ? "" : "none"; });
   if (!S) return;
-  if (tab === "asetukset") { fillSettings(); fillTabPick(); }
+  if (tab === "asetukset") { fillSettings(); fillTabPick(); if (!LAN_REMOTE) fillLan(); }
   if (tab === "viestit" || tab === "aprs") fillMsg();
   if (tab === "aprs") { fillRx(); fillRf(); fillAis(); covShow(); }
   if (tab === "seuranta") { netsShow(); fillBmCfg(); }
@@ -4315,6 +4354,51 @@ $("btnPropSave").onclick = async () => {
   S.config = j.config; fillProp(); $("propErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
 };
 
+
+// ---------------- Selainkäyttö lähiverkossa ----------------
+var LAN_REMOTE = false;   // var: showTab voi ajaa ennen tätä riviä
+fetch("/api/lan/me").then(r => r.json()).then(j => {
+  LAN_REMOTE = !!j.remote;
+  if (!LAN_REMOTE) return;
+  document.body.classList.add("remote");
+  $("lanLogout").style.display = "";
+  document.querySelectorAll("input[type=password]").forEach(i => { i.disabled = true; i.title = T("Avaimia ja salasanoja voi muuttaa vain ohjelman omalla koneella."); });
+  if (j.mode === "view") { document.body.classList.add("viewonly"); $("lanLogout").textContent = T("Vain katselu") + " · " + T("Kirjaudu ulos"); }
+}).catch(() => {});
+$("lanLogout").onclick = async e => { e.preventDefault(); await fetch("/api/lan/logout", {method: "POST"}); location.href = "/login"; };
+function renderLan(j) {
+  if (!j) return;
+  let h;
+  if (j.running) h = `<span class="ok">● ${esc(T("Käytössä portissa {p}", {p: j.port}))}</span>`
+    + (j.sessions ? ` · ${esc(T("kirjautuneita etälaitteita: {n}", {n: j.sessions}))}` : "");
+  else if (j.error) h = `<span class="bad">${esc(j.error)}</span>`;
+  else h = `<span class="muted">${esc(T("Ei käytössä."))}</span>`;
+  $("lanState").innerHTML = h;
+  $("lanQr").innerHTML = (j.addresses || []).map(a => `<figure><img src="/api/lan/qr.svg?u=${encodeURIComponent(a)}" alt="QR">`
+    + `<figcaption><a href="${esc(a)}" target="_blank" rel="noopener">${esc(a)}</a></figcaption></figure>`).join("");
+  $("lanPwHint").textContent = j.has_password ? T("Salasana on asetettu. Jätä kentät tyhjiksi, jos et halua vaihtaa sitä.")
+    : T("Aseta salasana (vähintään 8 merkkiä).");
+}
+async function fillLan() {
+  const c = S.config.lan || {};
+  $("lanEnabled").checked = !!c.enabled; $("lanPort").value = c.port || 8766; $("lanMode").value = c.mode || "full";
+  $("lanPw").value = ""; $("lanPw2").value = "";
+  try { renderLan(await (await fetch("/api/lan")).json()); } catch (e) { /* ei tilaa */ }
+}
+$("btnLanSave").onclick = async () => {
+  $("lanErr").textContent = "";
+  const body = {enabled: $("lanEnabled").checked, port: $("lanPort").value, mode: $("lanMode").value};
+  if ($("lanPw").value || $("lanPw2").value) {
+    if ($("lanPw").value !== $("lanPw2").value) { $("lanErr").textContent = T("Salasanat eivät täsmää"); return; }
+    body.password = $("lanPw").value;
+  }
+  const r = await fetch("/api/lan", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const j = await r.json().catch(() => ({ok: false, error: "?"}));
+  if (!j.ok) { $("lanErr").textContent = j.error; return; }
+  S.config = j.config; $("lanPw").value = ""; $("lanPw2").value = ""; renderLan(j);
+  $("lanErr").innerHTML = `<span class="ok">${esc(T("Tallennettu"))}</span>`;
+};
+$("btnLanLogoutAll").onclick = async () => { renderLan(await (await fetch("/api/lan/logout_all", {method: "POST"})).json()); };
 // ---------------- APRS-kuuluvuus (radiot) ----------------
 let covMap = null, covTiles = null, covCells = null, covMarks = null, covVia = null, covRes = 0, covTimer = null, covSum = null;
 let covStations = null, covDigis = null, covStaData = null, covLabels = false;

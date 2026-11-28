@@ -6,6 +6,23 @@
  */
 window.I18N_LANGS = window.I18N_LANGS || {};
 window.I18N_LANGS.de = {
+    "Set a password (at least 8 characters).": "Lege ein Passwort fest (mindestens 8 Zeichen).",
+    "Keys and passwords can only be changed on the program's own computer.": "Schlüssel und Passwörter können nur auf dem eigenen Rechner des Programms geändert werden.",
+    "Not in use.": "Nicht in Verwendung.",
+    "Log out remote devices": "Entfernte Geräte abmelden",
+    "Log out": "Abmelden",
+    "When this is on, the program can also be used with a browser from other devices on your home network (phone, tablet, another computer). Remote devices log in with the password set below. A remote device cannot close or update the program or change keys, passwords or these settings.": "Wenn dies an ist, kann das Programm auch von anderen Geräten im Heimnetz (Telefon, Tablet, anderer Rechner) im Browser verwendet werden. Entfernte Geräte melden sich mit dem unten festgelegten Passwort an. Ein entferntes Gerät kann das Programm nicht schließen oder aktualisieren und keine Schlüssel, Passwörter oder diese Einstellungen ändern.",
+    "Access": "Zugriff",
+    "In use on port {p}": "Aktiv auf Port {p}",
+    "A password is set. Leave the fields empty if you do not want to change it.": "Ein Passwort ist festgelegt. Lass die Felder leer, wenn du es nicht ändern möchtest.",
+    "Repeat password": "Passwort wiederholen",
+    "The passwords do not match": "Die Passwörter stimmen nicht überein",
+    "Browser access on the local network": "Browserzugriff im lokalen Netz",
+    "Browser access on the local network on": "Browserzugriff im lokalen Netz an",
+    "Full access": "Vollzugriff",
+    "View only": "Nur ansehen",
+    "The connection on the local network is unencrypted (HTTP). Do not open the port to the internet in your router. When you turn this on for the first time, the Windows or macOS firewall may ask for permission – allow private networks.": "Die Verbindung im lokalen Netz ist unverschlüsselt (HTTP). Öffne den Port nicht im Router zum Internet. Beim ersten Einschalten kann die Firewall von Windows oder macOS um Erlaubnis fragen – erlaube private Netzwerke.",
+    "remote devices logged in: {n}": "angemeldete entfernte Geräte: {n}",
     "Services → Your location": "Dienste → Dein Standort",
     "Own callsign: {c}": "Eigenes Rufzeichen: {c}",
     "Own square: {g}": "Eigenes Feld: {g}",

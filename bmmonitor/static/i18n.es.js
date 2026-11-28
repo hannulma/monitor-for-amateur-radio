@@ -6,6 +6,23 @@
  */
 window.I18N_LANGS = window.I18N_LANGS || {};
 window.I18N_LANGS.es = {
+    "Set a password (at least 8 characters).": "Define una contraseña (al menos 8 caracteres).",
+    "Keys and passwords can only be changed on the program's own computer.": "Las claves y contraseñas solo se pueden cambiar en el propio ordenador del programa.",
+    "Not in use.": "No está en uso.",
+    "Log out remote devices": "Cerrar sesión de dispositivos remotos",
+    "Log out": "Cerrar sesión",
+    "When this is on, the program can also be used with a browser from other devices on your home network (phone, tablet, another computer). Remote devices log in with the password set below. A remote device cannot close or update the program or change keys, passwords or these settings.": "Si está activado, el programa también se puede usar con un navegador desde otros dispositivos de tu red doméstica (teléfono, tableta, otro ordenador). Los dispositivos remotos inician sesión con la contraseña definida abajo. Un dispositivo remoto no puede cerrar ni actualizar el programa ni cambiar claves, contraseñas o estos ajustes.",
+    "Access": "Acceso",
+    "In use on port {p}": "En uso en el puerto {p}",
+    "A password is set. Leave the fields empty if you do not want to change it.": "Hay una contraseña definida. Deja los campos vacíos si no quieres cambiarla.",
+    "Repeat password": "Repite la contraseña",
+    "The passwords do not match": "Las contraseñas no coinciden",
+    "Browser access on the local network": "Acceso por navegador en la red local",
+    "Browser access on the local network on": "Acceso por navegador en la red local activado",
+    "Full access": "Acceso completo",
+    "View only": "Solo ver",
+    "The connection on the local network is unencrypted (HTTP). Do not open the port to the internet in your router. When you turn this on for the first time, the Windows or macOS firewall may ask for permission – allow private networks.": "La conexión en la red local no está cifrada (HTTP). No abras el puerto a internet en el router. Al activarlo por primera vez, el cortafuegos de Windows o macOS puede pedir permiso: permite las redes privadas.",
+    "remote devices logged in: {n}": "dispositivos remotos conectados: {n}",
     "Services → Your location": "Servicios → Tu ubicación",
     "Own callsign: {c}": "Indicativo propio: {c}",
     "Own square: {g}": "Cuadrícula propia: {g}",

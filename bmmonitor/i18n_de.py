@@ -5,6 +5,20 @@ Fehlt ein Eintrag, wird Englisch verwendet.
 """
 
 DE: dict[str, str] = {
+    "The port must be between 1024 and 65535": "Der Port muss zwischen 1024 und 65535 liegen",
+    "Wrong password": "Falsches Passwort",
+    "This function is only available on the program's own computer.": "Diese Funktion ist nur auf dem eigenen Rechner des Programms verfügbar.",
+    "Password": "Passwort",
+    "Please log in": "Bitte anmelden",
+    "Too many wrong attempts – wait {n} s": "Zu viele falsche Versuche – warte {n} s",
+    "Set a password": "Lege ein Passwort fest",
+    "The password must be at least {n} characters": "Das Passwort muss mindestens {n} Zeichen lang sein",
+    "Forbidden": "Verboten",
+    "Keys and passwords can only be changed on the program's own computer.": "Schlüssel und Passwörter können nur auf dem eigenen Rechner des Programms geändert werden.",
+    "Log in": "Anmelden",
+    "Cannot open port {p} ({e})": "Port {p} kann nicht geöffnet werden ({e})",
+    "Invalid port: {x}": "Ungültiger Port: {x}",
+    "Browser access on the local network. Log in with the program's local network password.": "Browserzugriff im lokalen Netz. Melde dich mit dem Netzwerkpasswort des Programms an.",
     "Propagation": "Funkwetter",
     "ducting likely": "Ducting wahrscheinlich",
     "Tropo estimate: {w}": "Tropo-Schätzung: {w}",

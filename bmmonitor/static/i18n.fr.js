@@ -6,6 +6,23 @@
  */
 window.I18N_LANGS = window.I18N_LANGS || {};
 window.I18N_LANGS.fr = {
+    "Set a password (at least 8 characters).": "Définissez un mot de passe (au moins 8 caractères).",
+    "Keys and passwords can only be changed on the program's own computer.": "Les clés et mots de passe ne peuvent être modifiés que sur l'ordinateur du programme.",
+    "Not in use.": "Non utilisé.",
+    "Log out remote devices": "Déconnecter les appareils distants",
+    "Log out": "Se déconnecter",
+    "When this is on, the program can also be used with a browser from other devices on your home network (phone, tablet, another computer). Remote devices log in with the password set below. A remote device cannot close or update the program or change keys, passwords or these settings.": "Lorsque cette option est activée, le programme peut aussi être utilisé dans un navigateur depuis d'autres appareils de votre réseau domestique (téléphone, tablette, autre ordinateur). Les appareils distants se connectent avec le mot de passe défini ci-dessous. Un appareil distant ne peut ni fermer ni mettre à jour le programme, ni modifier les clés, les mots de passe ou ces réglages.",
+    "Access": "Accès",
+    "In use on port {p}": "Actif sur le port {p}",
+    "A password is set. Leave the fields empty if you do not want to change it.": "Un mot de passe est défini. Laissez les champs vides si vous ne souhaitez pas le changer.",
+    "Repeat password": "Répétez le mot de passe",
+    "The passwords do not match": "Les mots de passe ne correspondent pas",
+    "Browser access on the local network": "Accès par navigateur sur le réseau local",
+    "Browser access on the local network on": "Accès par navigateur sur le réseau local activé",
+    "Full access": "Accès complet",
+    "View only": "Lecture seule",
+    "The connection on the local network is unencrypted (HTTP). Do not open the port to the internet in your router. When you turn this on for the first time, the Windows or macOS firewall may ask for permission – allow private networks.": "La connexion sur le réseau local n'est pas chiffrée (HTTP). N'ouvrez pas le port vers Internet dans votre routeur. À la première activation, le pare-feu de Windows ou de macOS peut demander l'autorisation – autorisez les réseaux privés.",
+    "remote devices logged in: {n}": "appareils distants connectés : {n}",
     "Services → Your location": "Services → Votre position",
     "Own callsign: {c}": "Propre indicatif : {c}",
     "Own square: {g}": "Propre carré : {g}",

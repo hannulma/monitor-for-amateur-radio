@@ -33,6 +33,7 @@ dependencies = [
     "recurring-ical-events>=3",
     "tzdata",                  # aikavyöhyketiedot Windowsille (kalenterit)
     "pyserial>=3.5",           # APRS: KISS-TNC sarjaportissa (USB / Bluetooth)
+    "segno>=1.5",              # QR-koodi lähiverkko-osoitteelle
     "pywebview>=5.3; sys_platform == 'win32' or sys_platform == 'darwin'",   # oma ikkuna
     "pystray>=0.19; sys_platform == 'win32'",                                # kuvake ilmaisinalueella
 ]

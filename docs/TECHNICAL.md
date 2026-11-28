@@ -88,6 +88,19 @@ Talkgroups 1–90 are not supported by Hoseline.
 - **Aurora oval**: NOAA SWPC `ovation_aurora_latest.json` every 10 min, max per 2° cell (≥ 3 %).
 - **APRS tropo meter**: farthest directly heard position in the last hour vs. the median of daily maxima over 14 days.
 
+### Browser access on the local network
+
+`bmmonitor/lan.py`. When enabled (and a password is set) the same aiohttp app gets a second `TCPSite` on
+`0.0.0.0:<port>` (default 8766); the local site on `127.0.0.1` is unchanged. A middleware tells the two apart by the
+local port of the connection. On the LAN port every path except `/login`, `/api/lan/login` and `/static/*` needs a
+session cookie (`bmm_lan`, random 256-bit token, HttpOnly, SameSite=Strict, 30 days, in memory only – a restart logs
+remote devices out). Login: PBKDF2-SHA256 (200 000 rounds, random salt) hash in the credential store; 5 wrong
+attempts per IP → 30 s block doubling up to 15 min. Non-GET requests with a foreign `Origin` are rejected. Always
+denied remotely: shutdown, update install, window show, feedback bundle/send, `/api/lan` changes, config keys `lan`
+and `ui`, any key/password field (BM API key, APRS passcode, log service keys, aisstream.io key) and connecting or
+disconnecting the check-in sheet. *View only* additionally rejects every non-GET request except logout. QR codes
+with `segno`.
+
 ## Open data services
 
 | Service | Endpoint | Notes |

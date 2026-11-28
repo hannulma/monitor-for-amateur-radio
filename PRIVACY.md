@@ -12,7 +12,10 @@ eikä mainoksia. Kaikki asetukset, lokit ja tallennetut tiedot ovat vain omalla 
 (Windows: `%APPDATA%\BMMonitor`, macOS: `~/Library/Application Support/BMMonitor`, Linux: `~/.config/BMMonitor`).
 API-avain ja APRS-passcode tallennetaan käyttöjärjestelmän salasanavarastoon.
 
-Käyttöliittymä toimii paikallisen palvelimen (`127.0.0.1`) kautta, joka ei näy verkkoon. Ohjelma ottaa yhteyttä
+Käyttöliittymä toimii paikallisen palvelimen (`127.0.0.1`) kautta, joka ei näy verkkoon. Jos otat käyttöön
+*Selainkäyttö lähiverkossa* -asetuksen (oletus pois), ohjelma kuuntelee lisäksi valitsemassasi portissa koko
+lähiverkossa; sinne kirjaudutaan asettamallasi salasanalla (vain sen tiiviste tallennetaan salasanavarastoon), ja
+yhteys on salaamaton HTTP – älä avaa porttia internetiin. Ohjelma ottaa yhteyttä
 alla lueteltuihin palveluihin vain silloin, kun kyseinen toiminto on käytössä. Jokainen palvelu näkee yhteyden
 tavallisesti tapaan IP-osoitteesi ja sen, mitä pyydetään; palveluiden omat tietosuojakäytännöt koskevat niitä.
 
@@ -47,7 +50,10 @@ Kysymykset: https://github.com/hannulma/monitor-for-amateur-radio/issues
 advertising. All settings, logs and stored data stay on your own computer (paths above). The API key and the APRS
 passcode are kept in the operating system's credential store.
 
-The user interface runs through a local server (`127.0.0.1`) that is not reachable from the network. The program
+The user interface runs through a local server (`127.0.0.1`) that is not reachable from the network. If you turn on
+*Browser access on the local network* (off by default), the program also listens on the port you choose on your
+whole local network; remote devices log in with the password you set (only its hash is kept in the credential store),
+and the connection is unencrypted HTTP – do not open the port to the internet. The program
 contacts the services listed above only while the corresponding feature is in use. Each service sees your IP address
 and what is requested, as with any internet connection; their own privacy policies apply.
 

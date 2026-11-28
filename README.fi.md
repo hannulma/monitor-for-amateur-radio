@@ -234,6 +234,12 @@ Toimintojen asetukset ovat kunkin välilehden alimmassa, pienennettävässä **A
 käyttöliittymä omassa ikkunassa tai selaimessa; **näytettävät välilehdet**), **päivitykset** sekä palaute, vikailmoitukset ja
 **Sulje ohjelma**. Käyttämättömät välilehdet voi piilottaa; niiden toiminnot jatkavat taustalla, ja Ohjelma-välilehti on aina näkyvissä.
 
+- **Selainkäyttö lähiverkossa** (Ohjelma → Selainkäyttö lähiverkossa, oletus pois) – ohjelmaa voi käyttää puhelimella,
+  tabletilla tai toisella koneella kotiverkossa. Etälaitteelta kirjaudutaan salasanalla (vähintään 8 merkkiä);
+  käyttöoikeudeksi *Täysi käyttö* tai *Vain katselu*. Etälaitteelta ei voi koskaan sulkea tai päivittää ohjelmaa,
+  muuttaa avaimia, salasanoja tai näitä asetuksia eikä ladata palautteen lokipakettia. Sivulla näkyvät osoitteet ja
+  QR-koodi. Yhteys on salaamaton HTTP – älä avaa porttia reitittimestä internetiin; salli yksityiset verkot, jos
+  palomuuri kysyy.
 - **Kieli (suomi / English / Deutsch / Español / Français)** koskee käyttöliittymää, ohjelman omia hälytyksiä ja radioon lähetettäviä vastauksia.
   Ensimmäisellä käynnistyksellä kieli valitaan käyttöjärjestelmän kielen mukaan (muuten englanti). Radiokomennot toimivat
   suomeksi ja englanniksi (`OHJE`/`CMD`, `KUKA`/`WHO`, `NYT`/`NOW`; saksaksi, espanjaksi ja ranskaksi käytetään englanninkielisiä). Saksan-, espanjan- ja ranskankielinen

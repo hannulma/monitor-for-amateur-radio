@@ -5,6 +5,20 @@ Si falta una entrada, se usa el inglés.
 """
 
 ES: dict[str, str] = {
+    "The port must be between 1024 and 65535": "El puerto debe estar entre 1024 y 65535",
+    "Wrong password": "Contraseña incorrecta",
+    "This function is only available on the program's own computer.": "Esta función solo está disponible en el propio ordenador del programa.",
+    "Password": "Contraseña",
+    "Please log in": "Inicia sesión",
+    "Too many wrong attempts – wait {n} s": "Demasiados intentos fallidos: espera {n} s",
+    "Set a password": "Define una contraseña",
+    "The password must be at least {n} characters": "La contraseña debe tener al menos {n} caracteres",
+    "Forbidden": "Prohibido",
+    "Keys and passwords can only be changed on the program's own computer.": "Las claves y contraseñas solo se pueden cambiar en el propio ordenador del programa.",
+    "Log in": "Iniciar sesión",
+    "Cannot open port {p} ({e})": "No se puede abrir el puerto {p} ({e})",
+    "Invalid port: {x}": "Puerto no válido: {x}",
+    "Browser access on the local network. Log in with the program's local network password.": "Acceso por navegador en la red local. Inicia sesión con la contraseña de red local del programa.",
     "Propagation": "Propagación",
     "ducting likely": "conducto probable",
     "Tropo estimate: {w}": "Estimación tropo: {w}",
