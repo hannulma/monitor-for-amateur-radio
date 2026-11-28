@@ -4286,10 +4286,18 @@ function fillProp() {
   $("propEnabled").checked = !!c.enabled; $("propEnabledTxt").textContent = T(c.enabled ? "Päällä" : "Pois");
   $("propMine").checked = c.mine !== false; $("propArea").checked = c.area !== false; $("propRbn").checked = c.rbn !== false;
   $("propAlertOpen").checked = !!c.alert_open; $("propAlertTropo").checked = !!c.alert_tropo; $("propSms").checked = !!c.sms;
-  $("propWho").textContent = [a.call ? T("Oma kutsu: {c} (Lokit → Asetukset)", {c: a.call}) : T("Omaa kutsua ei ole asetettu (Lokit → Asetukset)."),
-    a.grid ? T("Oma ruutu: {g} (Palvelut → Oma sijainti)", {g: a.grid}) : T("Sijaintia ei ole asetettu (Palvelut → Oma sijainti).")].join(" · ");
+  const toLog = `<a href="#" data-propgo="log">${esc(T("Lokit → Asetukset"))}</a>`, toLoc = `<a href="#" data-propgo="loc">${esc(T("Palvelut → Oma sijainti"))}</a>`;
+  const who = [(a.call ? esc(T("Oma kutsu: {c}", {c: a.call})) : esc(T("Omaa kutsua ei ole asetettu."))) + ` (${toLog})`,
+    (a.grid ? esc(T("Oma ruutu: {g}", {g: a.grid})) : esc(T("Sijaintia ei ole asetettu."))) + ` (${toLoc})`].join(" · ");
+  if ($("propWho").dataset.h !== who) { $("propWho").innerHTML = who; $("propWho").dataset.h = who; }
   renderPropState();
 }
+$("propWho").onclick = e => {
+  const g = e.target.closest("[data-propgo]"); if (!g) return;
+  e.preventDefault();
+  if (g.dataset.propgo === "log") { showTab("lokit"); unfold("log-cfg"); }
+  else { showTab("palvelut"); setTimeout(() => { $("locText").scrollIntoView({behavior: "smooth", block: "center"}); $("locText").focus(); }, 80); }
+};
 $("propEnabled").onchange = async () => {
   const on = $("propEnabled").checked;
   $("propEnabledTxt").textContent = T(on ? "Päällä" : "Pois");

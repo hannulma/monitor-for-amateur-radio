@@ -817,10 +817,6 @@
     "Radiosää ei ole päällä – kytke se otsikon kytkimestä.": "Propagation is off – turn it on with the switch in the heading.",
     "Yhdistetty PSK Reporteriin": "Connected to PSK Reporter",
     "viimeisin raportti {a}": "latest report {a}",
-    "Oma kutsu: {c} (Lokit → Asetukset)": "Own callsign: {c} (Logs → Settings)",
-    "Omaa kutsua ei ole asetettu (Lokit → Asetukset).": "Own callsign is not set (Logs → Settings).",
-    "Oma ruutu: {g} (Palvelut → Oma sijainti)": "Own square: {g} (Services → Your location)",
-    "Sijaintia ei ole asetettu (Palvelut → Oma sijainti).": "Location is not set (Services → Your location).",
     "Aseta oma kutsu (Lokit) tai sijainti (Palvelut)": "Set your callsign (Logs) or location (Services)",
     "CW- ja RTTY-raportit Reverse Beacon Networkista": "CW and RTTY reports from the Reverse Beacon Network",
     "Reverse Beacon Network (RBN) kertoo, missä CW- tai RTTY-lähetyksesi on kuultu ja mitä oman maasi skimmerit kuulevat. RBN:ään kirjaudutaan omalla kutsullasi; skimmerien sijainti päätellään kutsun etuliitteestä maan tarkkuudella.": "The Reverse Beacon Network (RBN) shows where your CW or RTTY transmissions have been heard and what the skimmers in your country hear. The program logs in to RBN with your callsign; skimmer locations are derived from the callsign prefix at country level.",
@@ -855,6 +851,11 @@
     ". Revontuliovaali: NOAA SWPC OVATION.": ". Aurora oval: NOAA SWPC OVATION.",
     "Hälytä, kun 6 m, 4 m, 2 m tai 70 cm aukeaa omalta alueelta": "Alert when 6 m, 4 m, 2 m or 70 cm opens from my area",
     "Hälytä, kun tropoarvio on voimakas seuraavan 12 h aikana": "Alert when the tropo estimate is strong within the next 12 h",
+    "Palvelut → Oma sijainti": "Services → Your location",
+    "Oma kutsu: {c}": "Own callsign: {c}",
+    "Oma ruutu: {g}": "Own square: {g}",
+    "Omaa kutsua ei ole asetettu.": "Own callsign is not set.",
+    "Sijaintia ei ole asetettu.": "Location is not set.",
   };
 
   const ATTRS = ["placeholder", "title", "aria-label"];

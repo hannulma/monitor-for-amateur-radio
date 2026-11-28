@@ -6,6 +6,11 @@
  */
 window.I18N_LANGS = window.I18N_LANGS || {};
 window.I18N_LANGS.es = {
+    "Services → Your location": "Servicios → Tu ubicación",
+    "Own callsign: {c}": "Indicativo propio: {c}",
+    "Own square: {g}": "Cuadrícula propia: {g}",
+    "Own callsign is not set.": "El indicativo propio no está definido.",
+    "Location is not set.": "La ubicación no está definida.",
     "+3 h": "+3 h",
     "+6 h": "+6 h",
     "+12 h": "+12 h",
@@ -63,9 +68,7 @@ window.I18N_LANGS.es = {
     "Propagation is off – turn it on with the switch in the heading.": "Propagación está desactivada: actívala con el interruptor del título.",
     "Connected to PSK Reporter": "Conectado a PSK Reporter",
     "latest report {a}": "último reporte {a}",
-    "Own callsign: {c} (Logs → Settings)": "Indicativo propio: {c} (Registros → Ajustes)",
     "Own callsign is not set (Logs → Settings).": "El indicativo propio no está definido (Registros → Ajustes).",
-    "Own square: {g} (Services → Your location)": "Cuadrícula propia: {g} (Servicios → Tu ubicación)",
     "Location is not set (Services → Your location).": "La ubicación no está definida (Servicios → Tu ubicación).",
     "Set your callsign (Logs) or location (Services)": "Define tu indicativo (Registros) o tu ubicación (Servicios)",
     "Map": "Mapa",

@@ -6,6 +6,11 @@
  */
 window.I18N_LANGS = window.I18N_LANGS || {};
 window.I18N_LANGS.fr = {
+    "Services → Your location": "Services → Votre position",
+    "Own callsign: {c}": "Propre indicatif : {c}",
+    "Own square: {g}": "Propre carré : {g}",
+    "Own callsign is not set.": "Le propre indicatif n'est pas défini.",
+    "Location is not set.": "La position n'est pas définie.",
     "+3 h": "+3 h",
     "+6 h": "+6 h",
     "+12 h": "+12 h",
@@ -63,9 +68,7 @@ window.I18N_LANGS.fr = {
     "Propagation is off – turn it on with the switch in the heading.": "Propagation est désactivée – activez-la avec l'interrupteur du titre.",
     "Connected to PSK Reporter": "Connecté à PSK Reporter",
     "latest report {a}": "dernier rapport {a}",
-    "Own callsign: {c} (Logs → Settings)": "Propre indicatif : {c} (Carnets → Réglages)",
     "Own callsign is not set (Logs → Settings).": "Le propre indicatif n'est pas défini (Carnets → Réglages).",
-    "Own square: {g} (Services → Your location)": "Propre carré : {g} (Services → Votre position)",
     "Location is not set (Services → Your location).": "La position n'est pas définie (Services → Votre position).",
     "Set your callsign (Logs) or location (Services)": "Définissez votre indicatif (Carnets) ou votre position (Services)",
     "Map": "Carte",

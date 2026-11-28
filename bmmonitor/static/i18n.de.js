@@ -6,6 +6,11 @@
  */
 window.I18N_LANGS = window.I18N_LANGS || {};
 window.I18N_LANGS.de = {
+    "Services → Your location": "Dienste → Dein Standort",
+    "Own callsign: {c}": "Eigenes Rufzeichen: {c}",
+    "Own square: {g}": "Eigenes Feld: {g}",
+    "Own callsign is not set.": "Eigenes Rufzeichen ist nicht gesetzt.",
+    "Location is not set.": "Standort ist nicht gesetzt.",
     "+3 h": "+3 h",
     "+6 h": "+6 h",
     "+12 h": "+12 h",
@@ -63,9 +68,7 @@ window.I18N_LANGS.de = {
     "Propagation is off – turn it on with the switch in the heading.": "Funkwetter ist aus – schalte es mit dem Schalter in der Überschrift ein.",
     "Connected to PSK Reporter": "Mit PSK Reporter verbunden",
     "latest report {a}": "letzter Bericht {a}",
-    "Own callsign: {c} (Logs → Settings)": "Eigenes Rufzeichen: {c} (Logs → Einstellungen)",
     "Own callsign is not set (Logs → Settings).": "Eigenes Rufzeichen ist nicht gesetzt (Logs → Einstellungen).",
-    "Own square: {g} (Services → Your location)": "Eigenes Feld: {g} (Dienste → Dein Standort)",
     "Location is not set (Services → Your location).": "Standort ist nicht gesetzt (Dienste → Dein Standort).",
     "Set your callsign (Logs) or location (Services)": "Lege dein Rufzeichen (Logs) oder deinen Standort (Dienste) fest",
     "Map": "Karte",
